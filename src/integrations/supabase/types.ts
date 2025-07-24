@@ -14,7 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      entregas: {
+        Row: {
+          created_at: string
+          fotos: string[]
+          geolocalizacao_validada: boolean | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          lote_codigo: string | null
+          observacoes: string | null
+          peso: number
+          updated_at: string
+          voluntario_id: string
+        }
+        Insert: {
+          created_at?: string
+          fotos?: string[]
+          geolocalizacao_validada?: boolean | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          lote_codigo?: string | null
+          observacoes?: string | null
+          peso: number
+          updated_at?: string
+          voluntario_id: string
+        }
+        Update: {
+          created_at?: string
+          fotos?: string[]
+          geolocalizacao_validada?: boolean | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          lote_codigo?: string | null
+          observacoes?: string | null
+          peso?: number
+          updated_at?: string
+          voluntario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entregas_voluntario_id_fkey"
+            columns: ["voluntario_id"]
+            isOneToOne: false
+            referencedRelation: "voluntarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voluntarios: {
+        Row: {
+          ativo: boolean
+          cpf: string
+          created_at: string
+          email: string
+          endereco: string
+          foto_url: string | null
+          id: string
+          nome: string
+          numero_balde: number
+          telefone: string
+          unidade: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cpf: string
+          created_at?: string
+          email: string
+          endereco: string
+          foto_url?: string | null
+          id?: string
+          nome: string
+          numero_balde: number
+          telefone: string
+          unidade?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cpf?: string
+          created_at?: string
+          email?: string
+          endereco?: string
+          foto_url?: string | null
+          id?: string
+          nome?: string
+          numero_balde?: number
+          telefone?: string
+          unidade?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
