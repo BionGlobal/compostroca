@@ -22,7 +22,7 @@ export const StatCard = ({ title, value, icon, description, variant = 'default' 
   };
 
   return (
-    <Card className={`${getVariantClasses()} shadow-sm border-0`}>
+    <Card className={`${getVariantClasses()} glass-light border-0 organic-hover bounce-in`}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex-1">
@@ -32,7 +32,7 @@ export const StatCard = ({ title, value, icon, description, variant = 'default' 
               <p className="text-xs opacity-70 mt-1">{description}</p>
             )}
           </div>
-          <div className="text-3xl opacity-80">
+          <div className="text-3xl opacity-80 float">
             {icon}
           </div>
         </div>

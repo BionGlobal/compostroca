@@ -19,13 +19,14 @@ export default {
 		},
 		extend: {
 			colors: {
-				border: 'hsl(var(--border))',
+				border: 'var(--border)',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
+					glow: 'hsl(var(--primary-glow))',
 					foreground: 'hsl(var(--primary-foreground))'
 				},
 				secondary: {
@@ -62,6 +63,7 @@ export default {
 				},
 				card: {
 					DEFAULT: 'hsl(var(--card))',
+					blur: 'var(--card-blur)',
 					foreground: 'hsl(var(--card-foreground))'
 				},
 				sidebar: {

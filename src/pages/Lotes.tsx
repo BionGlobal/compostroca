@@ -113,7 +113,7 @@ const Lotes = () => {
   return (
     <div className="p-4 space-y-6">
       {/* Lotes Ativos */}
-      <Card>
+      <Card className="border-0">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <RotateCcw className="h-5 w-5 text-primary" />
@@ -123,7 +123,7 @@ const Lotes = () => {
         <CardContent className="space-y-6">
           {lotesAtivos.map((lote) => (
             <div key={lote.codigo} className="space-y-4">
-              <div className="bg-accent rounded-lg p-4">
+              <div className="glass-light rounded-xl p-4 border-0 organic-hover">
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h4 className="font-semibold">{lote.codigo}</h4>
@@ -152,7 +152,7 @@ const Lotes = () => {
                 </Button>
               </div>
 
-              <div className="bg-card rounded-lg p-4 border">
+              <div className="glass-light rounded-xl p-4 border-0">
                 <h5 className="font-medium mb-3 flex items-center gap-2">
                   <ArrowRight className="h-4 w-4" />
                   Timeline do Processo
@@ -165,7 +165,7 @@ const Lotes = () => {
       </Card>
 
       {/* Lotes Finalizados */}
-      <Card>
+      <Card className="border-0">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-success" />
@@ -176,7 +176,7 @@ const Lotes = () => {
           {lotesFinalizados.map((lote) => (
             <div
               key={lote.codigo}
-              className="bg-muted rounded-lg p-4"
+              className="glass-light rounded-xl p-4 border-0 organic-hover"
             >
               <div className="flex justify-between items-start mb-2">
                 <h4 className="font-semibold text-sm">{lote.codigo}</h4>
@@ -205,10 +205,12 @@ const Lotes = () => {
       </Card>
 
       {/* Ação para Novo Lote */}
-      <Card className="bg-primary text-primary-foreground">
+      <Card className="bg-gradient-primary text-primary-foreground border-0 organic-hover">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <Package className="h-6 w-6" />
+            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+              <Package className="h-6 w-6" />
+            </div>
             <div className="flex-1">
               <h3 className="font-semibold">Iniciar Novo Lote</h3>
               <p className="text-sm opacity-90">
