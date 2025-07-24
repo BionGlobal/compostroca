@@ -16,7 +16,7 @@ const voluntarioSchema = z.object({
   email: z.string().email('Email inválido'),
   telefone: z.string().min(10, 'Telefone deve ter pelo menos 10 dígitos'),
   endereco: z.string().min(5, 'Endereço deve ter pelo menos 5 caracteres'),
-  numero_balde: z.number().min(1).max(20),
+  numero_balde: z.number().min(1).max(30),
   foto_url: z.string().optional(),
 });
 
