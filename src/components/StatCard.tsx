@@ -22,25 +22,19 @@ export const StatCard = ({ title, value, icon, description, variant = 'default' 
   };
 
   return (
-    <Card className={`${getVariantClasses()} glass-card border-0 tech-hover scale-in relative overflow-hidden`}>
-      <div className="absolute inset-0 bg-gradient-mesh opacity-30" />
-      <CardContent className="p-6 relative z-10">
+    <Card className={`${getVariantClasses()} glass-light border-0 organic-hover bounce-in`}>
+      <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <p className="text-sm opacity-90 mb-2 font-medium">{title}</p>
-            <p className="text-3xl font-bold text-gradient-primary mb-1">{value}</p>
+            <p className="text-sm opacity-80 mb-1">{title}</p>
+            <p className="text-2xl font-bold">{value}</p>
             {description && (
-              <p className="text-xs opacity-80 mt-1">{description}</p>
+              <p className="text-xs opacity-70 mt-1">{description}</p>
             )}
           </div>
-          <div className="text-4xl opacity-90 pulse-glow">
+          <div className="text-3xl opacity-80 float">
             {icon}
           </div>
-        </div>
-        
-        {/* Animated accent line */}
-        <div className="mt-4 w-full h-1 bg-muted/20 rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-primary rounded-full shimmer" style={{ width: '60%' }} />
         </div>
       </CardContent>
     </Card>

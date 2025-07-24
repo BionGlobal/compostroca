@@ -1,56 +1,113 @@
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { ArrowRight, ArrowDown, Thermometer, Beaker } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Thermometer, 
+  Droplets, 
+  Zap, 
+  Leaf, 
+  Scale,
+  ChevronRight,
+  ArrowRight
+} from 'lucide-react';
 
 interface CompostingBox {
   number: number;
-  weight: number;
-  status: 'active' | 'maturing' | 'testing' | 'ready';
+  weight: number; // kg
+  status: 'iniciada' | 'maturando' | 'pronta' | 'distribuida';
   week: number;
-  temperature?: number;
+  temperature?: number; // Apenas na caixa 1
   chemistry?: {
     ph: number;
     nitrogen: number;
     phosphorus: number;
     potassium: number;
-  };
+  }; // Apenas na caixa 6
 }
 
 export const CompostingBoxes = () => {
-  const initialWeight = 150;
-
+  // Simulação do peso inicial baseado nas entregas
+  const initialWeight = 48.5; // kg - peso das entregas da semana
+  
+  // Cálculo do peso com redução de 3.2% por semana
   const calculateWeight = (week: number) => {
     if (week === 1) return initialWeight;
-    return Math.round(initialWeight * Math.pow(0.968, week - 1));
+    return initialWeight * Math.pow(0.968, week - 1); // 3.2% de redução por semana
   };
 
   const boxes: CompostingBox[] = [
-    { number: 1, weight: calculateWeight(1), status: 'active', week: 1, temperature: 45 },
-    { number: 2, weight: calculateWeight(2), status: 'maturing', week: 2 },
-    { number: 3, weight: calculateWeight(3), status: 'maturing', week: 3 },
-    { number: 4, weight: calculateWeight(4), status: 'maturing', week: 4 },
-    { number: 5, weight: calculateWeight(5), status: 'maturing', week: 5 },
-    { number: 6, weight: calculateWeight(6), status: 'testing', week: 6, chemistry: { ph: 7.2, nitrogen: 2.1, phosphorus: 0.8, potassium: 1.5 } },
-    { number: 7, weight: calculateWeight(7), status: 'ready', week: 7 },
+    {
+      number: 1,
+      weight: calculateWeight(1),
+      status: 'iniciada',
+      week: 1,
+      temperature: 55, // °C - temperatura IoT
+    },
+    {
+      number: 2,
+      weight: calculateWeight(2),
+      status: 'maturando',
+      week: 2,
+    },
+    {
+      number: 3,
+      weight: calculateWeight(3),
+      status: 'maturando',
+      week: 3,
+    },
+    {
+      number: 4,
+      weight: calculateWeight(4),
+      status: 'maturando',
+      week: 4,
+    },
+    {
+      number: 5,
+      weight: calculateWeight(5),
+      status: 'maturando',
+      week: 5,
+    },
+    {
+      number: 6,
+      weight: calculateWeight(6),
+      status: 'maturando',
+      week: 6,
+      chemistry: {
+        ph: 7.2,
+        nitrogen: 2.1,
+        phosphorus: 0.8,
+        potassium: 1.5,
+      }
+    },
+    {
+      number: 7,
+      weight: calculateWeight(7),
+      status: 'pronta',
+      week: 7,
+    },
   ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-warning text-warning-foreground';
-      case 'maturing': return 'bg-primary text-primary-foreground';
-      case 'testing': return 'bg-accent text-accent-foreground';
-      case 'ready': return 'bg-success text-success-foreground';
-      default: return 'bg-muted text-muted-foreground';
+      case 'iniciada':
+        return 'bg-warning text-warning-foreground';
+      case 'maturando':
+        return 'bg-primary text-primary-foreground';
+      case 'pronta':
+        return 'bg-success text-success-foreground';
+      case 'distribuida':
+        return 'bg-muted text-muted-foreground';
+      default:
+        return 'bg-muted text-muted-foreground';
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'active': return 'Ativa';
-      case 'maturing': return 'Maturando';
-      case 'testing': return 'Testando';
-      case 'ready': return 'Pronta';
+      case 'iniciada': return 'Iniciada';
+      case 'maturando': return 'Maturando';
+      case 'pronta': return 'Pronta';
+      case 'distribuida': return 'Distribuída';
       default: return status;
     }
   };
@@ -63,57 +120,25 @@ export const CompostingBoxes = () => {
     if (!chemistry) return null;
 
     const indicators = [
-      { label: 'pH', value: chemistry.ph, optimal: [6.5, 7.5], icon: '⚗️', gradient: 'from-blue-400 to-blue-600' },
-      { label: 'N', value: chemistry.nitrogen, optimal: [1.5, 3.0], icon: '🌱', gradient: 'from-green-400 to-green-600' },
-      { label: 'P', value: chemistry.phosphorus, optimal: [0.5, 1.5], icon: '💜', gradient: 'from-purple-400 to-purple-600' },
-      { label: 'K', value: chemistry.potassium, optimal: [1.0, 2.0], icon: '🔸', gradient: 'from-orange-400 to-orange-600' },
+      { label: 'pH', value: chemistry.ph, optimal: [6.5, 8.0], icon: Droplets, unit: '' },
+      { label: 'N', value: chemistry.nitrogen, optimal: [1.5, 3.0], icon: Leaf, unit: '%' },
+      { label: 'P', value: chemistry.phosphorus, optimal: [0.5, 1.2], icon: Zap, unit: '%' },
+      { label: 'K', value: chemistry.potassium, optimal: [1.0, 2.0], icon: Zap, unit: '%' },
     ];
 
     return (
-      <div className="grid grid-cols-2 gap-2">
-        {indicators.map(({ label, value, optimal, icon, gradient }) => {
-          const isOptimal = value >= optimal[0] && value <= optimal[1];
-          const percentage = Math.min((value / optimal[1]) * 100, 100);
+      <div className="grid grid-cols-2 gap-2 mt-2">
+        {indicators.map((indicator) => {
+          const isOptimal = indicator.value >= indicator.optimal[0] && indicator.value <= indicator.optimal[1];
+          const Icon = indicator.icon;
           
           return (
-            <div key={label} className="glass-light rounded-lg p-2 tech-hover">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs">{icon}</span>
-                  <span className="text-xs font-medium">{label}</span>
-                </div>
-                <span className={`text-xs font-bold ${isOptimal ? 'text-success' : 'text-warning'}`}>
-                  {value}
-                </span>
-              </div>
-              
-              {/* Circular progress indicator */}
-              <div className="relative w-8 h-8 mx-auto">
-                <svg className="w-8 h-8 transform -rotate-90" viewBox="0 0 32 32">
-                  <circle
-                    cx="16"
-                    cy="16"
-                    r="12"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="text-muted/30"
-                  />
-                  <circle
-                    cx="16"
-                    cy="16"
-                    r="12"
-                    fill="none"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    className={`${isOptimal ? 'text-success' : 'text-warning'} transition-all duration-500`}
-                    strokeDasharray={`${(percentage / 100) * 75.4} 75.4`}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className={`w-1 h-1 rounded-full ${isOptimal ? 'bg-success' : 'bg-warning'} pulse-glow`} />
-                </div>
-              </div>
+            <div key={indicator.label} className="flex items-center gap-1">
+              <Icon className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs font-medium">{indicator.label}:</span>
+              <span className={`text-xs font-bold ${isOptimal ? 'text-success' : 'text-warning'}`}>
+                {indicator.value}{indicator.unit}
+              </span>
             </div>
           );
         })}
@@ -122,141 +147,123 @@ export const CompostingBoxes = () => {
   };
 
   return (
-    <div className="p-6 space-y-8">
-      <div className="text-center space-y-4 fade-in-up">
-        <h2 className="text-3xl font-bold text-gradient-primary">
-          Processo de Compostagem
-        </h2>
-        <p className="text-muted-foreground max-w-2xl mx-auto">
-          Acompanhe o ciclo completo de transformação dos resíduos orgânicos através de nossa tecnologia IoT avançada
+    <div className="space-y-6">
+      {/* Título */}
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-foreground mb-2">Processo de Compostagem</h2>
+        <p className="text-sm text-muted-foreground">
+          Acompanhe o fluxo das 7 caixas sequenciais
         </p>
       </div>
 
-      {/* Main composting flow */}
+      {/* Fluxo das Caixas */}
       <div className="relative">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-6">
+        {/* Linha de conexão */}
+        <div className="absolute top-8 left-8 right-8 h-0.5 bg-gradient-to-r from-warning via-primary to-success opacity-30 z-0" />
+        
+        <div className="grid grid-cols-1 gap-4 relative z-10">
           {boxes.map((box, index) => (
-            <div key={box.number} className="relative scale-in" style={{ animationDelay: `${index * 0.1}s` }}>
-              <div className={`relative h-80 ${getStatusColor(box.status)} rounded-2xl glass-card tech-hover overflow-hidden group`}>
-                {/* Animated background gradient */}
-                <div className="absolute inset-0 bg-gradient-mesh opacity-50" />
-                
-                {/* Main content */}
-                <div className="relative z-10 p-6 h-full flex flex-col">
-                  {/* Header */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="glass-light px-3 py-1 rounded-full">
-                      <span className="text-sm font-bold text-gradient-primary">Box {box.number}</span>
+            <div key={box.number} className="relative">
+              <Card className="glass-light organic-hover border-0">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center text-primary-foreground font-bold">
+                        {box.number}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">Caixa {box.number}</h3>
+                        <p className="text-xs text-muted-foreground">Semana {box.week}</p>
+                      </div>
                     </div>
-                    <Badge className={`${getStatusColor(box.status)} glass-light border-0 pulse-glow`}>
+                    <Badge className={getStatusColor(box.status)}>
                       {getStatusLabel(box.status)}
                     </Badge>
                   </div>
 
-                  {/* Week indicator */}
-                  <div className="text-center mb-4">
-                    <div className="text-xs text-muted-foreground mb-1">Semana</div>
-                    <div className="text-2xl font-bold text-gradient-accent">{box.week}</div>
-                  </div>
-
-                  {/* Weight display */}
-                  <div className="text-center mb-4 flex-1 flex flex-col justify-center">
-                    <div className="relative">
-                      <div className="w-20 h-20 mx-auto mb-2 rounded-full glass-strong flex items-center justify-center">
-                        <div className="text-lg font-bold text-gradient-primary">{box.weight}kg</div>
-                      </div>
-                      <div className="w-full bg-muted/20 rounded-full h-2">
-                        <div 
-                          className="bg-gradient-accent h-2 rounded-full transition-all duration-1000 shimmer"
-                          style={{ width: `${getProgressPercentage(box.week)}%` }}
-                        />
-                      </div>
+                  {/* Progresso */}
+                  <div className="mb-3">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                      <span>Progresso</span>
+                      <span>{Math.round(getProgressPercentage(box.week))}%</span>
                     </div>
+                    <Progress value={getProgressPercentage(box.week)} className="h-2" />
                   </div>
 
-                  {/* IoT Data */}
+                  {/* Peso */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <Scale className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">
+                      {box.weight.toFixed(1)} kg
+                    </span>
+                    {index > 0 && (
+                      <span className="text-xs text-success">
+                        (-{(((boxes[index-1]?.weight || 0) - box.weight) / (boxes[index-1]?.weight || 1) * 100).toFixed(1)}%)
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Dados IoT - Temperatura (Caixa 1) */}
                   {box.temperature && (
-                    <div className="glass-light rounded-xl p-3 mb-2 tech-hover">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Thermometer className="h-4 w-4 text-orange-500 pulse-glow" />
-                          <span className="text-xs text-muted-foreground">Temperatura</span>
-                        </div>
-                        <span className="text-sm font-bold text-orange-500">{box.temperature}°C</span>
-                      </div>
-                      <div className="mt-2 w-full bg-muted/30 rounded-full h-1">
-                        <div 
-                          className="bg-gradient-to-r from-orange-400 to-red-500 h-1 rounded-full"
-                          style={{ width: `${(box.temperature / 60) * 100}%` }}
-                        />
-                      </div>
+                    <div className="flex items-center gap-2 p-2 bg-gradient-primary rounded-lg text-primary-foreground mb-2">
+                      <Thermometer className="h-4 w-4" />
+                      <span className="text-sm font-medium">
+                        {box.temperature}°C
+                      </span>
+                      <span className="text-xs opacity-90">
+                        Temperatura ideal
+                      </span>
                     </div>
                   )}
 
+                  {/* Dados IoT - Química (Caixa 6) */}
                   {box.chemistry && (
-                    <div className="space-y-2">
-                      <div className="text-xs text-center text-muted-foreground mb-2">Análise Química</div>
+                    <div className="p-2 bg-gradient-earth rounded-lg text-earth-foreground">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Zap className="h-4 w-4" />
+                        <span className="text-sm font-medium">Análise Química</span>
+                      </div>
                       {renderChemistryIndicators(box.chemistry)}
                     </div>
                   )}
-                </div>
+                </CardContent>
+              </Card>
 
-                {/* Floating particles for active boxes */}
-                {box.status === 'active' && (
-                  <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-4 left-4 w-2 h-2 bg-primary/40 rounded-full particle" />
-                    <div className="absolute bottom-6 right-6 w-1 h-1 bg-accent/60 rounded-full particle" style={{ animationDelay: '2s' }} />
-                    <div className="absolute top-1/2 right-4 w-1.5 h-1.5 bg-secondary/50 rounded-full particle" style={{ animationDelay: '4s' }} />
-                  </div>
-                )}
-              </div>
-
-              {/* Connection arrows */}
+              {/* Seta para próxima caixa */}
               {index < boxes.length - 1 && (
-                <div className="hidden xl:block absolute -right-8 top-1/2 transform -translate-y-1/2 z-20">
-                  <div className="glass-light rounded-full p-2">
-                    <ArrowRight className="h-5 w-5 text-primary pulse-glow" />
+                <div className="flex justify-center my-2">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                    <ArrowRight className="h-4 w-4 text-primary" />
                   </div>
                 </div>
               )}
             </div>
           ))}
         </div>
-
-        {/* Connecting line for mobile */}
-        <div className="xl:hidden mt-6 flex justify-center">
-          <div className="flex flex-col items-center space-y-2">
-            {Array.from({ length: boxes.length - 1 }).map((_, i) => (
-              <ArrowDown key={i} className="h-5 w-5 text-primary/60 float" style={{ animationDelay: `${i * 0.2}s` }} />
-            ))}
-          </div>
-        </div>
       </div>
 
-      {/* Summary statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 scale-in" style={{ animationDelay: '0.8s' }}>
-        <div className="glass-card rounded-2xl p-6 text-center tech-hover">
-          <div className="text-3xl font-bold text-gradient-primary mb-2">150kg</div>
-          <div className="text-sm text-muted-foreground">Peso Inicial</div>
-          <div className="mt-2 w-full bg-muted/20 rounded-full h-1">
-            <div className="bg-gradient-primary h-1 rounded-full w-full" />
+      {/* Resumo */}
+      <Card className="glass-light border-0">
+        <CardContent className="p-4">
+          <h3 className="font-semibold mb-3 text-center">Resumo do Processo</h3>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-xs text-muted-foreground">Peso Inicial</p>
+              <p className="font-bold text-lg">{initialWeight} kg</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Peso Final</p>
+              <p className="font-bold text-lg text-success">{calculateWeight(7).toFixed(1)} kg</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Redução</p>
+              <p className="font-bold text-lg text-earth">
+                {Math.round((1 - calculateWeight(7) / initialWeight) * 100)}%
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="glass-card rounded-2xl p-6 text-center tech-hover">
-          <div className="text-3xl font-bold text-gradient-accent mb-2">117kg</div>
-          <div className="text-sm text-muted-foreground">Peso Final</div>
-          <div className="mt-2 w-full bg-muted/20 rounded-full h-1">
-            <div className="bg-gradient-accent h-1 rounded-full w-3/4" />
-          </div>
-        </div>
-        <div className="glass-card rounded-2xl p-6 text-center tech-hover">
-          <div className="text-3xl font-bold text-success mb-2">22%</div>
-          <div className="text-sm text-muted-foreground">Redução Total</div>
-          <div className="mt-2 w-full bg-muted/20 rounded-full h-1">
-            <div className="bg-gradient-to-r from-success to-primary h-1 rounded-full w-1/4" />
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

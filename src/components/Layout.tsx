@@ -12,18 +12,15 @@ export const Layout = ({ children }: LayoutProps) => {
     <div className="min-h-screen flex flex-col relative">
       <BackgroundParticles />
       
-      <header className="glass-strong border-0 border-b border-border/10 p-6 relative z-10">
-        <div className="absolute inset-0 bg-gradient-mesh opacity-20" />
-        <div className="flex items-center justify-center gap-4 relative z-10">
-          <div className="glass-light rounded-2xl p-3 pulse-glow">
-            <img src={compostrocaIcon} alt="Compostroca" className="h-10 w-10 float" />
-          </div>
+      <header className="glass-light border-0 border-b border-border/20 p-4 relative z-10">
+        <div className="flex items-center justify-center gap-3">
+          <img src={compostrocaIcon} alt="Compostroca" className="h-8 w-8 float" />
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gradient-primary mb-1">
+            <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               Compostroca
             </h1>
-            <p className="text-sm text-muted-foreground font-medium">
-              Gestão Inteligente de Compostagem Urbana
+            <p className="text-sm text-muted-foreground">
+              Gestão de Compostagem Urbana
             </p>
           </div>
         </div>

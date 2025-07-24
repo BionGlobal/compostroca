@@ -48,16 +48,10 @@ export const BackgroundParticles = () => {
         />
       ))}
       
-      {/* Enhanced organic elements */}
-      <div className="absolute top-10 left-10 w-24 h-24 rounded-full bg-gradient-mesh blur-2xl float opacity-60" />
-      <div className="absolute bottom-20 right-16 w-20 h-20 rounded-full bg-gradient-secondary blur-xl float-delayed opacity-40" />
-      <div className="absolute top-1/3 right-1/4 w-16 h-16 rounded-full bg-gradient-accent blur-lg float opacity-50" style={{ animationDelay: '6s' }} />
-      <div className="absolute bottom-1/3 left-1/4 w-12 h-12 rounded-full bg-gradient-primary blur-md float opacity-30" style={{ animationDelay: '9s' }} />
-      
-      {/* Technological mesh overlay */}
-      <div className="absolute inset-0 bg-gradient-mesh opacity-5" />
-      <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
-      <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+      {/* Elementos orgânicos adicionais */}
+      <div className="absolute top-10 left-10 w-20 h-20 rounded-full bg-earth/10 blur-xl float" />
+      <div className="absolute bottom-20 right-16 w-16 h-16 rounded-full bg-secondary/15 blur-lg float" style={{ animationDelay: '3s' }} />
+      <div className="absolute top-1/3 right-1/4 w-12 h-12 rounded-full bg-primary-glow/20 blur-md float" style={{ animationDelay: '6s' }} />
     </div>
   );
 };
