@@ -228,12 +228,12 @@ export const VoluntarioForm: React.FC<VoluntarioFormProps> = ({
 
           {/* Número do Balde */}
           <div className="space-y-2">
-            <Label htmlFor="numero_balde">Número do Balde (1-20) *</Label>
+            <Label htmlFor="numero_balde">Número do Balde (1-30) *</Label>
             <Input
               id="numero_balde"
               type="number"
               min="1"
-              max="20"
+              max="30"
               {...register('numero_balde', { valueAsNumber: true })}
             />
             {errors.numero_balde && (
