@@ -13,16 +13,16 @@ export const StatCard = ({ title, value, icon, description, variant = 'default' 
   const getVariantClasses = () => {
     switch (variant) {
       case 'primary':
-        return 'bg-primary text-primary-foreground';
+        return 'bg-gradient-primary text-primary-foreground';
       case 'earth':
-        return 'bg-earth text-earth-foreground';
+        return 'bg-gradient-earth text-earth-foreground';
       default:
         return 'bg-card text-card-foreground';
     }
   };
 
   return (
-    <Card className={`${getVariantClasses()} glass-light border-0 organic-hover bounce-in`}>
+    <Card className={`${getVariantClasses()} border-0 organic-hover bounce-in`}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex-1">
