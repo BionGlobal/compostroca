@@ -60,8 +60,8 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-100 p-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <div className="bg-emerald-600 p-3 rounded-full mb-4">
-            <TreePine className="h-8 w-8 text-white" />
+          <div className="p-2 rounded-full mb-4">
+            <img src="/lovable-uploads/b5447ccd-c863-4e8a-9880-d66ce4a8a5c4.png" alt="CompostRoca" className="h-12 w-12" />
           </div>
           <h1 className="text-2xl font-bold text-emerald-900">CompostRoca</h1>
           <p className="text-emerald-700 text-center">Sistema de Gestão de Compostagem</p>
