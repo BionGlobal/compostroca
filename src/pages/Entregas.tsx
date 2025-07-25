@@ -3,55 +3,92 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Camera, MapPin, Clock, Plus, Calendar } from 'lucide-react';
+import { Package, Camera, Clock, Plus, Calendar } from 'lucide-react';
+import { useVoluntarios } from '@/hooks/useVoluntarios';
+import { useEntregas } from '@/hooks/useEntregas';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Entregas = () => {
   const [selectedVoluntario, setSelectedVoluntario] = useState('');
   const [peso, setPeso] = useState('');
+  const [fotos, setFotos] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  
+  const { voluntarios } = useVoluntarios();
+  const { entregas, refetch } = useEntregas();
+  const { user } = useAuth();
+  const { toast } = useToast();
 
-  // Mock data - será substituído por dados do Supabase
-  const voluntarios = [
-    { id: 1, nome: 'Maria Silva', balde: '05' },
-    { id: 2, nome: 'João Santos', balde: '12' },
-    { id: 3, nome: 'Ana Costa', balde: '08' },
-  ];
+  const getCurrentLocation = (): Promise<{ latitude: number; longitude: number }> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocalização não é suportada neste navegador'));
+        return;
+      }
 
-  const entregasRecentes = [
-    {
-      id: 1,
-      voluntario: 'Maria Silva',
-      balde: '05',
-      peso: 2.3,
-      data: '23/07/2024',
-      hora: '14:30',
-      fotos: 3,
-      lote: 'CWB001-15072024-001'
-    },
-    {
-      id: 2,
-      voluntario: 'João Santos',
-      balde: '12',
-      peso: 1.8,
-      data: '23/07/2024',
-      hora: '10:15',
-      fotos: 3,
-      lote: 'CWB001-15072024-001'
-    },
-    {
-      id: 3,
-      voluntario: 'Ana Costa',
-      balde: '08',
-      peso: 3.2,
-      data: '22/07/2024',
-      hora: '16:45',
-      fotos: 3,
-      lote: 'CWB001-15072024-001'
-    },
-  ];
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          reject(error);
+        }
+      );
+    });
+  };
 
-  const handleNovaEntrega = () => {
-    // Funcionalidade será implementada com integração ao Supabase
-    console.log('Nova entrega:', { selectedVoluntario, peso });
+  const handleNovaEntrega = async () => {
+    if (!selectedVoluntario || !peso || !user) return;
+
+    try {
+      setLoading(true);
+
+      // Obter localização atual
+      const location = await getCurrentLocation();
+
+      // Registrar entrega no Supabase
+      const { error } = await supabase
+        .from('entregas')
+        .insert({
+          voluntario_id: selectedVoluntario,
+          peso: parseFloat(peso),
+          fotos: fotos,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          geolocalizacao_validada: true,
+          user_id: user.id,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Entrega registrada com sucesso!",
+      });
+
+      // Limpar formulário
+      setSelectedVoluntario('');
+      setPeso('');
+      setFotos([]);
+      
+      // Atualizar lista de entregas
+      refetch();
+
+    } catch (error) {
+      console.error('Erro ao registrar entrega:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível registrar a entrega",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -73,56 +110,46 @@ const Entregas = () => {
               </SelectTrigger>
               <SelectContent>
                 {voluntarios.map((voluntario) => (
-                  <SelectItem key={voluntario.id} value={voluntario.id.toString()}>
-                    {voluntario.nome} - Balde {voluntario.balde}
+                  <SelectItem key={voluntario.id} value={voluntario.id}>
+                    {voluntario.nome} - Balde {voluntario.numero_balde}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
+          <div className="grid grid-cols-3 gap-2">
+            <Button variant="outline" className="flex-col h-20">
+              <Camera className="h-6 w-6 mb-1" />
+              <span className="text-xs">Conteúdo balde</span>
+            </Button>
+            <Button variant="outline" className="flex-col h-20">
+              <Camera className="h-6 w-6 mb-1" />
+              <span className="text-xs">Pesagem</span>
+            </Button>
+            <Button variant="outline" className="flex-col h-20">
+              <Camera className="h-6 w-6 mb-1" />
+              <span className="text-xs">Destino (caixa 1)</span>
+            </Button>
+          </div>
+
           <div>
             <label className="text-sm font-medium mb-2 block">Peso (kg)</label>
             <Input
               type="number"
-              step="0.1"
-              placeholder="0.0"
+              step="0.001"
+              placeholder="0.000"
               value={peso}
               onChange={(e) => setPeso(e.target.value)}
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
-            <Button variant="outline" className="flex-col h-20">
-              <Camera className="h-6 w-6 mb-1" />
-              <span className="text-xs">Foto 1</span>
-            </Button>
-            <Button variant="outline" className="flex-col h-20">
-              <Camera className="h-6 w-6 mb-1" />
-              <span className="text-xs">Foto 2</span>
-            </Button>
-            <Button variant="outline" className="flex-col h-20">
-              <Camera className="h-6 w-6 mb-1" />
-              <span className="text-xs">Foto 3</span>
-            </Button>
-          </div>
-
-          <div className="bg-accent p-3 rounded-lg">
-            <div className="flex items-center gap-2 text-sm">
-              <MapPin className="h-4 w-4 text-success" />
-              <span>Localização validada</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Centro, Curitiba - PR
-            </p>
-          </div>
-
           <Button 
             onClick={handleNovaEntrega} 
             className="w-full"
-            disabled={!selectedVoluntario || !peso}
+            disabled={!selectedVoluntario || !peso || loading}
           >
-            Registrar Entrega
+            {loading ? "Registrando..." : "Registrar Entrega"}
           </Button>
         </CardContent>
       </Card>
@@ -136,41 +163,60 @@ const Entregas = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {entregasRecentes.map((entrega) => (
-            <div
-              key={entrega.id}
-              className="bg-muted rounded-lg p-4 space-y-3"
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-semibold">{entrega.voluntario}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Balde {entrega.balde} • {entrega.peso}kg
-                  </p>
-                </div>
-                <span className="bg-card px-2 py-1 rounded text-xs font-medium">
-                  {entrega.fotos} fotos
-                </span>
-              </div>
+          {entregas.map((entrega) => {
+            const voluntario = voluntarios.find(v => v.id === entrega.voluntario_id);
+            const dataFormatada = new Date(entrega.created_at).toLocaleDateString('pt-BR');
+            const horaFormatada = new Date(entrega.created_at).toLocaleTimeString('pt-BR', { 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            });
 
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-3 w-3" />
-                  <span>{entrega.data}</span>
+            return (
+              <div
+                key={entrega.id}
+                className="bg-muted rounded-lg p-4 space-y-3"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-semibold">{voluntario?.nome || 'Voluntário não encontrado'}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Balde {voluntario?.numero_balde} • {Number(entrega.peso).toFixed(3)}kg
+                    </p>
+                  </div>
+                  <span className="bg-card px-2 py-1 rounded text-xs font-medium">
+                    {entrega.fotos.length} fotos
+                  </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-3 w-3" />
-                  <span>{entrega.hora}</span>
-                </div>
-              </div>
 
-              <div className="pt-2 border-t border-border">
-                <p className="text-xs text-muted-foreground">
-                  Lote: {entrega.lote}
-                </p>
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-3 w-3" />
+                    <span>{dataFormatada}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-3 w-3" />
+                    <span>{horaFormatada}</span>
+                  </div>
+                </div>
+
+                {entrega.lote_codigo && (
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-xs text-muted-foreground">
+                      Lote: {entrega.lote_codigo}
+                    </p>
+                  </div>
+                )}
+
+                {entrega.observacoes && (
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-xs text-muted-foreground">
+                      Observações: {entrega.observacoes}
+                    </p>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
     </div>
