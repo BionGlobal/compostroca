@@ -26,6 +26,7 @@ export type Database = {
           observacoes: string | null
           peso: number
           updated_at: string
+          user_id: string | null
           voluntario_id: string
         }
         Insert: {
@@ -39,6 +40,7 @@ export type Database = {
           observacoes?: string | null
           peso: number
           updated_at?: string
+          user_id?: string | null
           voluntario_id: string
         }
         Update: {
@@ -52,6 +54,7 @@ export type Database = {
           observacoes?: string | null
           peso?: number
           updated_at?: string
+          user_id?: string | null
           voluntario_id?: string
         }
         Relationships: [
@@ -63,6 +66,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          organization_code: string
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          organization_code?: string
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          organization_code?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       voluntarios: {
         Row: {
@@ -78,6 +111,7 @@ export type Database = {
           telefone: string
           unidade: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           ativo?: boolean
@@ -92,6 +126,7 @@ export type Database = {
           telefone: string
           unidade?: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           ativo?: boolean
@@ -106,6 +141,7 @@ export type Database = {
           telefone?: string
           unidade?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }

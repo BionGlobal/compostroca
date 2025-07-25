@@ -9,13 +9,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, Upload } from 'lucide-react';
 import { Voluntario } from '@/hooks/useVoluntarios';
+import { validateCPF, formatCPF, sanitizeInput, validateEmail, validatePhone, formatPhone, checkRateLimit } from '@/lib/validation';
+import { useToast } from '@/hooks/use-toast';
 
 const voluntarioSchema = z.object({
-  nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  cpf: z.string().regex(/^\d{11}$/, 'CPF deve ter 11 dígitos'),
-  email: z.string().email('Email inválido'),
-  telefone: z.string().min(10, 'Telefone deve ter pelo menos 10 dígitos'),
-  endereco: z.string().min(5, 'Endereço deve ter pelo menos 5 caracteres'),
+  nome: z.string()
+    .min(2, 'Nome deve ter pelo menos 2 caracteres')
+    .transform(sanitizeInput),
+  cpf: z.string()
+    .refine(validateCPF, 'CPF inválido'),
+  email: z.string()
+    .refine(validateEmail, 'Email inválido')
+    .transform(sanitizeInput),
+  telefone: z.string()
+    .refine(validatePhone, 'Telefone inválido'),
+  endereco: z.string()
+    .min(5, 'Endereço deve ter pelo menos 5 caracteres')
+    .transform(sanitizeInput),
   numero_balde: z.number().min(1).max(30),
   foto_url: z.string().optional(),
 });
@@ -35,6 +45,7 @@ export const VoluntarioForm: React.FC<VoluntarioFormProps> = ({
   onCancel,
   loading = false,
 }) => {
+  const { toast } = useToast();
   const {
     register,
     handleSubmit,
@@ -57,6 +68,27 @@ export const VoluntarioForm: React.FC<VoluntarioFormProps> = ({
   });
 
   const fotoUrl = watch('foto_url');
+
+  const handleFormSubmit = async (data: VoluntarioFormData) => {
+    // Rate limiting check
+    if (!checkRateLimit('volunteer-form', 3, 60000)) {
+      toast({
+        title: "Muitas tentativas",
+        description: "Aguarde um momento antes de tentar novamente",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Format data before submission
+    const formattedData = {
+      ...data,
+      cpf: data.cpf.replace(/\D/g, ''),
+      telefone: data.telefone.replace(/\D/g, ''),
+    };
+
+    await onSubmit(formattedData);
+  };
 
   const formatCPF = (value: string) => {
     return value.replace(/\D/g, '').slice(0, 11);
@@ -118,7 +150,7 @@ export const VoluntarioForm: React.FC<VoluntarioFormProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
           {/* Foto */}
           <div className="flex flex-col items-center space-y-4">
             <Avatar className="h-24 w-24">

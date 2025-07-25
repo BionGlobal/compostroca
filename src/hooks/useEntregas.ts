@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface Entrega {
   id: string;
@@ -20,6 +21,7 @@ export const useEntregas = (voluntarioId?: string) => {
   const [entregas, setEntregas] = useState<Entrega[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const fetchEntregas = async () => {
     try {
@@ -60,8 +62,10 @@ export const useEntregas = (voluntarioId?: string) => {
   };
 
   useEffect(() => {
-    fetchEntregas();
-  }, [voluntarioId]);
+    if (user) {
+      fetchEntregas();
+    }
+  }, [voluntarioId, user]);
 
   return {
     entregas,

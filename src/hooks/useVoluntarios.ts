@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface Voluntario {
   id: string;
@@ -21,6 +22,7 @@ export const useVoluntarios = () => {
   const [voluntarios, setVoluntarios] = useState<Voluntario[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const fetchVoluntarios = async () => {
     try {
@@ -47,9 +49,11 @@ export const useVoluntarios = () => {
 
   const createVoluntario = async (data: Omit<Voluntario, 'id' | 'created_at' | 'updated_at' | 'ativo'>) => {
     try {
+      if (!user) throw new Error('Usuário não autenticado');
+
       const { data: newVoluntario, error } = await supabase
         .from('voluntarios')
-        .insert([data])
+        .insert([{ ...data, user_id: user.id }])
         .select()
         .single();
 
@@ -154,8 +158,10 @@ export const useVoluntarios = () => {
   };
 
   useEffect(() => {
-    fetchVoluntarios();
-  }, []);
+    if (user) {
+      fetchVoluntarios();
+    }
+  }, [user]);
 
   return {
     voluntarios,
