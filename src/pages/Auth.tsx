@@ -61,7 +61,7 @@ const Auth = () => {
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <div className="p-2 rounded-full mb-4">
-            <img src="/lovable-uploads/b5447ccd-c863-4e8a-9880-d66ce4a8a5c4.png" alt="CompostRoca" className="h-12 w-12" />
+            <img src="/lovable-uploads/41d1fc0c-7816-49f3-91e3-59ed2ae3fefe.png" alt="CompostRoca" className="h-12 w-12" />
           </div>
           <h1 className="text-2xl font-bold text-emerald-900">CompostRoca</h1>
           <p className="text-emerald-700 text-center">Sistema de Gestão de Compostagem</p>

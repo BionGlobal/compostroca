@@ -4,7 +4,7 @@ import { BackgroundParticles } from './BackgroundParticles';
 import { Button } from '@/components/ui/button';
 import { LogOut, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-const compostrocaIcon = '/lovable-uploads/b5447ccd-c863-4e8a-9880-d66ce4a8a5c4.png';
+const compostrocaIcon = '/lovable-uploads/41d1fc0c-7816-49f3-91e3-59ed2ae3fefe.png';
 
 interface LayoutProps {
   children: ReactNode;
