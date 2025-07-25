@@ -201,34 +201,34 @@ const Voluntarios = () => {
                     </AvatarFallback>
                   </Avatar>
 
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold">{voluntario.nome}</h3>
-                      <span className="bg-earth text-earth-foreground px-2 py-1 rounded-full text-xs font-medium">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                      <h3 className="font-semibold truncate">{voluntario.nome}</h3>
+                      <span className="bg-earth text-earth-foreground px-2 py-1 rounded-full text-xs font-medium self-start shrink-0">
                         Balde {voluntario.numero_balde.toString().padStart(2, '0')}
                       </span>
                     </div>
 
                     <div className="space-y-1 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-3 w-3" />
-                        <span>{voluntario.email}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Mail className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{voluntario.email}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-3 w-3" />
-                        <span>{formatTelefone(voluntario.telefone)}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Phone className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{formatTelefone(voluntario.telefone)}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-3 w-3" />
-                        <span>{voluntario.endereco}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{voluntario.endereco}</span>
                       </div>
                     </div>
 
-                    <div className="flex gap-2 pt-2">
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2">
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="flex-1"
+                        className="w-full sm:flex-1"
                         onClick={() => handleEditClick(voluntario)}
                       >
                         <Edit className="h-3 w-3 mr-1" />
@@ -237,7 +237,7 @@ const Voluntarios = () => {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="flex-1"
+                        className="w-full sm:flex-1"
                         onClick={() => handleHistoricoClick(voluntario)}
                       >
                         <History className="h-3 w-3 mr-1" />
@@ -246,7 +246,7 @@ const Voluntarios = () => {
                       <Button 
                         variant="destructive" 
                         size="sm" 
-                        className="flex-1"
+                        className="w-full sm:flex-1"
                         onClick={() => handleDeleteClick(voluntario)}
                       >
                         <Trash2 className="h-3 w-3 mr-1" />
