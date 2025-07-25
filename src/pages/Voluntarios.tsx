@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Users, Search, Plus, Phone, Mail, MapPin, Edit, History, Loader2 } from 'lucide-react';
+import { Users, Search, Plus, Phone, Mail, MapPin, Edit, History, Loader2, Trash2 } from 'lucide-react';
 import { useVoluntarios } from '@/hooks/useVoluntarios';
 import { VoluntarioForm } from '@/components/VoluntarioForm';
 import { HistoricoVoluntario } from '@/components/HistoricoVoluntario';
@@ -16,6 +17,9 @@ const Voluntarios = () => {
   const [editingVoluntario, setEditingVoluntario] = useState(null);
   const [showHistorico, setShowHistorico] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [voluntarioToDelete, setVoluntarioToDelete] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const { 
     voluntarios, 
@@ -92,6 +96,31 @@ const Voluntarios = () => {
 
   const handleCloseHistorico = () => {
     setShowHistorico(null);
+  };
+
+  const handleDeleteClick = (voluntario) => {
+    setVoluntarioToDelete(voluntario);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!voluntarioToDelete) return;
+    
+    try {
+      setDeleteLoading(true);
+      await deleteVoluntario(voluntarioToDelete.id);
+      setDeleteConfirmOpen(false);
+      setVoluntarioToDelete(null);
+    } catch (error) {
+      // Error is handled in the hook
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirmOpen(false);
+    setVoluntarioToDelete(null);
   };
 
   const formatTelefone = (telefone: string) => {
@@ -214,6 +243,15 @@ const Voluntarios = () => {
                         <History className="h-3 w-3 mr-1" />
                         Histórico
                       </Button>
+                      <Button 
+                        variant="destructive" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleDeleteClick(voluntario)}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Excluir
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -260,6 +298,43 @@ const Voluntarios = () => {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Alert Dialog para confirmação de exclusão */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o voluntário <strong>{voluntarioToDelete?.nome}</strong>?
+              <br />
+              <br />
+              O balde <strong>{voluntarioToDelete?.numero_balde?.toString().padStart(2, '0')}</strong> será liberado para uso por outro voluntário.
+              <br />
+              <br />
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDelete} disabled={deleteLoading}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              disabled={deleteLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                'Confirmar Exclusão'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
