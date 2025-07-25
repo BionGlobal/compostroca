@@ -1,13 +1,16 @@
 import { StatCard } from '@/components/StatCard';
 import { CompostingBoxes } from '@/components/CompostingBoxes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Package, RotateCcw, CheckCircle, Clock, MapPin, Leaf } from 'lucide-react';
+import { Users, Package, RotateCcw, CheckCircle, Clock, MapPin, Home } from 'lucide-react';
+import { useVoluntarios } from '@/hooks/useVoluntarios';
 
 const Dashboard = () => {
-  // Mock data - será substituído por dados do Supabase
+  const { voluntarios } = useVoluntarios();
+  
+  // Dados reais do sistema
   const stats = {
-    voluntariosAtivos: 12,
-    residuosColetados: 156.5,
+    voluntariosAtivos: voluntarios.filter(v => v.ativo).length,
+    residuosColetados: 156.5, // Mock - será conectado às entregas
     lotesAndamento: 2,
     lotesFinalizados: 8,
   };
@@ -20,6 +23,25 @@ const Dashboard = () => {
 
   return (
     <div className="p-4 space-y-6">
+      {/* Informações da Unidade */}
+      <Card className="bg-gradient-primary text-primary-foreground border-0 organic-hover">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+              <Home className="h-6 w-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-lg">Fazenda Urbana do Cajuru</h3>
+              <p className="text-sm opacity-90 font-medium">CWB001</p>
+              <p className="text-xs opacity-80 mt-1">
+                Av. Prefeito Maurício Fruet, 1880 - Cajuru, Curitiba - PR, 82900-010, Brasil
+              </p>
+            </div>
+            <MapPin className="h-5 w-5 opacity-80 shrink-0" />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-4">
         <StatCard
@@ -78,21 +100,6 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Ação Rápida */}
-      <Card className="bg-gradient-primary text-primary-foreground border-0 organic-hover">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-              <Leaf className="h-6 w-6" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold">Unidade CWB001</h3>
-              <p className="text-sm opacity-90">Centro, Curitiba - PR</p>
-            </div>
-            <MapPin className="h-5 w-5 opacity-80" />
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

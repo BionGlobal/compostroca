@@ -134,9 +134,9 @@ export const CompostingBoxes = () => {
           
           return (
             <div key={indicator.label} className="flex items-center gap-1">
-              <Icon className="h-3 w-3 text-muted-foreground" />
-              <span className="text-xs font-medium">{indicator.label}:</span>
-              <span className={`text-xs font-bold ${isOptimal ? 'text-success' : 'text-warning'}`}>
+              <Icon className="h-3 w-3 text-white" />
+              <span className="text-xs font-medium text-white">{indicator.label}:</span>
+              <span className={`text-xs font-bold text-white`}>
                 {indicator.value}{indicator.unit}
               </span>
             </div>
@@ -216,16 +216,16 @@ export const CompostingBoxes = () => {
                     </div>
                   )}
 
-                  {/* Dados IoT - Química (Caixa 6) */}
-                  {box.chemistry && (
-                    <div className="p-2 bg-gradient-earth rounded-lg text-earth-foreground">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Zap className="h-4 w-4" />
-                        <span className="text-sm font-medium">Análise Química</span>
-                      </div>
-                      {renderChemistryIndicators(box.chemistry)}
-                    </div>
-                  )}
+                   {/* Dados IoT - Química (Caixa 6) */}
+                   {box.chemistry && (
+                     <div className="p-2 bg-gradient-earth rounded-lg text-white">
+                       <div className="flex items-center gap-2 mb-2">
+                         <Zap className="h-4 w-4 text-white" />
+                         <span className="text-sm font-medium text-white">Análise Química</span>
+                       </div>
+                       {renderChemistryIndicators(box.chemistry)}
+                     </div>
+                   )}
                 </CardContent>
               </Card>
 
