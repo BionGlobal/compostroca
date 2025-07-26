@@ -169,12 +169,12 @@ const Entregas = () => {
                   {fotos[0] ? (
                     <div className="flex flex-col items-center">
                       <Camera size={20} />
-                      <span className="text-xs">✓ Material</span>
+                      <span className="text-xs">✓ Capturada</span>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center">
                       <Camera size={20} />
-                      <span className="text-xs">📦 Material</span>
+                      <span className="text-xs">Conteúdo</span>
                     </div>
                   )}
                 </Button>
@@ -187,12 +187,12 @@ const Entregas = () => {
                   {fotos[1] ? (
                     <div className="flex flex-col items-center">
                       <Camera size={20} />
-                      <span className="text-xs">✓ Balança</span>
+                      <span className="text-xs">✓ Capturada</span>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center">
                       <Camera size={20} />
-                      <span className="text-xs">⚖️ Balança</span>
+                      <span className="text-xs">Pesagem</span>
                     </div>
                   )}
                 </Button>
@@ -205,12 +205,12 @@ const Entregas = () => {
                   {fotos[2] ? (
                     <div className="flex flex-col items-center">
                       <Camera size={20} />
-                      <span className="text-xs">✓ Local</span>
+                      <span className="text-xs">✓ Capturada</span>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center">
                       <Camera size={20} />
-                      <span className="text-xs">🎯 Local</span>
+                      <span className="text-xs">Destino</span>
                     </div>
                   )}
                 </Button>

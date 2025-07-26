@@ -1,9 +1,10 @@
 import React, { useRef, useCallback, useState } from 'react';
-import { Camera, X, Check } from 'lucide-react';
+import { Camera, X, Check, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface CameraCaptureProps {
   onPhotoCapture: (url: string) => void;
@@ -28,10 +29,13 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   const [isStreaming, setIsStreaming] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const startCamera = useCallback(async () => {
     try {
+      setIsLoading(true);
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: 'environment',
@@ -53,6 +57,8 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
         description: "Não foi possível acessar a câmera",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   }, [toast]);
 
@@ -83,7 +89,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   }, [stopCamera]);
 
   const uploadPhoto = useCallback(async () => {
-    if (!capturedPhoto) return;
+    if (!capturedPhoto || !user) return;
     
     setIsUploading(true);
     try {
@@ -91,9 +97,9 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
       const response = await fetch(capturedPhoto);
       const blob = await response.blob();
       
-      // Generate unique filename
+      // Generate unique filename with user.id as first folder
       const timestamp = Date.now();
-      const filename = `entregas/${entregaId || timestamp}/${photoType}_${timestamp}.jpg`;
+      const filename = `${user.id}/entregas/${entregaId || timestamp}/${photoType}_${timestamp}.jpg`;
       
       // Upload to Supabase storage
       const { data, error } = await supabase.storage
@@ -126,13 +132,18 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     } finally {
       setIsUploading(false);
     }
-  }, [capturedPhoto, entregaId, photoType, onPhotoCapture, toast]);
+  }, [capturedPhoto, entregaId, photoType, onPhotoCapture, toast, user]);
 
   const handleClose = useCallback(() => {
     stopCamera();
     setCapturedPhoto(null);
     onClose();
   }, [stopCamera, onClose]);
+
+  const retakePhoto = useCallback(() => {
+    setCapturedPhoto(null);
+    startCamera();
+  }, [startCamera]);
 
   React.useEffect(() => {
     if (isOpen && !capturedPhoto) {
@@ -146,77 +157,98 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg w-full max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Camera size={20} />
-            {title}
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4">
+      <DialogContent className="w-full h-full max-w-none max-h-none m-0 p-0 bg-black border-none">
+        {/* Header */}
+        <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4">
+          <div className="flex items-center justify-between text-white">
+            <h2 className="text-lg font-medium flex items-center gap-2">
+              <Camera size={20} />
+              {title}
+            </h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClose}
+              className="text-white hover:bg-white/20"
+            >
+              <X size={24} />
+            </Button>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="relative w-full h-full">
           {capturedPhoto ? (
-            <div className="space-y-4">
+            // Photo Preview
+            <div className="w-full h-full flex flex-col">
               <img
                 src={capturedPhoto}
                 alt="Foto capturada"
-                className="w-full rounded-lg"
+                className="flex-1 w-full object-cover"
               />
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setCapturedPhoto(null);
-                    startCamera();
-                  }}
-                  className="flex-1"
-                >
-                  Tirar Novamente
-                </Button>
-                <Button
-                  onClick={uploadPhoto}
-                  disabled={isUploading}
-                  className="flex-1"
-                >
-                  <Check size={16} className="mr-2" />
-                  {isUploading ? 'Salvando...' : 'Confirmar'}
-                </Button>
+              
+              {/* Bottom Controls for Preview */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
+                <div className="flex gap-4">
+                  <Button
+                    variant="secondary"
+                    onClick={retakePhoto}
+                    disabled={isUploading}
+                    className="flex-1 h-12"
+                  >
+                    <RotateCcw size={20} className="mr-2" />
+                    Tirar Novamente
+                  </Button>
+                  <Button
+                    onClick={uploadPhoto}
+                    disabled={isUploading}
+                    className="flex-1 h-12"
+                  >
+                    <Check size={20} className="mr-2" />
+                    {isUploading ? 'Salvando...' : 'Confirmar'}
+                  </Button>
+                </div>
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="relative aspect-[3/4] bg-black rounded-lg overflow-hidden">
-                <video
-                  ref={videoRef}
-                  className="w-full h-full object-cover"
-                  autoPlay
-                  playsInline
-                  muted
-                />
-                <canvas ref={canvasRef} className="hidden" />
-              </div>
+            // Camera View
+            <div className="w-full h-full flex flex-col">
+              {isLoading ? (
+                <div className="flex-1 flex items-center justify-center text-white">
+                  <div className="text-center">
+                    <Camera size={48} className="mx-auto mb-2 animate-pulse" />
+                    <p>Iniciando câmera...</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <video
+                    ref={videoRef}
+                    className="flex-1 w-full object-cover"
+                    autoPlay
+                    playsInline
+                    muted
+                  />
+                  <canvas ref={canvasRef} className="hidden" />
+                </>
+              )}
               
+              {/* Bottom Controls for Camera */}
               {isStreaming && (
-                <Button
-                  onClick={capturePhoto}
-                  size="lg"
-                  className="w-full"
-                >
-                  <Camera size={20} className="mr-2" />
-                  Capturar Foto
-                </Button>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
+                  <div className="flex justify-center">
+                    <Button
+                      onClick={capturePhoto}
+                      size="lg"
+                      className="w-20 h-20 rounded-full bg-white hover:bg-gray-200 text-black"
+                    >
+                      <Camera size={32} />
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           )}
-          
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            className="w-full"
-          >
-            <X size={16} className="mr-2" />
-            Cancelar
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
