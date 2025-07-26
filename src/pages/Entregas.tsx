@@ -41,6 +41,11 @@ const Entregas = () => {
   
   // Check if form should be disabled (no active lot)
   const isFormDisabled = !loteAtivoCaixa01;
+  
+  // Debug logs
+  console.log('🔍 Debug Entregas - loteAtivoCaixa01:', loteAtivoCaixa01);
+  console.log('🔍 Debug Entregas - isFormDisabled:', isFormDisabled);
+  console.log('🔍 Debug Entregas - loading:', loading);
 
   const getCurrentLocation = (): Promise<GeolocationPosition> => {
     return new Promise((resolve, reject) => {

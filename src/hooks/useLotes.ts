@@ -68,6 +68,10 @@ export const useLotes = () => {
 
       setLoteAtivoCaixa01(data ? data as Lote : null);
       
+      // Debug logs
+      console.log('🔍 useLotes - Lote encontrado:', data);
+      console.log('🔍 useLotes - Profile organization_code:', profile?.organization_code);
+      
       // Se há um lote ativo, buscar contagem de voluntários
       if (data) {
         await fetchVoluntariosCount(data.codigo);
