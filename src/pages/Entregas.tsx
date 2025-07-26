@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { MapPin, Star, Plus, Calendar, Camera, Eye, User, Clock, ExternalLink } from 'lucide-react';
+import { MapPin, Star, Plus, Calendar, Camera, Eye, User, Clock, ExternalLink, Package } from 'lucide-react';
 import { useVoluntarios } from '@/hooks/useVoluntarios';
 import { useEntregas } from '@/hooks/useEntregas';
 import { useAuth } from '@/hooks/useAuth';
@@ -38,6 +38,9 @@ const Entregas = () => {
 
   // Filter volunteers who haven't delivered to current lot
   const availableVoluntarios = voluntarios.filter(v => !hasDeliveredToCurrentLot(v.id, loteAtivoCaixa01?.codigo || null));
+  
+  // Check if form should be disabled (no active lot)
+  const isFormDisabled = !loteAtivoCaixa01;
 
   const getCurrentLocation = (): Promise<GeolocationPosition> => {
     return new Promise((resolve, reject) => {
@@ -177,10 +180,18 @@ const Entregas = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          {isFormDisabled && (
+            <div className="rounded-lg border-2 border-orange-200 bg-orange-50 p-4 mb-4">
+              <p className="text-orange-800 font-medium">
+                ⚠️ É necessário ter um lote ativo para registrar entregas. Inicie um novo lote na seção acima.
+              </p>
+            </div>
+          )}
+          
+          <div className={`space-y-4 ${isFormDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
             <div>
               <Label htmlFor="voluntario">Voluntário</Label>
-              <Select value={selectedVoluntario} onValueChange={setSelectedVoluntario}>
+              <Select value={selectedVoluntario} onValueChange={setSelectedVoluntario} disabled={isFormDisabled}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um voluntário" />
                 </SelectTrigger>
@@ -208,6 +219,7 @@ const Entregas = () => {
                 value={peso}
                 onChange={(e) => setPeso(e.target.value)}
                 placeholder="Ex: 10.432"
+                disabled={isFormDisabled}
               />
             </div>
 
@@ -216,6 +228,7 @@ const Entregas = () => {
               <StarRating
                 value={qualidadeResiduo}
                 onChange={setQualidadeResiduo}
+                disabled={isFormDisabled}
               />
             </div>
 
@@ -231,7 +244,7 @@ const Entregas = () => {
               
               <Button 
                 onClick={handleFazerFotos}
-                disabled={!selectedVoluntario || !peso || qualidadeResiduo === 0 || loading}
+                disabled={isFormDisabled || !selectedVoluntario || !peso || qualidadeResiduo === 0 || loading}
                 className="w-full"
                 variant="secondary"
               >
@@ -311,18 +324,23 @@ const Entregas = () => {
 
                   {/* Informações de Data e Local */}
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3 text-sm">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">
-                        {new Date(entrega.created_at).toLocaleString('pt-BR', {
-                          day: '2-digit',
-                          month: '2-digit', 
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                    </div>
+                     <div className="flex items-center gap-3 text-sm">
+                       <Clock className="h-4 w-4 text-muted-foreground" />
+                       <span className="font-medium">
+                         {new Date(entrega.created_at).toLocaleString('pt-BR', {
+                           day: '2-digit',
+                           month: '2-digit', 
+                           year: 'numeric',
+                           hour: '2-digit',
+                           minute: '2-digit'
+                         })}
+                       </span>
+                     </div>
+                     
+                     <div className="flex items-center gap-3 text-sm">
+                       <Package className="h-4 w-4 text-muted-foreground" />
+                       <span>Lote: <span className="font-mono font-medium">{entrega.lote_codigo || 'N/A'}</span></span>
+                     </div>
                     
                     <div className="flex items-center gap-3 text-sm">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
