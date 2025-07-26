@@ -91,7 +91,9 @@ export const useLotes = () => {
     const dia = agora.getDate().toString().padStart(2, '0');
     const mes = (agora.getMonth() + 1).toString().padStart(2, '0');
     const ano = agora.getFullYear().toString();
-    return `${unidade}-${dia}${mes}${ano}${linhaProducao}`;
+    // Adicionar 3 dígitos aleatórios para permitir múltiplos lotes por dia (teste)
+    const randomDigits = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `${unidade}-${dia}${mes}${ano}${linhaProducao}${randomDigits}`;
   };
 
   const getProximaSegunda = () => {
@@ -148,21 +150,21 @@ export const useLotes = () => {
       // Gerar código único
       const codigo = gerarCodigoLote(profile.organization_code, 'A');
       
-      // Verificar se código já existe
-      const { data: existingLote } = await supabase
-        .from('lotes')
-        .select('codigo')
-        .eq('codigo', codigo)
-        .single();
+      // Comentado para permitir múltiplos lotes por dia (teste)
+      // const { data: existingLote } = await supabase
+      //   .from('lotes')
+      //   .select('codigo')
+      //   .eq('codigo', codigo)
+      //   .single();
 
-      if (existingLote) {
-        toast({
-          title: "Erro",
-          description: "Já existe um lote com este código hoje",
-          variant: "destructive",
-        });
-        return null;
-      }
+      // if (existingLote) {
+      //   toast({
+      //     title: "Erro",
+      //     description: "Já existe um lote com este código hoje",
+      //     variant: "destructive",
+      //   });
+      //   return null;
+      // }
 
       // Criar novo lote
       const novoLote = {
