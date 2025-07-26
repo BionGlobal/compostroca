@@ -1,19 +1,11 @@
 import { StatCard } from '@/components/StatCard';
 import { CompostingBoxes } from '@/components/CompostingBoxes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Package, RotateCcw, CheckCircle, Clock, MapPin, Home } from 'lucide-react';
-import { useVoluntarios } from '@/hooks/useVoluntarios';
+import { Users, Package, RotateCcw, CheckCircle, Clock, MapPin, Home, Leaf, Sprout } from 'lucide-react';
+import { useDashboard } from '@/hooks/useDashboard';
 
 const Dashboard = () => {
-  const { voluntarios } = useVoluntarios();
-  
-  // Dados reais do sistema
-  const stats = {
-    voluntariosAtivos: voluntarios.filter(v => v.ativo).length,
-    residuosColetados: 156.5, // Mock - será conectado às entregas
-    lotesAndamento: 2,
-    lotesFinalizados: 8,
-  };
+  const { stats, loading } = useDashboard();
 
   const entregasRecentes = [
     { voluntario: 'Maria Silva', balde: '05', peso: 2.3, data: '23/07/2024 14:30' },
@@ -46,26 +38,42 @@ const Dashboard = () => {
       <div className="grid grid-cols-2 gap-4">
         <StatCard
           title="Voluntários Ativos"
-          value={stats.voluntariosAtivos}
+          value={loading ? "..." : stats.voluntariosAtivos}
           icon={<Users />}
           variant="primary"
         />
         <StatCard
           title="Resíduos (kg)"
-          value={stats.residuosColetados}
+          value={loading ? "..." : stats.residuosColetados.toFixed(1)}
           icon={<Package />}
-          description="Este mês"
+          description="Validados"
           variant="earth"
         />
         <StatCard
+          title="CO2e Evitado (kg)"
+          value={loading ? "..." : stats.co2eEvitado.toFixed(1)}
+          icon={<Leaf />}
+          description="Sustentabilidade"
+          variant="earth"
+        />
+        <StatCard
+          title="Composto Produzido (kg)"
+          value={loading ? "..." : stats.compostoProduzido.toFixed(1)}
+          icon={<Sprout />}
+          description="Resultado final"
+          variant="primary"
+        />
+        <StatCard
           title="Lotes em Andamento"
-          value={stats.lotesAndamento}
+          value={loading ? "..." : stats.lotesAndamento}
           icon={<Clock />}
+          description="Na esteira"
         />
         <StatCard
           title="Lotes Finalizados"
-          value={stats.lotesFinalizados}
+          value={loading ? "..." : stats.lotesFinalizados}
           icon={<CheckCircle />}
+          description="Concluídos"
         />
       </div>
 
