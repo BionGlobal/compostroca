@@ -17,6 +17,8 @@ import { EntregaFotosCapture } from '@/components/EntregaFotosCapture';
 import { EntregaFotosGaleria } from '@/components/EntregaFotosGaleria';
 import { useEntregaFotos } from '@/hooks/useEntregaFotos';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { LoteCard } from '@/components/LoteCard';
+import { useLotes } from '@/hooks/useLotes';
 
 
 const Entregas = () => {
@@ -32,6 +34,7 @@ const Entregas = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { validateAllPhotos } = useEntregaFotos(tempEntregaId || undefined);
+  const { loteAtivoCaixa01, atualizarPesoLote } = useLotes();
 
   // Filter volunteers who haven't delivered today
   const availableVoluntarios = voluntarios.filter(v => !hasDeliveredToday(v.id));
@@ -61,6 +64,16 @@ const Entregas = () => {
       return;
     }
 
+    // Verificar se existe lote ativo na Caixa 01
+    if (!loteAtivoCaixa01) {
+      toast({
+        title: "Erro",
+        description: "Não há lote ativo na Caixa 01. Inicie um novo lote antes de registrar entregas.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       // Get current location
@@ -76,6 +89,7 @@ const Entregas = () => {
           geolocalizacao_validada: true,
           qualidade_residuo: qualidadeResiduo,
           user_id: user.id,
+          lote_codigo: loteAtivoCaixa01.codigo,
         })
         .select()
         .single();
@@ -96,8 +110,15 @@ const Entregas = () => {
     }
   };
 
-  const handleFotosComplete = () => {
+  const handleFotosComplete = async () => {
     setShowCamera(false);
+    
+    // Atualizar peso do lote ativo
+    if (loteAtivoCaixa01 && peso) {
+      const novoPeso = loteAtivoCaixa01.peso_atual + parseFloat(peso);
+      await atualizarPesoLote(loteAtivoCaixa01.id, novoPeso);
+    }
+    
     setTempEntregaId(null);
     
     toast({
@@ -144,6 +165,9 @@ const Entregas = () => {
 
   return (
     <div className="p-4 space-y-6">
+      {/* Card do Lote */}
+      <LoteCard />
+      
       {/* Formulário de Nova Entrega */}
       <Card>
         <CardHeader>

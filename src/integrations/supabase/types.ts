@@ -94,6 +94,69 @@ export type Database = {
           },
         ]
       }
+      lotes: {
+        Row: {
+          caixa_atual: number
+          codigo: string
+          created_at: string | null
+          criado_por: string
+          criado_por_nome: string
+          data_encerramento: string | null
+          data_inicio: string
+          data_proxima_transferencia: string | null
+          id: string
+          latitude: number | null
+          linha_producao: string
+          longitude: number | null
+          peso_atual: number | null
+          peso_inicial: number | null
+          semana_atual: number
+          status: string
+          unidade: string
+          updated_at: string | null
+        }
+        Insert: {
+          caixa_atual?: number
+          codigo: string
+          created_at?: string | null
+          criado_por: string
+          criado_por_nome: string
+          data_encerramento?: string | null
+          data_inicio?: string
+          data_proxima_transferencia?: string | null
+          id?: string
+          latitude?: number | null
+          linha_producao?: string
+          longitude?: number | null
+          peso_atual?: number | null
+          peso_inicial?: number | null
+          semana_atual?: number
+          status?: string
+          unidade?: string
+          updated_at?: string | null
+        }
+        Update: {
+          caixa_atual?: number
+          codigo?: string
+          created_at?: string | null
+          criado_por?: string
+          criado_por_nome?: string
+          data_encerramento?: string | null
+          data_inicio?: string
+          data_proxima_transferencia?: string | null
+          id?: string
+          latitude?: number | null
+          linha_producao?: string
+          longitude?: number | null
+          peso_atual?: number | null
+          peso_inicial?: number | null
+          semana_atual?: number
+          status?: string
+          unidade?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
