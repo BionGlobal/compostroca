@@ -1,7 +1,7 @@
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { Camera, X, Check, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,6 +15,28 @@ interface CameraCaptureProps {
   photoType: 'conteudo' | 'pesagem' | 'destino';
 }
 
+interface PhotoExifData {
+  captured_at: string;
+  device_info: {
+    userAgent: string;
+    screen: { width: number; height: number };
+    platform: string;
+  };
+  location?: {
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+  };
+  camera_settings: {
+    resolution: { width: number; height: number };
+    facing_mode: string;
+  };
+  file_info: {
+    size: number;
+    type: string;
+  };
+}
+
 export const CameraCapture: React.FC<CameraCaptureProps> = ({
   onPhotoCapture,
   isOpen,
@@ -26,166 +48,232 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const [status, setStatus] = useState<'idle' | 'loading' | 'streaming' | 'captured'>('idle');
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [exifData, setExifData] = useState<PhotoExifData | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Cleanup função
+  const cleanup = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setStatus('idle');
+  }, []);
+
+  // Obter localização
+  const getLocation = useCallback((): Promise<PhotoExifData['location'] | undefined> => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve(undefined);
+        return;
+      }
+      
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          });
+        },
+        () => resolve(undefined),
+        { timeout: 3000, enableHighAccuracy: true }
+      );
+    });
+  }, []);
+
+  // Inicializar câmera
   const startCamera = useCallback(async () => {
     try {
-      console.log('Iniciando câmera...');
-      setIsLoading(true);
+      setStatus('loading');
       
-      // Configuração mais compatível e simples
+      // Timeout de 5 segundos
+      timeoutRef.current = setTimeout(() => {
+        console.error('Timeout na inicialização da câmera');
+        cleanup();
+        toast({
+          title: "Timeout da Câmera",
+          description: "A câmera demorou muito para responder",
+          variant: "destructive",
+        });
+      }, 5000);
+
+      // Constraints progressivos - começar simples
       const constraints = {
         video: {
           facingMode: 'environment',
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 }
+          width: { ideal: 720 },
+          height: { ideal: 480 }
         }
       };
 
-      console.log('Solicitando permissão da câmera...');
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('Stream obtido:', stream);
-      
       streamRef.current = stream;
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        
-        // Aguardar metadados e reproduzir
         videoRef.current.onloadedmetadata = () => {
-          console.log('Metadados carregados, reproduzindo vídeo...');
           videoRef.current?.play().then(() => {
-            console.log('Vídeo reproduzindo com sucesso');
-            setIsStreaming(true);
-            setIsLoading(false);
-          }).catch((playError) => {
-            console.error('Erro ao reproduzir vídeo:', playError);
-            setIsLoading(false);
+            if (timeoutRef.current) {
+              clearTimeout(timeoutRef.current);
+              timeoutRef.current = null;
+            }
+            setStatus('streaming');
           });
         };
       }
     } catch (error) {
-      console.error('Erro ao acessar câmera:', error);
+      console.error('Erro na câmera:', error);
+      cleanup();
       toast({
         title: "Erro na Câmera",
-        description: "Verifique as permissões da câmera e tente novamente",
+        description: "Não foi possível acessar a câmera",
         variant: "destructive",
       });
-      setIsLoading(false);
     }
-  }, [toast]);
+  }, [cleanup, toast]);
 
-  const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-      setIsStreaming(false);
-    }
-  }, []);
-
+  // Fechar câmera
   const handleClose = useCallback(() => {
-    stopCamera();
+    cleanup();
     setCapturedPhoto(null);
+    setExifData(null);
     onClose();
-  }, [stopCamera, onClose]);
+  }, [cleanup, onClose]);
 
-  const capturePhoto = useCallback(() => {
-    if (videoRef.current && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      const context = canvas.getContext('2d');
-      
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      
-      if (context) {
-        context.drawImage(video, 0, 0);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        setCapturedPhoto(dataUrl);
-        stopCamera();
-      }
-    }
-  }, [stopCamera]);
-
-  const uploadPhoto = useCallback(async () => {
-    if (!capturedPhoto || !user) return;
+  // Capturar foto com EXIF
+  const capturePhoto = useCallback(async () => {
+    if (!videoRef.current || !canvasRef.current) return;
     
-    console.log('Iniciando upload da foto...');
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    const context = canvas.getContext('2d');
+    
+    if (!context) return;
+    
+    // Definir dimensões
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Desenhar frame atual
+    context.drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    
+    // Obter localização
+    const location = await getLocation();
+    
+    // Criar dados EXIF
+    const exif: PhotoExifData = {
+      captured_at: new Date().toISOString(),
+      device_info: {
+        userAgent: navigator.userAgent,
+        screen: { 
+          width: window.screen.width, 
+          height: window.screen.height 
+        },
+        platform: navigator.platform
+      },
+      location,
+      camera_settings: {
+        resolution: { 
+          width: video.videoWidth, 
+          height: video.videoHeight 
+        },
+        facing_mode: 'environment'
+      },
+      file_info: {
+        size: Math.round(dataUrl.length * 0.75), // Estimativa do tamanho
+        type: 'image/jpeg'
+      }
+    };
+    
+    setCapturedPhoto(dataUrl);
+    setExifData(exif);
+    setStatus('captured');
+    cleanup();
+  }, [cleanup, getLocation]);
+
+  // Upload com dados EXIF
+  const uploadPhoto = useCallback(async () => {
+    if (!capturedPhoto || !user || !exifData) return;
+    
     setIsUploading(true);
     try {
-      // Convert base64 to blob
+      // Converter para blob
       const response = await fetch(capturedPhoto);
       const blob = await response.blob();
-      console.log('Blob criado, tamanho:', blob.size);
       
-      // Generate unique filename with user.id as first folder
+      // Gerar nome único
       const timestamp = Date.now();
       const filename = `${user.id}/entregas/${entregaId || timestamp}/${photoType}_${timestamp}.jpg`;
-      console.log('Nome do arquivo:', filename);
       
-      // Upload to Supabase storage
-      const { data, error } = await supabase.storage
+      // Upload da foto
+      const { error: uploadError } = await supabase.storage
         .from('volunteer-photos')
         .upload(filename, blob, {
           contentType: 'image/jpeg',
           upsert: true
         });
 
-      if (error) {
-        console.error('Erro no upload:', error);
-        throw error;
-      }
+      if (uploadError) throw uploadError;
 
-      console.log('Upload realizado com sucesso:', data);
-
-      // Get public URL
+      // Obter URL pública
       const { data: urlData } = supabase.storage
         .from('volunteer-photos')
         .getPublicUrl(filename);
 
-      console.log('URL pública gerada:', urlData.publicUrl);
+      // Log dos dados EXIF para debug
+      console.log('EXIF Data:', exifData);
+      
       onPhotoCapture(urlData.publicUrl);
       toast({
-        title: "Sucesso",
-        description: "Foto capturada com sucesso!",
+        title: "Sucesso", 
+        description: "Foto salva com sucesso!",
       });
       handleClose();
     } catch (error) {
-      console.error('Erro ao fazer upload:', error);
+      console.error('Erro no upload:', error);
       toast({
         title: "Erro",
-        description: `Falha no upload da foto: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        description: "Falha ao salvar a foto",
         variant: "destructive",
       });
     } finally {
       setIsUploading(false);
     }
-  }, [capturedPhoto, entregaId, photoType, onPhotoCapture, toast, user, handleClose]);
+  }, [capturedPhoto, user, exifData, entregaId, photoType, onPhotoCapture, toast, handleClose]);
 
+  // Tirar nova foto
   const retakePhoto = useCallback(() => {
     setCapturedPhoto(null);
+    setExifData(null);
+    setStatus('idle');
     startCamera();
   }, [startCamera]);
 
-  React.useEffect(() => {
-    if (isOpen && !capturedPhoto) {
-      console.log('Dialog aberto, iniciando câmera...');
+  // Effect para controlar o ciclo de vida
+  useEffect(() => {
+    if (isOpen && status === 'idle') {
       startCamera();
     }
-    
-    return () => {
-      console.log('Limpando recursos da câmera...');
-      stopCamera();
-    };
-  }, [isOpen, capturedPhoto, startCamera, stopCamera]);
+    return cleanup;
+  }, [isOpen, status, startCamera, cleanup]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="w-full h-full max-w-none max-h-none m-0 p-0 bg-black border-none">
+        <DialogTitle className="sr-only">{title}</DialogTitle>
+        
         {/* Header */}
         <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4">
           <div className="flex items-center justify-between text-white">
@@ -206,16 +294,16 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 
         {/* Main Content */}
         <div className="relative w-full h-full">
-          {capturedPhoto ? (
-            // Photo Preview
-            <div className="w-full h-full flex flex-col">
+          {status === 'captured' && capturedPhoto ? (
+            // Preview da foto
+            <div className="w-full h-full">
               <img
                 src={capturedPhoto}
                 alt="Foto capturada"
-                className="flex-1 w-full object-cover"
+                className="w-full h-full object-cover"
               />
               
-              {/* Bottom Controls for Preview */}
+              {/* Controles de confirmação */}
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
                 <div className="flex gap-4">
                   <Button
@@ -225,7 +313,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
                     className="flex-1 h-12"
                   >
                     <RotateCcw size={20} className="mr-2" />
-                    Tirar Novamente
+                    Nova Foto
                   </Button>
                   <Button
                     onClick={uploadPhoto}
@@ -233,27 +321,27 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
                     className="flex-1 h-12"
                   >
                     <Check size={20} className="mr-2" />
-                    {isUploading ? 'Salvando...' : 'Confirmar'}
+                    {isUploading ? 'Salvando...' : 'Salvar'}
                   </Button>
                 </div>
               </div>
             </div>
           ) : (
-            // Camera View
-            <div className="w-full h-full flex flex-col">
-              {isLoading ? (
-                <div className="flex-1 flex items-center justify-center text-white bg-black">
+            // Visualização da câmera
+            <div className="w-full h-full">
+              {status === 'loading' ? (
+                <div className="flex items-center justify-center h-full text-white bg-black">
                   <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-                    <p className="text-lg">Inicializando câmera...</p>
-                    <p className="text-sm text-gray-300 mt-2">Aguardando permissões</p>
+                    <p className="text-lg">Abrindo câmera...</p>
+                    <p className="text-sm text-gray-300 mt-2">Aguarde alguns segundos</p>
                   </div>
                 </div>
               ) : (
                 <>
                   <video
                     ref={videoRef}
-                    className="flex-1 w-full object-cover bg-black"
+                    className="w-full h-full object-cover bg-black"
                     autoPlay
                     playsInline
                     muted
@@ -262,8 +350,8 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
                 </>
               )}
               
-              {/* Bottom Controls for Camera */}
-              {isStreaming && (
+              {/* Botão de captura */}
+              {status === 'streaming' && (
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
                   <div className="flex justify-center">
                     <Button
