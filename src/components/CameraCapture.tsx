@@ -16,10 +16,9 @@ interface CameraCaptureProps {
 }
 
 interface PhotoExifData {
-  captured_at: string;
-  device_info: string;
-  location?: { latitude: number; longitude: number };
-  resolution: { width: number; height: number };
+  captureTime: string;
+  deviceInfo: string;
+  resolution: string;
 }
 
 export const CameraCapture: React.FC<CameraCaptureProps> = ({
@@ -97,93 +96,159 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     cleanup();
   };
 
-  // Upload com retry automático
+  // Função para converter base64 para blob nativamente
+  const base64ToBlob = (base64Data: string): Blob => {
+    console.log('🔄 Convertendo base64 para blob...');
+    
+    // Remover prefixo data:image/...;base64,
+    const base64String = base64Data.split(',')[1];
+    
+    // Converter base64 para bytes
+    const byteCharacters = atob(base64String);
+    const byteArrays = [];
+    
+    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+      const slice = byteCharacters.slice(offset, offset + 512);
+      const byteNumbers = new Array(slice.length);
+      
+      for (let i = 0; i < slice.length; i++) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
+      
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+    
+    const blob = new Blob(byteArrays, { type: 'image/jpeg' });
+    console.log('✅ Blob criado:', { size: blob.size, type: blob.type });
+    return blob;
+  };
+
+  // Sistema de upload robusto e simplificado
   const uploadPhoto = async (retryCount = 0) => {
-    if (!capturedPhoto || !user) return;
+    if (!capturedPhoto || !user) {
+      console.error('❌ Dados faltando para upload:', { capturedPhoto: !!capturedPhoto, user: !!user });
+      return;
+    }
     
     setIsUploading(true);
     setUploadError(null);
     
+    const maxRetries = 3;
+    const timeoutMs = 30000;
+    
     try {
-      console.log(`Tentativa ${retryCount + 1} de upload...`);
+      console.log(`🚀 Iniciando upload - Tentativa ${retryCount + 1}/${maxRetries}`);
       
-      // Converter base64 para blob
-      const response = await fetch(capturedPhoto);
-      const blob = await response.blob();
-      console.log('Blob criado:', { size: blob.size, type: blob.type });
-      
-      // Validar tamanho do arquivo (máx 10MB)
-      if (blob.size > 10 * 1024 * 1024) {
-        throw new Error('Arquivo muito grande (máx 10MB)');
+      // 1. Verificar conectividade básica
+      if (!navigator.onLine) {
+        throw new Error('Sem conexão com a internet');
       }
       
-      const timestamp = Date.now();
-      const filename = `${user.id}/${entregaId || timestamp}/${photoType}_${timestamp}.jpg`;
-      console.log('Fazendo upload para:', filename);
+      // 2. Converter base64 para blob nativamente (sem fetch)
+      const blob = base64ToBlob(capturedPhoto);
       
-      // Upload com timeout de 30 segundos
+      // 3. Validar tamanho (máx 10MB)
+      if (blob.size > 10 * 1024 * 1024) {
+        throw new Error('Imagem muito grande (máximo 10MB)');
+      }
+      
+      if (blob.size === 0) {
+        throw new Error('Imagem inválida (tamanho zero)');
+      }
+      
+      // 4. Gerar nome único e simples
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 8);
+      const filename = `${user.id}/${timestamp}_${randomId}_${photoType}.jpg`;
+      
+      console.log('📤 Fazendo upload:', { 
+        filename, 
+        size: `${(blob.size / 1024).toFixed(1)}KB`,
+        type: blob.type 
+      });
+      
+      // 5. Upload com timeout
       const uploadPromise = supabase.storage
         .from('volunteer-photos')
         .upload(filename, blob, {
           contentType: 'image/jpeg',
-          upsert: true
+          upsert: false, // Não sobrescrever, gerar erro se existir
         });
       
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Upload timeout')), 30000)
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error(`Upload demorou mais que ${timeoutMs/1000}s`)), timeoutMs)
       );
       
-      const { data, error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]) as any;
+      const { data: uploadData, error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]);
       
       if (uploadError) {
-        console.error('Erro no upload:', uploadError);
-        throw uploadError;
+        console.error('❌ Erro no Supabase:', uploadError);
+        throw new Error(`Upload falhou: ${uploadError.message}`);
       }
       
-      console.log('Upload bem-sucedido:', data);
+      if (!uploadData) {
+        throw new Error('Upload retornou dados vazios');
+      }
       
+      console.log('✅ Upload concluído:', uploadData);
+      
+      // 6. Gerar URL pública
       const { data: urlData } = supabase.storage
         .from('volunteer-photos')
         .getPublicUrl(filename);
       
-      console.log('URL pública gerada:', urlData.publicUrl);
-
-      // EXIF data simples para log
+      if (!urlData?.publicUrl) {
+        throw new Error('Falha ao gerar URL pública');
+      }
+      
+      console.log('🔗 URL gerada:', urlData.publicUrl);
+      
+      // 7. Log dos metadados
       const exifData: PhotoExifData = {
-        captured_at: new Date().toISOString(),
-        device_info: navigator.userAgent,
-        resolution: { 
-          width: canvasRef.current?.width || 0, 
-          height: canvasRef.current?.height || 0 
-        }
+        captureTime: new Date().toISOString(),
+        deviceInfo: navigator.userAgent.substring(0, 50),
+        resolution: `${videoRef.current?.videoWidth || 0}x${videoRef.current?.videoHeight || 0}`,
       };
       
-      console.log('Foto salva com EXIF:', exifData);
-      
-      onPhotoCapture(urlData.publicUrl);
-      toast({
-        title: "Sucesso", 
-        description: "Foto salva com sucesso!",
+      console.log('📸 Foto processada:', {
+        url: urlData.publicUrl,
+        metadata: exifData,
+        photoType,
+        fileSize: blob.size,
       });
+      
+      // 8. Callback e feedback
+      onPhotoCapture(urlData.publicUrl);
+      
+      toast({
+        title: "✅ Foto Salva!",
+        description: `${photoType} capturada com sucesso`,
+      });
+      
       onClose();
       
     } catch (error: any) {
-      console.error(`Erro na tentativa ${retryCount + 1}:`, error);
+      console.error(`❌ Erro na tentativa ${retryCount + 1}:`, error);
       
-      // Retry automático até 3 tentativas
-      if (retryCount < 2) {
-        console.log(`Tentando novamente em 2 segundos... (tentativa ${retryCount + 2})`);
-        setTimeout(() => uploadPhoto(retryCount + 1), 2000);
+      // Retry com backoff exponencial
+      if (retryCount < maxRetries - 1) {
+        const delayMs = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+        console.log(`🔄 Tentando novamente em ${delayMs/1000}s... (${retryCount + 2}/${maxRetries})`);
+        
+        setTimeout(() => uploadPhoto(retryCount + 1), delayMs);
         return;
       }
       
-      // Falha definitiva após 3 tentativas
-      const errorMessage = error.message || 'Erro desconhecido';
+      // Falha definitiva
+      const errorMessage = error.message || 'Erro desconhecido no upload';
       setUploadError(errorMessage);
       
+      console.error('💥 Falha definitiva após todas as tentativas:', errorMessage);
+      
       toast({
-        title: "Erro ao Salvar",
-        description: `Falha após 3 tentativas: ${errorMessage}`,
+        title: "❌ Erro ao Salvar",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
