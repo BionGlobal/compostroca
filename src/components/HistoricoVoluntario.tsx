@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Package, MapPin, Camera, ArrowLeft } from 'lucide-react';
+import { Calendar, Package, MapPin, ArrowLeft } from 'lucide-react';
 import { Voluntario } from '@/hooks/useVoluntarios';
 import { useEntregas } from '@/hooks/useEntregas';
 import { format } from 'date-fns';
@@ -147,12 +147,6 @@ export const HistoricoVoluntario: React.FC<HistoricoVoluntarioProps> = ({
                       </div>
                     )}
 
-                    {entrega.fotos && entrega.fotos.length > 0 && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Camera className="h-3 w-3" />
-                        <span>{entrega.fotos.length} foto(s)</span>
-                      </div>
-                    )}
 
                     {entrega.observacoes && (
                       <div className="text-xs text-muted-foreground bg-muted p-2 rounded">

@@ -5,26 +5,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Camera, Star, Plus, Calendar, Clock } from 'lucide-react';
+import { MapPin, Star, Plus, Calendar } from 'lucide-react';
 import { useVoluntarios } from '@/hooks/useVoluntarios';
 import { useEntregas } from '@/hooks/useEntregas';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { StarRating } from '@/components/StarRating';
-import { CameraCapture } from '@/components/CameraCapture';
+
 
 const Entregas = () => {
   const [selectedVoluntario, setSelectedVoluntario] = useState<string>('');
   const [peso, setPeso] = useState<string>('');
-  const [fotos, setFotos] = useState<string[]>(['', '', '']);
   const [qualidadeResiduo, setQualidadeResiduo] = useState<number>(0);
   const [loading, setLoading] = useState(false);
-  const [cameraOpen, setCameraOpen] = useState<{ open: boolean; type: 'conteudo' | 'pesagem' | 'destino'; index: number }>({
-    open: false,
-    type: 'conteudo',
-    index: 0
-  });
 
   const { voluntarios } = useVoluntarios();
   const { entregas, hasDeliveredToday, refetch: refetchEntregas } = useEntregas();
@@ -59,16 +53,6 @@ const Entregas = () => {
       return;
     }
 
-    // Check if all 3 photos are captured
-    if (fotos.some(foto => !foto)) {
-      toast({
-        title: "Erro",
-        description: "Todas as 3 fotos são obrigatórias",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
     try {
       // Get current location
@@ -79,7 +63,6 @@ const Entregas = () => {
         .insert({
           voluntario_id: selectedVoluntario,
           peso: parseFloat(peso),
-          fotos: fotos,
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           geolocalizacao_validada: true,
@@ -97,7 +80,6 @@ const Entregas = () => {
       // Reset form
       setSelectedVoluntario('');
       setPeso('');
-      setFotos(['', '', '']);
       setQualidadeResiduo(0);
       
       // Refresh data
@@ -114,15 +96,6 @@ const Entregas = () => {
     }
   };
 
-  const handlePhotoCapture = (url: string, index: number) => {
-    const newFotos = [...fotos];
-    newFotos[index] = url;
-    setFotos(newFotos);
-  };
-
-  const openCamera = (type: 'conteudo' | 'pesagem' | 'destino', index: number) => {
-    setCameraOpen({ open: true, type, index });
-  };
 
   return (
     <div className="p-4 space-y-6">
@@ -157,65 +130,6 @@ const Entregas = () => {
               )}
             </div>
 
-            <div>
-              <Label>Fotos da Entrega</Label>
-              <div className="grid grid-cols-3 gap-4 mt-2">
-                <Button 
-                  variant={fotos[0] ? "default" : "outline"} 
-                  className="w-full h-20 flex flex-col items-center justify-center gap-2"
-                  type="button"
-                  onClick={() => openCamera('conteudo', 0)}
-                >
-                  {fotos[0] ? (
-                    <div className="flex flex-col items-center">
-                      <Camera size={20} />
-                      <span className="text-xs">✓ Capturada</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <Camera size={20} />
-                      <span className="text-xs">Conteúdo</span>
-                    </div>
-                  )}
-                </Button>
-                <Button 
-                  variant={fotos[1] ? "default" : "outline"} 
-                  className="w-full h-20 flex flex-col items-center justify-center gap-2"
-                  type="button"
-                  onClick={() => openCamera('pesagem', 1)}
-                >
-                  {fotos[1] ? (
-                    <div className="flex flex-col items-center">
-                      <Camera size={20} />
-                      <span className="text-xs">✓ Capturada</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <Camera size={20} />
-                      <span className="text-xs">Pesagem</span>
-                    </div>
-                  )}
-                </Button>
-                <Button 
-                  variant={fotos[2] ? "default" : "outline"} 
-                  className="w-full h-20 flex flex-col items-center justify-center gap-2"
-                  type="button"
-                  onClick={() => openCamera('destino', 2)}
-                >
-                  {fotos[2] ? (
-                    <div className="flex flex-col items-center">
-                      <Camera size={20} />
-                      <span className="text-xs">✓ Capturada</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <Camera size={20} />
-                      <span className="text-xs">Destino</span>
-                    </div>
-                  )}
-                </Button>
-              </div>
-            </div>
 
             <div>
               <Label htmlFor="peso">Peso (kg)</Label>
@@ -239,7 +153,7 @@ const Entregas = () => {
 
             <Button 
               onClick={handleNovaEntrega}
-              disabled={!selectedVoluntario || !peso || qualidadeResiduo === 0 || fotos.some(f => !f) || loading}
+              disabled={!selectedVoluntario || !peso || qualidadeResiduo === 0 || loading}
               className="w-full"
             >
               {loading ? 'Registrando...' : 'Registrar Entrega'}
@@ -267,7 +181,7 @@ const Entregas = () => {
                       {voluntario?.nome || 'Voluntário não encontrado'}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      Balde {voluntario?.numero_balde} • {entrega.peso}kg • {entrega.fotos.length} foto(s)
+                      Balde {voluntario?.numero_balde} • {entrega.peso}kg
                     </div>
                     {entrega.qualidade_residuo && (
                       <div className="flex items-center gap-1 text-sm">
@@ -303,13 +217,6 @@ const Entregas = () => {
         </CardContent>
       </Card>
 
-      <CameraCapture
-        isOpen={cameraOpen.open}
-        onClose={() => setCameraOpen({ ...cameraOpen, open: false })}
-        onPhotoCapture={(url) => handlePhotoCapture(url, cameraOpen.index)}
-        title={`Foto: ${cameraOpen.type.charAt(0).toUpperCase() + cameraOpen.type.slice(1)}`}
-        photoType={cameraOpen.type}
-      />
     </div>
   );
 };

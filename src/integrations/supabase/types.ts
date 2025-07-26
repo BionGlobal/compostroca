@@ -17,7 +17,6 @@ export type Database = {
       entregas: {
         Row: {
           created_at: string
-          fotos: string[]
           geolocalizacao_validada: boolean | null
           id: string
           latitude: number | null
@@ -32,7 +31,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          fotos?: string[]
           geolocalizacao_validada?: boolean | null
           id?: string
           latitude?: number | null
@@ -47,7 +45,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          fotos?: string[]
           geolocalizacao_validada?: boolean | null
           id?: string
           latitude?: number | null

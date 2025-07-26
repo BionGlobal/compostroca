@@ -7,7 +7,6 @@ export interface Entrega {
   id: string;
   voluntario_id: string;
   peso: number;
-  fotos: string[];
   latitude?: number;
   longitude?: number;
   geolocalizacao_validada: boolean;
