@@ -37,6 +37,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   const [isReady, setIsReady] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -48,6 +49,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     }
     setIsReady(false);
     setCapturedPhoto(null);
+    setUploadError(null);
   };
 
   // Inicializar câmera simplificado
@@ -95,30 +97,56 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     cleanup();
   };
 
-  // Upload simplificado
-  const uploadPhoto = async () => {
+  // Upload com retry automático
+  const uploadPhoto = async (retryCount = 0) => {
     if (!capturedPhoto || !user) return;
     
     setIsUploading(true);
+    setUploadError(null);
+    
     try {
+      console.log(`Tentativa ${retryCount + 1} de upload...`);
+      
+      // Converter base64 para blob
       const response = await fetch(capturedPhoto);
       const blob = await response.blob();
+      console.log('Blob criado:', { size: blob.size, type: blob.type });
+      
+      // Validar tamanho do arquivo (máx 10MB)
+      if (blob.size > 10 * 1024 * 1024) {
+        throw new Error('Arquivo muito grande (máx 10MB)');
+      }
       
       const timestamp = Date.now();
       const filename = `${user.id}/${entregaId || timestamp}/${photoType}_${timestamp}.jpg`;
+      console.log('Fazendo upload para:', filename);
       
-      const { error: uploadError } = await supabase.storage
+      // Upload com timeout de 30 segundos
+      const uploadPromise = supabase.storage
         .from('volunteer-photos')
         .upload(filename, blob, {
           contentType: 'image/jpeg',
           upsert: true
         });
-
-      if (uploadError) throw uploadError;
-
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Upload timeout')), 30000)
+      );
+      
+      const { data, error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]) as any;
+      
+      if (uploadError) {
+        console.error('Erro no upload:', uploadError);
+        throw uploadError;
+      }
+      
+      console.log('Upload bem-sucedido:', data);
+      
       const { data: urlData } = supabase.storage
         .from('volunteer-photos')
         .getPublicUrl(filename);
+      
+      console.log('URL pública gerada:', urlData.publicUrl);
 
       // EXIF data simples para log
       const exifData: PhotoExifData = {
@@ -135,14 +163,27 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
       onPhotoCapture(urlData.publicUrl);
       toast({
         title: "Sucesso", 
-        description: "Foto salva!",
+        description: "Foto salva com sucesso!",
       });
       onClose();
-    } catch (error) {
-      console.error('Erro upload:', error);
+      
+    } catch (error: any) {
+      console.error(`Erro na tentativa ${retryCount + 1}:`, error);
+      
+      // Retry automático até 3 tentativas
+      if (retryCount < 2) {
+        console.log(`Tentando novamente em 2 segundos... (tentativa ${retryCount + 2})`);
+        setTimeout(() => uploadPhoto(retryCount + 1), 2000);
+        return;
+      }
+      
+      // Falha definitiva após 3 tentativas
+      const errorMessage = error.message || 'Erro desconhecido';
+      setUploadError(errorMessage);
+      
       toast({
-        title: "Erro",
-        description: "Falha ao salvar",
+        title: "Erro ao Salvar",
+        description: `Falha após 3 tentativas: ${errorMessage}`,
         variant: "destructive",
       });
     } finally {
@@ -209,7 +250,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
                     Nova Foto
                   </Button>
                   <Button
-                    onClick={uploadPhoto}
+                    onClick={() => uploadPhoto()}
                     disabled={isUploading}
                     className="flex-1"
                   >
