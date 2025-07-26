@@ -25,6 +25,7 @@ export type Database = {
           lote_codigo: string | null
           observacoes: string | null
           peso: number
+          qualidade_residuo: number | null
           updated_at: string
           user_id: string | null
           voluntario_id: string
@@ -39,6 +40,7 @@ export type Database = {
           lote_codigo?: string | null
           observacoes?: string | null
           peso: number
+          qualidade_residuo?: number | null
           updated_at?: string
           user_id?: string | null
           voluntario_id: string
@@ -53,6 +55,7 @@ export type Database = {
           lote_codigo?: string | null
           observacoes?: string | null
           peso?: number
+          qualidade_residuo?: number | null
           updated_at?: string
           user_id?: string | null
           voluntario_id?: string

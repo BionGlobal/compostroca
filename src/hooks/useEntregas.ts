@@ -13,6 +13,7 @@ export interface Entrega {
   geolocalizacao_validada: boolean;
   lote_codigo?: string;
   observacoes?: string;
+  qualidade_residuo?: number;
   created_at: string;
   updated_at: string;
 }
@@ -61,6 +62,14 @@ export const useEntregas = (voluntarioId?: string) => {
     return entregas.filter(e => e.voluntario_id === voluntarioId).length;
   };
 
+  const hasDeliveredToday = (voluntarioId: string) => {
+    const today = new Date().toISOString().split('T')[0];
+    return entregas.some(e => 
+      e.voluntario_id === voluntarioId && 
+      e.created_at.startsWith(today)
+    );
+  };
+
   useEffect(() => {
     if (user) {
       fetchEntregas();
@@ -72,6 +81,7 @@ export const useEntregas = (voluntarioId?: string) => {
     loading,
     getTotalKgByVoluntario,
     getCountByVoluntario,
+    hasDeliveredToday,
     refetch: fetchEntregas,
   };
 };

@@ -1,66 +1,89 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Package, Camera, Clock, Plus, Calendar } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { MapPin, Camera, Star, Plus, Calendar, Clock } from 'lucide-react';
 import { useVoluntarios } from '@/hooks/useVoluntarios';
 import { useEntregas } from '@/hooks/useEntregas';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { StarRating } from '@/components/StarRating';
+import { CameraCapture } from '@/components/CameraCapture';
 
 const Entregas = () => {
-  const [selectedVoluntario, setSelectedVoluntario] = useState('');
-  const [peso, setPeso] = useState('');
-  const [fotos, setFotos] = useState<string[]>([]);
+  const [selectedVoluntario, setSelectedVoluntario] = useState<string>('');
+  const [peso, setPeso] = useState<string>('');
+  const [fotos, setFotos] = useState<string[]>(['', '', '']);
+  const [qualidadeResiduo, setQualidadeResiduo] = useState<number>(0);
   const [loading, setLoading] = useState(false);
-  
+  const [cameraOpen, setCameraOpen] = useState<{ open: boolean; type: 'conteudo' | 'pesagem' | 'destino'; index: number }>({
+    open: false,
+    type: 'conteudo',
+    index: 0
+  });
+
   const { voluntarios } = useVoluntarios();
-  const { entregas, refetch } = useEntregas();
+  const { entregas, hasDeliveredToday, refetch: refetchEntregas } = useEntregas();
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const getCurrentLocation = (): Promise<{ latitude: number; longitude: number }> => {
+  // Filter volunteers who haven't delivered today
+  const availableVoluntarios = voluntarios.filter(v => !hasDeliveredToday(v.id));
+
+  const getCurrentLocation = (): Promise<GeolocationPosition> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
         reject(new Error('Geolocalização não é suportada neste navegador'));
         return;
       }
 
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          resolve({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-        },
-        (error) => {
-          reject(error);
-        }
-      );
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      });
     });
   };
 
   const handleNovaEntrega = async () => {
-    if (!selectedVoluntario || !peso || !user) return;
+    if (!selectedVoluntario || !peso || !user || qualidadeResiduo === 0) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os campos obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    // Check if all 3 photos are captured
+    if (fotos.some(foto => !foto)) {
+      toast({
+        title: "Erro",
+        description: "Todas as 3 fotos são obrigatórias",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
     try {
-      setLoading(true);
-
-      // Obter localização atual
-      const location = await getCurrentLocation();
-
-      // Registrar entrega no Supabase
+      // Get current location
+      const position = await getCurrentLocation();
+      
       const { error } = await supabase
         .from('entregas')
         .insert({
           voluntario_id: selectedVoluntario,
           peso: parseFloat(peso),
           fotos: fotos,
-          latitude: location.latitude,
-          longitude: location.longitude,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
           geolocalizacao_validada: true,
+          qualidade_residuo: qualidadeResiduo,
           user_id: user.id,
         });
 
@@ -71,14 +94,14 @@ const Entregas = () => {
         description: "Entrega registrada com sucesso!",
       });
 
-      // Limpar formulário
+      // Reset form
       setSelectedVoluntario('');
       setPeso('');
-      setFotos([]);
+      setFotos(['', '', '']);
+      setQualidadeResiduo(0);
       
-      // Atualizar lista de entregas
-      refetch();
-
+      // Refresh data
+      refetchEntregas();
     } catch (error) {
       console.error('Erro ao registrar entrega:', error);
       toast({
@@ -91,6 +114,16 @@ const Entregas = () => {
     }
   };
 
+  const handlePhotoCapture = (url: string, index: number) => {
+    const newFotos = [...fotos];
+    newFotos[index] = url;
+    setFotos(newFotos);
+  };
+
+  const openCamera = (type: 'conteudo' | 'pesagem' | 'destino', index: number) => {
+    setCameraOpen({ open: true, type, index });
+  };
+
   return (
     <div className="p-4 space-y-6">
       {/* Formulário de Nova Entrega */}
@@ -101,56 +134,123 @@ const Entregas = () => {
             Nova Entrega
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">Voluntário</label>
-            <Select value={selectedVoluntario} onValueChange={setSelectedVoluntario}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o voluntário" />
-              </SelectTrigger>
-              <SelectContent>
-                {voluntarios.map((voluntario) => (
-                  <SelectItem key={voluntario.id} value={voluntario.id}>
-                    {voluntario.nome} - Balde {voluntario.numero_balde}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="voluntario">Voluntário</Label>
+              <Select value={selectedVoluntario} onValueChange={setSelectedVoluntario}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um voluntário" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableVoluntarios.map((voluntario) => (
+                    <SelectItem key={voluntario.id} value={voluntario.id}>
+                      {voluntario.nome} - Balde {voluntario.numero_balde}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {voluntarios.length > availableVoluntarios.length && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {voluntarios.length - availableVoluntarios.length} voluntário(s) já fizeram entrega hoje
+                </p>
+              )}
+            </div>
 
-          <div className="grid grid-cols-3 gap-2">
-            <Button variant="outline" className="flex-col h-20">
-              <Camera className="h-6 w-6 mb-1" />
-              <span className="text-xs">Conteúdo balde</span>
-            </Button>
-            <Button variant="outline" className="flex-col h-20">
-              <Camera className="h-6 w-6 mb-1" />
-              <span className="text-xs">Pesagem</span>
-            </Button>
-            <Button variant="outline" className="flex-col h-20">
-              <Camera className="h-6 w-6 mb-1" />
-              <span className="text-xs">Destino (caixa 1)</span>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Conteúdo</Label>
+                <Button 
+                  variant={fotos[0] ? "default" : "outline"} 
+                  className="w-full h-20 flex flex-col items-center justify-center gap-2"
+                  type="button"
+                  onClick={() => openCamera('conteudo', 0)}
+                >
+                  {fotos[0] ? (
+                    <div className="flex flex-col items-center">
+                      <Camera size={20} />
+                      <span className="text-xs">✓ Capturada</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <Camera size={20} />
+                      <span className="text-xs">Conteúdo</span>
+                    </div>
+                  )}
+                </Button>
+              </div>
+              <div>
+                <Label>Pesagem</Label>
+                <Button 
+                  variant={fotos[1] ? "default" : "outline"} 
+                  className="w-full h-20 flex flex-col items-center justify-center gap-2"
+                  type="button"
+                  onClick={() => openCamera('pesagem', 1)}
+                >
+                  {fotos[1] ? (
+                    <div className="flex flex-col items-center">
+                      <Camera size={20} />
+                      <span className="text-xs">✓ Capturada</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <Camera size={20} />
+                      <span className="text-xs">Pesagem</span>
+                    </div>
+                  )}
+                </Button>
+              </div>
+              <div>
+                <Label>Destino</Label>
+                <Button 
+                  variant={fotos[2] ? "default" : "outline"} 
+                  className="w-full h-20 flex flex-col items-center justify-center gap-2"
+                  type="button"
+                  onClick={() => openCamera('destino', 2)}
+                >
+                  {fotos[2] ? (
+                    <div className="flex flex-col items-center">
+                      <Camera size={20} />
+                      <span className="text-xs">✓ Capturada</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <Camera size={20} />
+                      <span className="text-xs">Destino</span>
+                    </div>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="peso">Peso (kg)</Label>
+              <Input
+                id="peso"
+                type="number"
+                step="0.001"
+                value={peso}
+                onChange={(e) => setPeso(e.target.value)}
+                placeholder="Ex: 10.432"
+              />
+            </div>
+
+            <div>
+              <Label>Qualidade do Resíduo</Label>
+              <StarRating
+                value={qualidadeResiduo}
+                onChange={setQualidadeResiduo}
+              />
+            </div>
+
+            <Button 
+              onClick={handleNovaEntrega}
+              disabled={!selectedVoluntario || !peso || qualidadeResiduo === 0 || fotos.some(f => !f) || loading}
+              className="w-full"
+            >
+              {loading ? 'Registrando...' : 'Registrar Entrega'}
             </Button>
           </div>
-
-          <div>
-            <label className="text-sm font-medium mb-2 block">Peso (kg)</label>
-            <Input
-              type="number"
-              step="0.001"
-              placeholder="0.000"
-              value={peso}
-              onChange={(e) => setPeso(e.target.value)}
-            />
-          </div>
-
-          <Button 
-            onClick={handleNovaEntrega} 
-            className="w-full"
-            disabled={!selectedVoluntario || !peso || loading}
-          >
-            {loading ? "Registrando..." : "Registrar Entrega"}
-          </Button>
         </CardContent>
       </Card>
 
@@ -158,67 +258,64 @@ const Entregas = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-primary" />
+            <Calendar className="h-5 w-5 text-primary" />
             Entregas Recentes
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {entregas.map((entrega) => {
-            const voluntario = voluntarios.find(v => v.id === entrega.voluntario_id);
-            const dataFormatada = new Date(entrega.created_at).toLocaleDateString('pt-BR');
-            const horaFormatada = new Date(entrega.created_at).toLocaleTimeString('pt-BR', { 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            });
-
-            return (
-              <div
-                key={entrega.id}
-                className="bg-muted rounded-lg p-4 space-y-3"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-semibold">{voluntario?.nome || 'Voluntário não encontrado'}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Balde {voluntario?.numero_balde} • {Number(entrega.peso).toFixed(3)}kg
-                    </p>
+        <CardContent>
+          <div className="space-y-4">
+            {entregas.slice(0, 5).map((entrega) => {
+              const voluntario = voluntarios.find(v => v.id === entrega.voluntario_id);
+              return (
+                <div key={entrega.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="font-medium">
+                      {voluntario?.nome || 'Voluntário não encontrado'}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Balde {voluntario?.numero_balde} • {entrega.peso}kg • {entrega.fotos.length} foto(s)
+                    </div>
+                    {entrega.qualidade_residuo && (
+                      <div className="flex items-center gap-1 text-sm">
+                        <span>Qualidade:</span>
+                        <div className="flex">
+                          {[1, 2, 3].map((star) => (
+                            <Star
+                              key={star}
+                              size={12}
+                              className={star <= entrega.qualidade_residuo! ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {entrega.latitude && entrega.longitude && (
+                      <div className="text-xs text-muted-foreground">
+                        <MapPin size={12} className="inline mr-1" />
+                        Lat: {entrega.latitude.toFixed(6)}, Lon: {entrega.longitude.toFixed(6)}
+                      </div>
+                    )}
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(entrega.created_at).toLocaleString('pt-BR')}
+                    </div>
                   </div>
-                  <span className="bg-card px-2 py-1 rounded text-xs font-medium">
-                    {entrega.fotos.length} fotos
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-3 w-3" />
-                    <span>{dataFormatada}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-3 w-3" />
-                    <span>{horaFormatada}</span>
+                    <Badge variant="secondary">{entrega.peso}kg</Badge>
                   </div>
                 </div>
-
-                {entrega.lote_codigo && (
-                  <div className="pt-2 border-t border-border">
-                    <p className="text-xs text-muted-foreground">
-                      Lote: {entrega.lote_codigo}
-                    </p>
-                  </div>
-                )}
-
-                {entrega.observacoes && (
-                  <div className="pt-2 border-t border-border">
-                    <p className="text-xs text-muted-foreground">
-                      Observações: {entrega.observacoes}
-                    </p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
+
+      <CameraCapture
+        isOpen={cameraOpen.open}
+        onClose={() => setCameraOpen({ ...cameraOpen, open: false })}
+        onPhotoCapture={(url) => handlePhotoCapture(url, cameraOpen.index)}
+        title={`Foto: ${cameraOpen.type.charAt(0).toUpperCase() + cameraOpen.type.slice(1)}`}
+        photoType={cameraOpen.type}
+      />
     </div>
   );
 };
