@@ -41,6 +41,13 @@ export const EntregaFotosCapture: React.FC<EntregaFotosCaptureProps> = ({
 
   const startCamera = async () => {
     try {
+      // Para o stream anterior se existir
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      
+      setCameraActive(false);
+      
       const mediaStream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: 'environment' } 
       });
@@ -48,7 +55,11 @@ export const EntregaFotosCapture: React.FC<EntregaFotosCaptureProps> = ({
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
         setStream(mediaStream);
-        setCameraActive(true);
+        
+        // Aguarda o vídeo estar pronto antes de marcar como ativo
+        videoRef.current.onloadedmetadata = () => {
+          setCameraActive(true);
+        };
       }
     } catch (error) {
       console.error('Erro ao acessar câmera:', error);
@@ -122,6 +133,13 @@ export const EntregaFotosCapture: React.FC<EntregaFotosCaptureProps> = ({
       stopCamera();
     };
   }, []);
+
+  // Reinicializar câmera quando o step muda
+  useEffect(() => {
+    if (currentStep && !capturedImage) {
+      startCamera();
+    }
+  }, [currentStep]);
 
   const currentInstruction = FOTO_INSTRUCTIONS[currentStep];
   const progressStep = currentStep === 'conteudo' ? 1 : currentStep === 'pesagem' ? 2 : 3;
