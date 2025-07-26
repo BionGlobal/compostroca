@@ -157,9 +157,9 @@ const Entregas = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label>Conteúdo</Label>
+            <div>
+              <Label>Fotos da Entrega</Label>
+              <div className="grid grid-cols-3 gap-4 mt-2">
                 <Button 
                   variant={fotos[0] ? "default" : "outline"} 
                   className="w-full h-20 flex flex-col items-center justify-center gap-2"
@@ -169,18 +169,15 @@ const Entregas = () => {
                   {fotos[0] ? (
                     <div className="flex flex-col items-center">
                       <Camera size={20} />
-                      <span className="text-xs">✓ Capturada</span>
+                      <span className="text-xs">✓ Material</span>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center">
                       <Camera size={20} />
-                      <span className="text-xs">Conteúdo</span>
+                      <span className="text-xs">📦 Material</span>
                     </div>
                   )}
                 </Button>
-              </div>
-              <div>
-                <Label>Pesagem</Label>
                 <Button 
                   variant={fotos[1] ? "default" : "outline"} 
                   className="w-full h-20 flex flex-col items-center justify-center gap-2"
@@ -190,18 +187,15 @@ const Entregas = () => {
                   {fotos[1] ? (
                     <div className="flex flex-col items-center">
                       <Camera size={20} />
-                      <span className="text-xs">✓ Capturada</span>
+                      <span className="text-xs">✓ Balança</span>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center">
                       <Camera size={20} />
-                      <span className="text-xs">Pesagem</span>
+                      <span className="text-xs">⚖️ Balança</span>
                     </div>
                   )}
                 </Button>
-              </div>
-              <div>
-                <Label>Destino</Label>
                 <Button 
                   variant={fotos[2] ? "default" : "outline"} 
                   className="w-full h-20 flex flex-col items-center justify-center gap-2"
@@ -211,12 +205,12 @@ const Entregas = () => {
                   {fotos[2] ? (
                     <div className="flex flex-col items-center">
                       <Camera size={20} />
-                      <span className="text-xs">✓ Capturada</span>
+                      <span className="text-xs">✓ Local</span>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center">
                       <Camera size={20} />
-                      <span className="text-xs">Destino</span>
+                      <span className="text-xs">🎯 Local</span>
                     </div>
                   )}
                 </Button>

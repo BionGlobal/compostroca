@@ -35,8 +35,8 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          width: { ideal: 720 },
+          height: { ideal: 1280 }
         }
       });
       
@@ -120,7 +120,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
       console.error('Erro ao fazer upload:', error);
       toast({
         title: "Erro",
-        description: "Erro ao salvar a foto",
+        description: `Falha no upload da foto: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
         variant: "destructive",
       });
     } finally {
@@ -146,7 +146,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg w-full max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Camera size={20} />
@@ -185,7 +185,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+              <div className="relative aspect-[3/4] bg-black rounded-lg overflow-hidden">
                 <video
                   ref={videoRef}
                   className="w-full h-full object-cover"
