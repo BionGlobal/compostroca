@@ -30,14 +30,14 @@ const Entregas = () => {
   const [tempEntregaId, setTempEntregaId] = useState<string | null>(null);
 
   const { voluntarios } = useVoluntarios();
-  const { entregas, hasDeliveredToday, refetch: refetchEntregas } = useEntregas();
+  const { entregas, hasDeliveredToday, hasDeliveredToCurrentLot, refetch: refetchEntregas } = useEntregas();
   const { user } = useAuth();
   const { toast } = useToast();
   const { validateAllPhotos } = useEntregaFotos(tempEntregaId || undefined);
   const { loteAtivoCaixa01, atualizarPesoLote } = useLotes();
 
-  // Filter volunteers who haven't delivered today
-  const availableVoluntarios = voluntarios.filter(v => !hasDeliveredToday(v.id));
+  // Filter volunteers who haven't delivered to current lot
+  const availableVoluntarios = voluntarios.filter(v => !hasDeliveredToCurrentLot(v.id, loteAtivoCaixa01?.codigo || null));
 
   const getCurrentLocation = (): Promise<GeolocationPosition> => {
     return new Promise((resolve, reject) => {
@@ -194,7 +194,7 @@ const Entregas = () => {
               </Select>
               {voluntarios.length > availableVoluntarios.length && (
                 <p className="text-sm text-muted-foreground mt-1">
-                  {voluntarios.length - availableVoluntarios.length} voluntário(s) já fizeram entrega hoje
+                  {voluntarios.length - availableVoluntarios.length} voluntário(s) já fizeram entrega neste lote
                 </p>
               )}
             </div>

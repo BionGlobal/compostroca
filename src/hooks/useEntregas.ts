@@ -69,6 +69,14 @@ export const useEntregas = (voluntarioId?: string) => {
     );
   };
 
+  const hasDeliveredToCurrentLot = (voluntarioId: string, loteAtivo: string | null) => {
+    if (!loteAtivo) return false;
+    return entregas.some(e => 
+      e.voluntario_id === voluntarioId && 
+      e.lote_codigo === loteAtivo
+    );
+  };
+
   useEffect(() => {
     if (user) {
       fetchEntregas();
@@ -81,6 +89,7 @@ export const useEntregas = (voluntarioId?: string) => {
     getTotalKgByVoluntario,
     getCountByVoluntario,
     hasDeliveredToday,
+    hasDeliveredToCurrentLot,
     refetch: fetchEntregas,
   };
 };
