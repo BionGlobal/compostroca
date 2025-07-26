@@ -11,6 +11,8 @@ import { Camera, Upload } from 'lucide-react';
 import { Voluntario } from '@/hooks/useVoluntarios';
 import { validateCPF, formatCPF, sanitizeInput, validateEmail, validatePhone, formatPhone, checkRateLimit } from '@/lib/validation';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const voluntarioSchema = z.object({
   nome: z.string()
@@ -46,6 +48,8 @@ export const VoluntarioForm: React.FC<VoluntarioFormProps> = ({
   loading = false,
 }) => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [uploading, setUploading] = React.useState(false);
   const {
     register,
     handleSubmit,
@@ -108,10 +112,73 @@ export const VoluntarioForm: React.FC<VoluntarioFormProps> = ({
   };
 
   const handleFileUpload = async (file: File) => {
-    // Por enquanto, vamos simular o upload
-    // Em uma implementação real, você faria upload para o Supabase Storage
-    const url = URL.createObjectURL(file);
-    setValue('foto_url', url);
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file type and size
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione apenas arquivos de imagem",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB
+      toast({
+        title: "Erro",
+        description: "Imagem muito grande. Máximo 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      // Create unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('voluntarios-fotos')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('voluntarios-fotos')
+        .getPublicUrl(data.path);
+
+      setValue('foto_url', publicUrl);
+      
+      toast({
+        title: "Sucesso",
+        description: "Foto enviada com sucesso!",
+      });
+
+    } catch (error: any) {
+      console.error('Erro no upload:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao enviar a foto. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleCameraCapture = () => {
@@ -166,18 +233,20 @@ export const VoluntarioForm: React.FC<VoluntarioFormProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={handleCameraCapture}
+                disabled={uploading}
               >
                 <Camera className="h-4 w-4 mr-2" />
-                Câmera
+                {uploading ? 'Enviando...' : 'Câmera'}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={handleImageUpload}
+                disabled={uploading}
               >
                 <Upload className="h-4 w-4 mr-2" />
-                Galeria
+                {uploading ? 'Enviando...' : 'Galeria'}
               </Button>
             </div>
           </div>
