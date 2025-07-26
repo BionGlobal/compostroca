@@ -181,18 +181,80 @@ export const VoluntarioForm: React.FC<VoluntarioFormProps> = ({
     }
   };
 
+  // Detect if device is mobile
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+  };
+
   const handleCameraCapture = () => {
-    // Implementar captura via câmera
+    const isMobile = isMobileDevice();
+    
+    if (isMobile) {
+      // For mobile devices, try to use getUserMedia for better camera control
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: 'environment' // Force main (rear) camera
+          } 
+        })
+        .then((stream) => {
+          // Stop the stream immediately as we just wanted to check permissions
+          stream.getTracks().forEach(track => track.stop());
+          
+          // Now create the input with capture attribute
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.capture = 'environment'; // Main camera
+          input.setAttribute('capture', 'environment');
+          
+          input.onchange = (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file) {
+              handleFileUpload(file);
+            }
+          };
+          
+          input.click();
+        })
+        .catch((error) => {
+          console.log('Camera access denied or not available:', error);
+          // Fallback to regular file input
+          createFileInput();
+        });
+      } else {
+        // Fallback for older mobile browsers
+        createFileInput();
+      }
+    } else {
+      // Desktop - show message and open file selector
+      toast({
+        title: "Modo Desktop",
+        description: "Em desktop, selecione uma imagem do seu computador",
+      });
+      createFileInput();
+    }
+  };
+
+  const createFileInput = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.capture = 'environment';
+    
+    // Only add capture on mobile devices
+    if (isMobileDevice()) {
+      input.capture = 'environment'; // Main camera
+      input.setAttribute('capture', 'environment');
+    }
+    
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         handleFileUpload(file);
       }
     };
+    
     input.click();
   };
 
