@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { MapPin, Star, Plus, Calendar, Camera, Eye, User, Clock, ExternalLink } from 'lucide-react';
 import { useVoluntarios } from '@/hooks/useVoluntarios';
 import { useEntregas } from '@/hooks/useEntregas';
@@ -230,48 +231,49 @@ const Entregas = () => {
           <div className="space-y-4">
             {entregas.slice(0, 5).map((entrega) => {
               const voluntario = voluntarios.find(v => v.id === entrega.voluntario_id);
-              const getValidatorName = () => {
-                // Se houver user_id, pode buscar o nome do usuário
-                // Por ora, usando um nome genérico
-                return user?.email?.split('@')[0] || 'Sistema';
-              };
 
               const googleMapsUrl = entrega.latitude && entrega.longitude 
                 ? `https://maps.google.com/maps?q=${entrega.latitude},${entrega.longitude}`
                 : null;
 
+              const coordsText = entrega.latitude && entrega.longitude 
+                ? `${Number(entrega.latitude).toFixed(6)}, ${Number(entrega.longitude).toFixed(6)}`
+                : 'Sem coordenadas';
+
               return (
-                <div key={entrega.id} className="glass-light rounded-lg p-4 space-y-3">
-                  {/* Header com Avatar e Badge de Peso */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3 flex-1">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={voluntario?.foto_url} />
-                        <AvatarFallback className="text-sm">
-                          {voluntario?.nome?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'V'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-base leading-tight">
-                          {voluntario?.nome || 'Voluntário não encontrado'}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Balde nº{voluntario?.numero_balde || 'N/A'}
-                        </p>
-                      </div>
+                <div key={entrega.id} className="glass-light rounded-xl p-6 space-y-4">
+                  {/* Header - Avatar e Informações do Voluntário */}
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-16 w-16 border-2 border-border">
+                      <AvatarImage src={voluntario?.foto_url} />
+                      <AvatarFallback className="text-lg font-semibold">
+                        {voluntario?.nome?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'V'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-lg leading-tight">
+                        {voluntario?.nome || 'Voluntário não encontrado'}
+                      </h3>
+                      <p className="text-base text-muted-foreground">
+                        Balde nº{voluntario?.numero_balde || 'N/A'}
+                      </p>
                     </div>
-                    <Badge className="bg-green-500 hover:bg-green-600 text-white font-bold text-sm px-3 py-1">
-                      {entrega.peso}kg
-                    </Badge>
                   </div>
 
-                  {/* Qualidade - Estrelas */}
-                  {entrega.qualidade_residuo && (
-                    <div className="flex items-center justify-center gap-1">
-                      {[1, 2, 3].map((star) => (
+                  <Separator />
+
+                  {/* Peso e Qualidade */}
+                  <div className="flex items-center justify-between">
+                    <div className="text-center">
+                      <Badge className="bg-green-500 hover:bg-green-600 text-white font-bold text-lg px-4 py-2">
+                        {Number(entrega.peso).toFixed(3)}kg
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {entrega.qualidade_residuo && [1, 2, 3].map((star) => (
                         <Star
                           key={star}
-                          size={16}
+                          size={20}
                           className={star <= entrega.qualidade_residuo! 
                             ? "fill-yellow-400 text-yellow-400" 
                             : "text-muted-foreground"
@@ -279,57 +281,61 @@ const Entregas = () => {
                         />
                       ))}
                     </div>
-                  )}
+                  </div>
 
-                  {/* Info Row - Data e Validador */}
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      <span>{new Date(entrega.created_at).toLocaleString('pt-BR')}</span>
+                  <Separator />
+
+                  {/* Informações de Data e Local */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-sm">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {new Date(entrega.created_at).toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit', 
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <User className="h-4 w-4" />
-                      <span>Validado por: {getValidatorName()}</span>
+                    
+                    <div className="flex items-center gap-3 text-sm">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      {googleMapsUrl ? (
+                        <a 
+                          href={googleMapsUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="underline text-primary hover:text-primary/80 font-medium"
+                        >
+                          {coordsText}
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">{coordsText}</span>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-3 text-sm">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span>Validado por: <span className="font-medium">Bion Global</span></span>
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 pt-2">
-                    {/* Botão Ver Local */}
-                    {googleMapsUrl ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => window.open(googleMapsUrl, '_blank')}
-                      >
-                        <MapPin className="h-4 w-4 mr-1" />
-                        Ver Local
-                        <ExternalLink className="h-3 w-3 ml-1" />
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        disabled
-                      >
-                        <MapPin className="h-4 w-4 mr-1" />
-                        Sem localização
-                      </Button>
-                    )}
+                  <Separator />
 
-                    {/* Botão Ver Fotos */}
+                  {/* Botão Ver Fotos Centralizado */}
+                  <div className="flex justify-center pt-2">
                     <EntregaFotosGaleria 
                       entregaId={entrega.id} 
                       numeroBalde={voluntario?.numero_balde || 0}
                     >
                       <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
+                        variant="default"
+                        size="default"
+                        className="px-8"
                       >
-                        <Eye className="h-4 w-4 mr-1" />
+                        <Eye className="h-4 w-4 mr-2" />
                         Ver Fotos
                       </Button>
                     </EntregaFotosGaleria>
