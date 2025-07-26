@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      entrega_fotos: {
+        Row: {
+          created_at: string
+          entrega_id: string
+          foto_url: string
+          id: string
+          tipo_foto: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          entrega_id: string
+          foto_url: string
+          id?: string
+          tipo_foto: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          entrega_id?: string
+          foto_url?: string
+          id?: string
+          tipo_foto?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       entregas: {
         Row: {
           created_at: string

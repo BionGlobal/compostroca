@@ -5,13 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Star, Plus, Calendar } from 'lucide-react';
+import { MapPin, Star, Plus, Calendar, Camera } from 'lucide-react';
 import { useVoluntarios } from '@/hooks/useVoluntarios';
 import { useEntregas } from '@/hooks/useEntregas';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { StarRating } from '@/components/StarRating';
+import { EntregaFotosCapture } from '@/components/EntregaFotosCapture';
+import { useEntregaFotos } from '@/hooks/useEntregaFotos';
 
 
 const Entregas = () => {
@@ -19,11 +21,14 @@ const Entregas = () => {
   const [peso, setPeso] = useState<string>('');
   const [qualidadeResiduo, setQualidadeResiduo] = useState<number>(0);
   const [loading, setLoading] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [tempEntregaId, setTempEntregaId] = useState<string | null>(null);
 
   const { voluntarios } = useVoluntarios();
   const { entregas, hasDeliveredToday, refetch: refetchEntregas } = useEntregas();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { validateAllPhotos } = useEntregaFotos(tempEntregaId || undefined);
 
   // Filter volunteers who haven't delivered today
   const availableVoluntarios = voluntarios.filter(v => !hasDeliveredToday(v.id));
@@ -43,7 +48,7 @@ const Entregas = () => {
     });
   };
 
-  const handleNovaEntrega = async () => {
+  const handleFazerFotos = async () => {
     if (!selectedVoluntario || !peso || !user || qualidadeResiduo === 0) {
       toast({
         title: "Erro",
@@ -58,7 +63,7 @@ const Entregas = () => {
       // Get current location
       const position = await getCurrentLocation();
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('entregas')
         .insert({
           voluntario_id: selectedVoluntario,
@@ -68,27 +73,19 @@ const Entregas = () => {
           geolocalizacao_validada: true,
           qualidade_residuo: qualidadeResiduo,
           user_id: user.id,
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      toast({
-        title: "Sucesso",
-        description: "Entrega registrada com sucesso!",
-      });
-
-      // Reset form
-      setSelectedVoluntario('');
-      setPeso('');
-      setQualidadeResiduo(0);
-      
-      // Refresh data
-      refetchEntregas();
+      setTempEntregaId(data.id);
+      setShowCamera(true);
     } catch (error) {
-      console.error('Erro ao registrar entrega:', error);
+      console.error('Erro ao criar entrega:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível registrar a entrega",
+        description: "Não foi possível criar a entrega",
         variant: "destructive",
       });
     } finally {
@@ -96,6 +93,51 @@ const Entregas = () => {
     }
   };
 
+  const handleFotosComplete = () => {
+    setShowCamera(false);
+    setTempEntregaId(null);
+    
+    toast({
+      title: "Sucesso",
+      description: "Entrega registrada com sucesso!",
+    });
+
+    // Reset form
+    setSelectedVoluntario('');
+    setPeso('');
+    setQualidadeResiduo(0);
+    
+    // Refresh data
+    refetchEntregas();
+  };
+
+  const handleCancelFotos = () => {
+    setShowCamera(false);
+    
+    // Delete temporary delivery if it exists
+    if (tempEntregaId) {
+      supabase
+        .from('entregas')
+        .delete()
+        .eq('id', tempEntregaId)
+        .then(() => {
+          setTempEntregaId(null);
+        });
+    }
+  };
+
+
+  if (showCamera && tempEntregaId) {
+    return (
+      <div className="p-4">
+        <EntregaFotosCapture 
+          entregaId={tempEntregaId}
+          onComplete={handleFotosComplete}
+          onCancel={handleCancelFotos}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 space-y-6">
@@ -130,7 +172,6 @@ const Entregas = () => {
               )}
             </div>
 
-
             <div>
               <Label htmlFor="peso">Peso (kg)</Label>
               <Input
@@ -151,13 +192,26 @@ const Entregas = () => {
               />
             </div>
 
-            <Button 
-              onClick={handleNovaEntrega}
-              disabled={!selectedVoluntario || !peso || qualidadeResiduo === 0 || loading}
-              className="w-full"
-            >
-              {loading ? 'Registrando...' : 'Registrar Entrega'}
-            </Button>
+            {/* Seção de Fotos da Entrega */}
+            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+              <div className="flex items-center gap-2">
+                <Camera className="h-5 w-5" />
+                <Label className="text-base font-medium">Fotos da Entrega</Label>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Será necessário fazer 3 fotos obrigatórias: conteúdo do balde, pesagem e destino.
+              </p>
+              
+              <Button 
+                onClick={handleFazerFotos}
+                disabled={!selectedVoluntario || !peso || qualidadeResiduo === 0 || loading}
+                className="w-full"
+                variant="secondary"
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                {loading ? 'Preparando...' : 'Fazer Fotos'}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
