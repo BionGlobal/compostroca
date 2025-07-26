@@ -35,29 +35,46 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 
   const startCamera = useCallback(async () => {
     try {
+      console.log('Iniciando câmera...');
       setIsLoading(true);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
+      
+      // Configuração mais compatível e simples
+      const constraints = {
+        video: {
           facingMode: 'environment',
-          width: { ideal: 720 },
-          height: { ideal: 1280 }
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 }
         }
-      });
+      };
+
+      console.log('Solicitando permissão da câmera...');
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('Stream obtido:', stream);
       
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
-        setIsStreaming(true);
+        
+        // Aguardar metadados e reproduzir
+        videoRef.current.onloadedmetadata = () => {
+          console.log('Metadados carregados, reproduzindo vídeo...');
+          videoRef.current?.play().then(() => {
+            console.log('Vídeo reproduzindo com sucesso');
+            setIsStreaming(true);
+            setIsLoading(false);
+          }).catch((playError) => {
+            console.error('Erro ao reproduzir vídeo:', playError);
+            setIsLoading(false);
+          });
+        };
       }
     } catch (error) {
       console.error('Erro ao acessar câmera:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível acessar a câmera",
+        title: "Erro na Câmera",
+        description: "Verifique as permissões da câmera e tente novamente",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   }, [toast]);
@@ -69,6 +86,12 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
       setIsStreaming(false);
     }
   }, []);
+
+  const handleClose = useCallback(() => {
+    stopCamera();
+    setCapturedPhoto(null);
+    onClose();
+  }, [stopCamera, onClose]);
 
   const capturePhoto = useCallback(() => {
     if (videoRef.current && canvasRef.current) {
@@ -91,15 +114,18 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   const uploadPhoto = useCallback(async () => {
     if (!capturedPhoto || !user) return;
     
+    console.log('Iniciando upload da foto...');
     setIsUploading(true);
     try {
       // Convert base64 to blob
       const response = await fetch(capturedPhoto);
       const blob = await response.blob();
+      console.log('Blob criado, tamanho:', blob.size);
       
       // Generate unique filename with user.id as first folder
       const timestamp = Date.now();
       const filename = `${user.id}/entregas/${entregaId || timestamp}/${photoType}_${timestamp}.jpg`;
+      console.log('Nome do arquivo:', filename);
       
       // Upload to Supabase storage
       const { data, error } = await supabase.storage
@@ -109,13 +135,19 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
           upsert: true
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro no upload:', error);
+        throw error;
+      }
+
+      console.log('Upload realizado com sucesso:', data);
 
       // Get public URL
       const { data: urlData } = supabase.storage
         .from('volunteer-photos')
         .getPublicUrl(filename);
 
+      console.log('URL pública gerada:', urlData.publicUrl);
       onPhotoCapture(urlData.publicUrl);
       toast({
         title: "Sucesso",
@@ -132,13 +164,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     } finally {
       setIsUploading(false);
     }
-  }, [capturedPhoto, entregaId, photoType, onPhotoCapture, toast, user]);
-
-  const handleClose = useCallback(() => {
-    stopCamera();
-    setCapturedPhoto(null);
-    onClose();
-  }, [stopCamera, onClose]);
+  }, [capturedPhoto, entregaId, photoType, onPhotoCapture, toast, user, handleClose]);
 
   const retakePhoto = useCallback(() => {
     setCapturedPhoto(null);
@@ -147,10 +173,12 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 
   React.useEffect(() => {
     if (isOpen && !capturedPhoto) {
+      console.log('Dialog aberto, iniciando câmera...');
       startCamera();
     }
     
     return () => {
+      console.log('Limpando recursos da câmera...');
       stopCamera();
     };
   }, [isOpen, capturedPhoto, startCamera, stopCamera]);
@@ -214,17 +242,18 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
             // Camera View
             <div className="w-full h-full flex flex-col">
               {isLoading ? (
-                <div className="flex-1 flex items-center justify-center text-white">
+                <div className="flex-1 flex items-center justify-center text-white bg-black">
                   <div className="text-center">
-                    <Camera size={48} className="mx-auto mb-2 animate-pulse" />
-                    <p>Iniciando câmera...</p>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+                    <p className="text-lg">Inicializando câmera...</p>
+                    <p className="text-sm text-gray-300 mt-2">Aguardando permissões</p>
                   </div>
                 </div>
               ) : (
                 <>
                   <video
                     ref={videoRef}
-                    className="flex-1 w-full object-cover"
+                    className="flex-1 w-full object-cover bg-black"
                     autoPlay
                     playsInline
                     muted
