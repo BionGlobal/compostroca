@@ -26,9 +26,28 @@ export interface Lote {
 
 export const useLotes = () => {
   const [loteAtivoCaixa01, setLoteAtivoCaixa01] = useState<Lote | null>(null);
+  const [voluntariosCount, setVoluntariosCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user, profile } = useAuth();
+
+  const fetchVoluntariosCount = async (loteCode: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('entregas')
+        .select('voluntario_id')
+        .eq('lote_codigo', loteCode);
+
+      if (error) throw error;
+
+      // Contar voluntários únicos
+      const uniqueVoluntarios = new Set(data?.map(entrega => entrega.voluntario_id) || []);
+      setVoluntariosCount(uniqueVoluntarios.size);
+    } catch (error) {
+      console.error('Erro ao buscar contagem de voluntários:', error);
+      setVoluntariosCount(0);
+    }
+  };
 
   const fetchLoteAtivoCaixa01 = async () => {
     if (!user || !profile) return;
@@ -48,6 +67,13 @@ export const useLotes = () => {
       }
 
       setLoteAtivoCaixa01(data ? data as Lote : null);
+      
+      // Se há um lote ativo, buscar contagem de voluntários
+      if (data) {
+        await fetchVoluntariosCount(data.codigo);
+      } else {
+        setVoluntariosCount(0);
+      }
     } catch (error) {
       console.error('Erro ao buscar lote ativo na caixa 01:', error);
       toast({
@@ -240,6 +266,8 @@ export const useLotes = () => {
       // Atualizar estado local
       if (loteAtivoCaixa01?.id === loteId) {
         setLoteAtivoCaixa01(prev => prev ? { ...prev, peso_atual: novoPeso } : null);
+        // Atualizar contagem de voluntários também
+        await fetchVoluntariosCount(loteAtivoCaixa01.codigo);
       }
     } catch (error) {
       console.error('Erro ao atualizar peso do lote:', error);
@@ -254,6 +282,7 @@ export const useLotes = () => {
 
   return {
     loteAtivoCaixa01,
+    voluntariosCount,
     loading,
     criarNovoLote,
     encerrarLote,
