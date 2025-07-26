@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Star, Plus, Calendar, Camera } from 'lucide-react';
+import { MapPin, Star, Plus, Calendar, Camera, Eye, User, Clock, ExternalLink } from 'lucide-react';
 import { useVoluntarios } from '@/hooks/useVoluntarios';
 import { useEntregas } from '@/hooks/useEntregas';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,7 +13,9 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { StarRating } from '@/components/StarRating';
 import { EntregaFotosCapture } from '@/components/EntregaFotosCapture';
+import { EntregaFotosGaleria } from '@/components/EntregaFotosGaleria';
 import { useEntregaFotos } from '@/hooks/useEntregaFotos';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const Entregas = () => {
@@ -228,41 +230,109 @@ const Entregas = () => {
           <div className="space-y-4">
             {entregas.slice(0, 5).map((entrega) => {
               const voluntario = voluntarios.find(v => v.id === entrega.voluntario_id);
+              const getValidatorName = () => {
+                // Se houver user_id, pode buscar o nome do usuário
+                // Por ora, usando um nome genérico
+                return user?.email?.split('@')[0] || 'Sistema';
+              };
+
+              const googleMapsUrl = entrega.latitude && entrega.longitude 
+                ? `https://maps.google.com/maps?q=${entrega.latitude},${entrega.longitude}`
+                : null;
+
               return (
-                <div key={entrega.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="font-medium">
-                      {voluntario?.nome || 'Voluntário não encontrado'}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Balde {voluntario?.numero_balde} • {entrega.peso}kg
-                    </div>
-                    {entrega.qualidade_residuo && (
-                      <div className="flex items-center gap-1 text-sm">
-                        <span>Qualidade:</span>
-                        <div className="flex">
-                          {[1, 2, 3].map((star) => (
-                            <Star
-                              key={star}
-                              size={12}
-                              className={star <= entrega.qualidade_residuo! ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}
-                            />
-                          ))}
-                        </div>
+                <div key={entrega.id} className="glass-light rounded-lg p-4 space-y-3">
+                  {/* Header com Avatar e Badge de Peso */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={voluntario?.foto_url} />
+                        <AvatarFallback className="text-sm">
+                          {voluntario?.nome?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'V'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base leading-tight">
+                          {voluntario?.nome || 'Voluntário não encontrado'}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Balde nº{voluntario?.numero_balde || 'N/A'}
+                        </p>
                       </div>
-                    )}
-                    {entrega.latitude && entrega.longitude && (
-                      <div className="text-xs text-muted-foreground">
-                        <MapPin size={12} className="inline mr-1" />
-                        Lat: {entrega.latitude.toFixed(6)}, Lon: {entrega.longitude.toFixed(6)}
-                      </div>
-                    )}
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(entrega.created_at).toLocaleString('pt-BR')}
+                    </div>
+                    <Badge className="bg-green-500 hover:bg-green-600 text-white font-bold text-sm px-3 py-1">
+                      {entrega.peso}kg
+                    </Badge>
+                  </div>
+
+                  {/* Qualidade - Estrelas */}
+                  {entrega.qualidade_residuo && (
+                    <div className="flex items-center justify-center gap-1">
+                      {[1, 2, 3].map((star) => (
+                        <Star
+                          key={star}
+                          size={16}
+                          className={star <= entrega.qualidade_residuo! 
+                            ? "fill-yellow-400 text-yellow-400" 
+                            : "text-muted-foreground"
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Info Row - Data e Validador */}
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      <span>{new Date(entrega.created_at).toLocaleString('pt-BR')}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <User className="h-4 w-4" />
+                      <span>Validado por: {getValidatorName()}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{entrega.peso}kg</Badge>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 pt-2">
+                    {/* Botão Ver Local */}
+                    {googleMapsUrl ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => window.open(googleMapsUrl, '_blank')}
+                      >
+                        <MapPin className="h-4 w-4 mr-1" />
+                        Ver Local
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        disabled
+                      >
+                        <MapPin className="h-4 w-4 mr-1" />
+                        Sem localização
+                      </Button>
+                    )}
+
+                    {/* Botão Ver Fotos */}
+                    <EntregaFotosGaleria 
+                      entregaId={entrega.id} 
+                      numeroBalde={voluntario?.numero_balde || 0}
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver Fotos
+                      </Button>
+                    </EntregaFotosGaleria>
                   </div>
                 </div>
               );
