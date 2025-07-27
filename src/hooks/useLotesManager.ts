@@ -96,7 +96,6 @@ export const useLotesManager = () => {
   const { user, profile } = useAuth();
   const { subscribeToLoteUpdates } = useLoteUpdates();
 
-  // Calcula peso esperado com redução de 3.15% por transferência
   const calcularPesoEsperado = (pesoInicial: number, semanaAtual: number): number => {
     const reducaoPorSemana = 0.0315; // 3.15%
     let peso = pesoInicial;
@@ -106,12 +105,10 @@ export const useLotesManager = () => {
     return peso;
   };
 
-  // Calcula peso final esperado (22% de redução total)
   const calcularPesoFinal = (pesoInicial: number): number => {
     return pesoInicial * 0.78; // 22% de redução = 78% do peso inicial
   };
 
-  // Calcula dias até próxima transferência
   const calcularDiasTransferencia = (dataInicio: string, semanaAtual: number): number => {
     const inicio = new Date(dataInicio);
     const proximaTransferencia = new Date(inicio);
@@ -124,15 +121,25 @@ export const useLotesManager = () => {
     return Math.max(0, diffDays);
   };
 
-  // Busca dados de voluntários únicos por lote
   const fetchVoluntariosUnicos = async (lotesCodigos: string[]): Promise<Record<string, number>> => {
     try {
+      console.log('👥 Buscando voluntários únicos para lotes:', lotesCodigos);
+      
+      if (lotesCodigos.length === 0) {
+        return {};
+      }
+
       const { data: entregas, error } = await supabase
         .from('entregas')
         .select('lote_codigo, voluntario_id')
         .in('lote_codigo', lotesCodigos);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao buscar entregas:', error);
+        throw error;
+      }
+
+      console.log('📊 Entregas encontradas:', entregas);
 
       const voluntariosPorLote: Record<string, Set<string>> = {};
       entregas?.forEach(entrega => {
@@ -144,19 +151,21 @@ export const useLotesManager = () => {
         }
       });
 
-      return Object.fromEntries(
+      const resultado = Object.fromEntries(
         Object.entries(voluntariosPorLote).map(([codigo, voluntarios]) => [
           codigo,
           voluntarios.size
         ])
       );
+
+      console.log('✅ Voluntários únicos por lote:', resultado);
+      return resultado;
     } catch (error) {
       console.error('Erro ao buscar voluntários únicos:', error);
       return {};
     }
   };
 
-  // Busca estatísticas globais de voluntários
   const fetchVoluntariosStats = async () => {
     try {
       if (!profile?.organization_code) return { totalVoluntarios: 0, totalEntregas: 0 };
@@ -189,7 +198,6 @@ export const useLotesManager = () => {
     }
   };
 
-  // Enriquece lotes com dados calculados
   const enrichLotes = async (lotesData: any[]): Promise<LoteExtended[]> => {
     const lotesCodigos = lotesData.map(lote => lote.codigo);
     const voluntariosData = await fetchVoluntariosUnicos(lotesCodigos);
@@ -198,7 +206,7 @@ export const useLotesManager = () => {
       const diasParaTransferencia = calcularDiasTransferencia(lote.data_inicio, lote.semana_atual);
       const pesoEsperadoFinal = calcularPesoFinal(lote.peso_inicial);
       const pesoEsperadoAtual = calcularPesoEsperado(lote.peso_inicial, lote.semana_atual);
-      const reducaoAcumulada = ((lote.peso_inicial - lote.peso_atual) / lote.peso_inicial) * 100;
+      const reducaoAcumulada = lote.peso_inicial > 0 ? ((lote.peso_inicial - lote.peso_atual) / lote.peso_inicial) * 100 : 0;
       
       let statusManejo: 'pendente' | 'realizado' | 'atrasado' = 'realizado';
       if (lote.status === 'ativo') {
@@ -233,12 +241,16 @@ export const useLotesManager = () => {
     });
   };
 
-  // Busca todos os lotes
   const fetchLotes = async () => {
     try {
       setLoading(true);
       
-      if (!profile?.organization_code) return;
+      if (!profile?.organization_code) {
+        console.log('❌ Organização não disponível');
+        return;
+      }
+
+      console.log('🔄 Buscando lotes da organização:', profile.organization_code);
 
       const { data, error } = await supabase
         .from('lotes')
@@ -247,6 +259,8 @@ export const useLotesManager = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      console.log('📦 Lotes encontrados:', data);
 
       const enrichedLotes = await enrichLotes(data || []);
       setLotes(enrichedLotes);
@@ -257,6 +271,8 @@ export const useLotesManager = () => {
 
       setLotesAtivos(ativos);
       setLotesFinalizados(finalizados);
+
+      console.log('✅ Lotes ativos:', ativos.length, 'Finalizados:', finalizados.length);
 
       // Calcula métricas
       await calculateMetrics(ativos, finalizados);
@@ -273,7 +289,6 @@ export const useLotesManager = () => {
     }
   };
 
-  // Calcula métricas de produção
   const calculateMetrics = async (ativos: LoteExtended[], finalizados: LoteExtended[]) => {
     const totalCaixas = 7;
     const caixasOcupadas = ativos.length;
@@ -322,7 +337,6 @@ export const useLotesManager = () => {
     });
   };
 
-  // Registra manejo semanal
   const registrarManejo = async (
     loteId: string,
     pesoNovo: number,
@@ -333,7 +347,6 @@ export const useLotesManager = () => {
       const lote = lotes.find(l => l.id === loteId);
       if (!lote) throw new Error('Lote não encontrado');
 
-      // Registra o manejo (temporariamente desabilitado até tipos serem atualizados)
       console.log('Registrando manejo:', {
         lote_id: loteId,
         caixa_origem: lote.caixa_atual,
@@ -380,7 +393,6 @@ export const useLotesManager = () => {
     }
   };
 
-  // Finaliza lote (caixa 7)
   const finalizarLote = async (loteId: string, pesoFinal: number) => {
     try {
       const { error } = await supabase
@@ -414,6 +426,7 @@ export const useLotesManager = () => {
 
   useEffect(() => {
     if (user && profile?.organization_code) {
+      console.log('🔄 Inicializando useLotesManager');
       fetchLotes();
     }
   }, [user, profile?.organization_code]);
@@ -421,6 +434,7 @@ export const useLotesManager = () => {
   // Subscribe to lote updates from other hooks
   useEffect(() => {
     const unsubscribe = subscribeToLoteUpdates(() => {
+      console.log('🔄 Recebida notificação de atualização - refazendo fetch');
       if (user && profile?.organization_code) {
         fetchLotes();
       }

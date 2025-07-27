@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,6 @@ import { useEntregaFotos } from '@/hooks/useEntregaFotos';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LoteCard } from '@/components/LoteCard';
 import { useLotes } from '@/hooks/useLotes';
-
 
 const Entregas = () => {
   const [selectedVoluntario, setSelectedVoluntario] = useState<string>('');
@@ -84,8 +84,11 @@ const Entregas = () => {
 
     setLoading(true);
     try {
+      console.log('📸 Iniciando processo de fotos para entrega');
+      
       // Get current location
       const position = await getCurrentLocation();
+      console.log('📍 Localização obtida:', position.coords.latitude, position.coords.longitude);
       
       const { data, error } = await supabase
         .from('entregas')
@@ -104,6 +107,7 @@ const Entregas = () => {
 
       if (error) throw error;
 
+      console.log('✅ Entrega criada:', data);
       setTempEntregaId(data.id);
       setShowCamera(true);
     } catch (error) {
@@ -119,11 +123,13 @@ const Entregas = () => {
   };
 
   const handleFotosComplete = async () => {
+    console.log('📸 Fotos concluídas, finalizando entrega');
     setShowCamera(false);
     
     // Atualizar peso do lote ativo
     if (loteAtivoCaixa01 && peso) {
       const novoPeso = loteAtivoCaixa01.peso_atual + parseFloat(peso);
+      console.log('⚖️ Atualizando peso do lote:', loteAtivoCaixa01.peso_atual, '+', parseFloat(peso), '=', novoPeso);
       await atualizarPesoLote(loteAtivoCaixa01.id, novoPeso);
     }
     
@@ -144,6 +150,8 @@ const Entregas = () => {
   };
 
   const handleCancelFotos = async () => {
+    console.log('❌ Cancelando entrega');
+    
     // Delete temporary delivery if it exists before hiding camera
     if (tempEntregaId) {
       try {
@@ -172,7 +180,6 @@ const Entregas = () => {
     
     setShowCamera(false);
   };
-
 
   if (showCamera && tempEntregaId) {
     return (
@@ -408,7 +415,6 @@ const Entregas = () => {
           </div>
         </CardContent>
       </Card>
-
     </div>
   );
 };
