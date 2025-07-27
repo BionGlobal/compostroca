@@ -70,7 +70,7 @@ export const PerformanceCharts = ({
     switch (metrica) {
       case 'capacidade':
         return <Gauge className="h-4 w-4" />;
-      case 'eficiencia':
+      case 'peso':
         return <Target className="h-4 w-4" />;
       case 'tempo':
         return <Timer className="h-4 w-4" />;
@@ -85,10 +85,10 @@ export const PerformanceCharts = ({
         if (valor >= 85) return 'text-destructive';
         if (valor >= 70) return 'text-warning';
         return 'text-success';
-      case 'eficiencia':
-        if (valor >= 20) return 'text-success';
-        if (valor >= 15) return 'text-warning';
-        return 'text-destructive';
+      case 'peso':
+        if (valor >= 5) return 'text-success';
+        if (valor >= 2) return 'text-warning';
+        return 'text-foreground';
       case 'transferencia':
         if (valor >= 90) return 'text-success';
         if (valor >= 70) return 'text-warning';
@@ -128,21 +128,21 @@ export const PerformanceCharts = ({
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground">Eficiência</p>
-                <p className={`text-lg font-bold ${getMetricColor(metrics.eficienciaReducao, 'eficiencia')}`}>
-                  {formatNumber(metrics.eficienciaReducao, 1)}%
+                <p className="text-xs text-muted-foreground">Peso Total</p>
+                <p className={`text-lg font-bold ${getMetricColor(metrics.pesoTotalCompostado, 'peso')}`}>
+                  {formatNumber(metrics.pesoTotalCompostado, 1)}T
                 </p>
               </div>
-              {getMetricIcon('eficiencia')}
+              {getMetricIcon('peso')}
             </div>
             <div className="flex items-center mt-1">
-              {metrics.eficienciaReducao >= 20 ? (
+              {metrics.pesoTotalCompostado >= 5 ? (
                 <TrendingUp className="h-3 w-3 text-success mr-1" />
               ) : (
                 <TrendingDown className="h-3 w-3 text-destructive mr-1" />
               )}
               <span className="text-xs text-muted-foreground">
-                Redução média
+                Resíduo compostado
               </span>
             </div>
           </CardContent>

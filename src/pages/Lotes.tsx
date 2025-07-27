@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   RotateCcw, 
-  TrendingUp, 
+  Scale, 
+  Leaf, 
+  Users,
   Gauge, 
   Package,
   Clock,
@@ -93,24 +95,24 @@ const Lotes = () => {
           variant={metrics.capacidadeUtilizada > 85 ? 'earth' : 'default'}
         />
         <StatCard
-          title="Eficiência"
-          value={`${metrics.eficienciaReducao.toFixed(1)}%`}
-          description="redução média"
-          icon={<TrendingUp className="h-6 w-6" />}
-          variant={metrics.eficienciaReducao >= 20 ? 'primary' : 'default'}
+          title="Peso Total"
+          value={`${metrics.pesoTotalCompostado.toFixed(1)}T`}
+          description="resíduo compostado"
+          icon={<Scale className="h-6 w-6" />}
+          variant={metrics.pesoTotalCompostado > 5 ? 'primary' : 'default'}
         />
         <StatCard
-          title="Em Andamento"
-          value={metrics.totalLotesAtivos.toString()}
-          description="lotes ativos"
-          icon={<Activity className="h-6 w-6" />}
-          variant="default"
+          title="CO2e Evitado"
+          value={`${metrics.co2eEvitado.toFixed(1)}T`}
+          description="impacto ambiental"
+          icon={<Leaf className="h-6 w-6" />}
+          variant="earth"
         />
         <StatCard
-          title="Finalizados"
-          value={metrics.totalLotesFinalizados.toString()}
-          description="lotes completos"
-          icon={<CheckCircle className="h-6 w-6" />}
+          title="Voluntários"
+          value={`${metrics.totalVoluntarios} | ${metrics.totalEntregas}`}
+          description="pessoas | entregas"
+          icon={<Users className="h-6 w-6" />}
           variant="default"
         />
       </div>

@@ -30,6 +30,17 @@ export interface LoteExtended {
   voluntariosUnicos: number;
   statusManejo: 'pendente' | 'realizado' | 'atrasado';
   progressoPercentual: number;
+  dataEntradaCaixa: string;
+  validadorNome: string;
+  
+  // Dados IoT (placeholders para futuro)
+  temperatura?: number;
+  umidade?: number;
+  condutividade?: number;
+  ph?: number;
+  nitrogenio?: number;
+  fosforo?: number;
+  potassio?: number;
 }
 
 export interface ManejoRecord {
@@ -49,7 +60,10 @@ export interface ManejoRecord {
 
 export interface ProductionMetrics {
   capacidadeUtilizada: number; // % das 7 caixas ocupadas
-  eficienciaReducao: number; // % médio de redução de peso
+  pesoTotalCompostado: number; // peso bruto total compostado em toneladas
+  co2eEvitado: number; // CO2e evitado em toneladas
+  totalVoluntarios: number; // voluntários únicos que participaram
+  totalEntregas: number; // total de entregas realizadas
   tempoMedioCiclo: number; // dias para completar processo
   taxaTransferencia: number; // pontualidade dos manejos
   totalLotesAtivos: number;
@@ -65,7 +79,10 @@ export const useLotesManager = () => {
   const [manejos, setManejos] = useState<ManejoRecord[]>([]);
   const [metrics, setMetrics] = useState<ProductionMetrics>({
     capacidadeUtilizada: 0,
-    eficienciaReducao: 0,
+    pesoTotalCompostado: 0,
+    co2eEvitado: 0,
+    totalVoluntarios: 0,
+    totalEntregas: 0,
     tempoMedioCiclo: 0,
     taxaTransferencia: 0,
     totalLotesAtivos: 0,
@@ -137,6 +154,39 @@ export const useLotesManager = () => {
     }
   };
 
+  // Busca estatísticas globais de voluntários
+  const fetchVoluntariosStats = async () => {
+    try {
+      if (!profile?.organization_code) return { totalVoluntarios: 0, totalEntregas: 0 };
+
+      // Busca voluntários únicos da organização
+      const { data: voluntariosData, error: voluntariosError } = await supabase
+        .from('entregas')
+        .select('voluntario_id')
+        .eq('geolocalizacao_validada', true);
+
+      if (voluntariosError) throw voluntariosError;
+
+      const voluntariosUnicos = new Set(voluntariosData?.map(e => e.voluntario_id) || []);
+
+      // Busca total de entregas validadas
+      const { count: totalEntregas, error: entregasError } = await supabase
+        .from('entregas')
+        .select('*', { count: 'exact' })
+        .eq('geolocalizacao_validada', true);
+
+      if (entregasError) throw entregasError;
+
+      return {
+        totalVoluntarios: voluntariosUnicos.size,
+        totalEntregas: totalEntregas || 0
+      };
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas de voluntários:', error);
+      return { totalVoluntarios: 0, totalEntregas: 0 };
+    }
+  };
+
   // Enriquece lotes com dados calculados
   const enrichLotes = async (lotesData: any[]): Promise<LoteExtended[]> => {
     const lotesCodigos = lotesData.map(lote => lote.codigo);
@@ -167,6 +217,16 @@ export const useLotesManager = () => {
         voluntariosUnicos: voluntariosData[lote.codigo] || 0,
         statusManejo,
         progressoPercentual,
+        dataEntradaCaixa: lote.data_inicio, // Placeholder - em produção seria calculado
+        validadorNome: lote.criado_por_nome,
+        // Dados IoT simulados (placeholders)
+        temperatura: Math.round(25 + Math.random() * 10),
+        umidade: Math.round(60 + Math.random() * 20),
+        ph: Number((6.5 + Math.random() * 1.5).toFixed(1)),
+        condutividade: Number((1.2 + Math.random() * 0.8).toFixed(1)),
+        nitrogenio: Math.round(15 + Math.random() * 10),
+        fosforo: Math.round(8 + Math.random() * 7),
+        potassio: Math.round(12 + Math.random() * 8),
       };
     });
   };
@@ -197,7 +257,7 @@ export const useLotesManager = () => {
       setLotesFinalizados(finalizados);
 
       // Calcula métricas
-      calculateMetrics(ativos, finalizados);
+      await calculateMetrics(ativos, finalizados);
 
     } catch (error) {
       console.error('Erro ao buscar lotes:', error);
@@ -212,14 +272,21 @@ export const useLotesManager = () => {
   };
 
   // Calcula métricas de produção
-  const calculateMetrics = (ativos: LoteExtended[], finalizados: LoteExtended[]) => {
+  const calculateMetrics = async (ativos: LoteExtended[], finalizados: LoteExtended[]) => {
     const totalCaixas = 7;
     const caixasOcupadas = ativos.length;
     const capacidadeUtilizada = (caixasOcupadas / totalCaixas) * 100;
 
-    const eficienciaReducao = finalizados.length > 0
-      ? finalizados.reduce((acc, lote) => acc + lote.reducaoAcumulada, 0) / finalizados.length
-      : 0;
+    // Peso total compostado (todos os lotes em toneladas)
+    const pesoTotalTodosLotes = [...ativos, ...finalizados].reduce((acc, lote) => acc + lote.peso_inicial, 0);
+    const pesoTotalCompostado = pesoTotalTodosLotes / 1000; // Converter para toneladas
+
+    // CO2e evitado (baseado em lotes finalizados)
+    const pesoInicialFinalizados = finalizados.reduce((acc, lote) => acc + lote.peso_inicial, 0);
+    const co2eEvitado = (pesoInicialFinalizados * 0.766) / 1000; // 1kg = 0.766kg CO2e, converter para toneladas
+
+    // Buscar dados de voluntários
+    const voluntariosStats = await fetchVoluntariosStats();
 
     const tempoMedioCiclo = finalizados.length > 0
       ? finalizados.reduce((acc, lote) => {
@@ -240,7 +307,10 @@ export const useLotesManager = () => {
 
     setMetrics({
       capacidadeUtilizada,
-      eficienciaReducao,
+      pesoTotalCompostado,
+      co2eEvitado,
+      totalVoluntarios: voluntariosStats.totalVoluntarios,
+      totalEntregas: voluntariosStats.totalEntregas,
       tempoMedioCiclo,
       taxaTransferencia,
       totalLotesAtivos: ativos.length,
