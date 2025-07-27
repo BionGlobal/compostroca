@@ -185,16 +185,16 @@ export const LoteCard = () => {
                   disabled={isClosing}
                   className="w-full sm:w-auto"
                 >
-                  {isClosing ? 'Encerrando...' : 'Encerrar Lote'}
+                  {isClosing ? 'Encerrando...' : 'Encerrar Entregas'}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent className="sm:max-w-md">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Encerrar Lote</AlertDialogTitle>
+                  <AlertDialogTitle>Encerrar Entregas</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Tem certeza que deseja encerrar o lote <strong>{loteAtivoCaixa01.codigo}</strong>?
+                    Tem certeza que deseja finalizar a fase de entregas do lote <strong>{loteAtivoCaixa01.codigo}</strong>?
                     <br /><br />
-                    Esta ação é <strong>irreversível</strong> e o lote não poderá mais receber novos resíduos.
+                    O lote será transferido para a esteira de produção e não poderá mais receber novos resíduos.
                     O peso total atual é de <strong>{loteAtivoCaixa01.peso_atual.toFixed(2)} kg</strong>.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -204,7 +204,7 @@ export const LoteCard = () => {
                     onClick={handleEncerrarLote}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
-                    Encerrar Definitivamente
+                    Finalizar Entregas
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

@@ -9,7 +9,7 @@ export interface LoteExtended {
   codigo: string;
   unidade: string;
   linha_producao: string;
-  status: 'ativo' | 'encerrado';
+  status: 'ativo' | 'em_processamento' | 'encerrado';
   caixa_atual: number;
   semana_atual: number;
   data_inicio: string;
@@ -266,7 +266,7 @@ export const useLotesManager = () => {
       setLotes(enrichedLotes);
 
       // Separa ativos e finalizados
-      const ativos = enrichedLotes.filter(lote => lote.status === 'ativo');
+      const ativos = enrichedLotes.filter(lote => lote.status === 'ativo' || lote.status === 'em_processamento');
       const finalizados = enrichedLotes.filter(lote => lote.status === 'encerrado');
 
       setLotesAtivos(ativos);

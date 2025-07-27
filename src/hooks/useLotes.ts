@@ -11,7 +11,7 @@ export interface Lote {
   linha_producao: string;
   caixa_atual: number;
   semana_atual: number;
-  status: 'ativo' | 'encerrado';
+  status: 'ativo' | 'em_processamento' | 'encerrado';
   data_inicio: string;
   data_encerramento?: string;
   data_proxima_transferencia?: string;
@@ -233,19 +233,19 @@ export const useLotes = () => {
 
     try {
       setLoading(true);
-      console.log('🔒 Encerrando lote:', loteId);
+      console.log('🔒 Finalizando entregas do lote:', loteId);
 
       const { error } = await supabase
         .from('lotes')
         .update({
-          status: 'encerrado',
+          status: 'em_processamento',
           data_encerramento: new Date().toISOString(),
         })
         .eq('id', loteId);
 
       if (error) throw error;
 
-      console.log('✅ Lote encerrado com sucesso');
+      console.log('✅ Entregas finalizadas - lote transferido para esteira de produção');
       setLoteAtivoCaixa01(null);
       setVoluntariosCount(0);
       
@@ -254,7 +254,7 @@ export const useLotes = () => {
       
       toast({
         title: "Sucesso",
-        description: "Lote encerrado com sucesso!",
+        description: "Entregas finalizadas! Lote transferido para a esteira de produção.",
       });
 
       return true;
