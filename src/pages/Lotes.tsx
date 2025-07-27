@@ -25,6 +25,8 @@ import { ManejoSemanal } from '@/components/ManejoSemanal';
 import { PerformanceCharts } from '@/components/PerformanceCharts';
 import { FinalizationModal } from '@/components/FinalizationModal';
 import { StatCard } from '@/components/StatCard';
+import { LoteHistoricoCard } from '@/components/LoteHistoricoCard';
+import { LoteDetalhesModal } from '@/components/LoteDetalhesModal';
 
 const Lotes = () => {
   const {
@@ -285,54 +287,28 @@ const Lotes = () => {
 
         {/* Tab: Histórico */}
         <TabsContent value="historico" className="space-y-6">
-          <div className="grid gap-4">
-            {lotesFinalizados.length === 0 ? (
-              <Card className="glass-light border-0">
-                <CardContent className="p-8 text-center">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <h3 className="text-lg font-medium mb-2">Nenhum lote finalizado</h3>
-                  <p className="text-muted-foreground">
-                    Os lotes finalizados aparecerão aqui
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              lotesFinalizados.map(lote => (
-                <Card key={lote.id} className="glass-light border-0 organic-hover">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h4 className="font-semibold">{lote.codigo}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {formatarData(lote.data_inicio)} - {formatarData(lote.data_encerramento || lote.data_inicio)}
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="text-success border-success">
-                        Finalizado
-                      </Badge>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Peso Inicial</p>
-                        <p className="font-medium">{lote.peso_inicial.toFixed(1)}kg</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Peso Final</p>
-                        <p className="font-medium">{lote.peso_atual.toFixed(1)}kg</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Redução</p>
-                        <p className="font-medium text-success">
-                          -{lote.reducaoAcumulada.toFixed(1)}%
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+          {lotesFinalizados.length === 0 ? (
+            <Card className="glass-light border-0">
+              <CardContent className="p-8 text-center">
+                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                <h3 className="text-lg font-medium mb-2">Nenhum lote finalizado</h3>
+                <p className="text-muted-foreground">
+                  Os lotes finalizados aparecerão aqui
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {lotesFinalizados.map((lote) => (
+                <LoteDetalhesModal key={lote.id} loteId={lote.id} loteCode={lote.codigo}>
+                  <LoteHistoricoCard 
+                    lote={lote as any}
+                    onClick={() => {}}
+                  />
+                </LoteDetalhesModal>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         {/* Tab: Análise */}

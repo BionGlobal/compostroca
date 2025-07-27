@@ -104,6 +104,7 @@ export type Database = {
           data_encerramento: string | null
           data_inicio: string
           data_proxima_transferencia: string | null
+          hash_integridade: string | null
           id: string
           latitude: number | null
           linha_producao: string
@@ -124,6 +125,7 @@ export type Database = {
           data_encerramento?: string | null
           data_inicio?: string
           data_proxima_transferencia?: string | null
+          hash_integridade?: string | null
           id?: string
           latitude?: number | null
           linha_producao?: string
@@ -144,6 +146,7 @@ export type Database = {
           data_encerramento?: string | null
           data_inicio?: string
           data_proxima_transferencia?: string | null
+          hash_integridade?: string | null
           id?: string
           latitude?: number | null
           linha_producao?: string
