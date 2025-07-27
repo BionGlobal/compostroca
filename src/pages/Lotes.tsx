@@ -21,6 +21,7 @@ import {
 import { useLotesManager } from '@/hooks/useLotesManager';
 import { ProductionBelt } from '@/components/ProductionBelt';
 import { ManejoCard } from '@/components/ManejoCard';
+import { ManejoSemanal } from '@/components/ManejoSemanal';
 import { PerformanceCharts } from '@/components/PerformanceCharts';
 import { FinalizationModal } from '@/components/FinalizationModal';
 import { StatCard } from '@/components/StatCard';
@@ -37,6 +38,7 @@ const Lotes = () => {
   } = useLotesManager();
 
   const [selectedLoteForFinalization, setSelectedLoteForFinalization] = useState<string | null>(null);
+  const [showManejoSemanal, setShowManejoSemanal] = useState(false);
 
   const handleManejoClick = (lote: any) => {
     // Modal já é aberto pelo ManejoCard
@@ -185,27 +187,100 @@ const Lotes = () => {
 
         {/* Tab: Manejo */}
         <TabsContent value="manejo" className="space-y-6">
-          <div className="grid gap-4">
-            {lotesAtivos.length === 0 ? (
-              <Card className="glass-light border-0">
-                <CardContent className="p-8 text-center">
+          <Card className="glass-light border-0">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Manejo Semanal
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Processo integrado de transferência e finalização dos lotes
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => setShowManejoSemanal(true)}
+                  disabled={lotesAtivos.length < 7}
+                  className="gap-2"
+                >
+                  <Clock className="h-4 w-4" />
+                  Iniciar Manejo
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {lotesAtivos.length === 0 ? (
+                <div className="text-center py-8">
                   <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                   <h3 className="text-lg font-medium mb-2">Nenhum lote ativo</h3>
                   <p className="text-muted-foreground">
                     Não há lotes em processamento no momento
                   </p>
-                </CardContent>
-              </Card>
-            ) : (
-              lotesAtivos.map(lote => (
-                <ManejoCard
-                  key={lote.id}
-                  lote={lote}
-                  onRegistrarManejo={registrarManejo}
-                />
-              ))
-            )}
-          </div>
+                </div>
+              ) : lotesAtivos.length < 7 ? (
+                <div className="text-center py-8">
+                  <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-warning" />
+                  <h3 className="text-lg font-medium mb-2">Lotes insuficientes</h3>
+                  <p className="text-muted-foreground">
+                    É necessário ter lotes em todas as 7 caixas para realizar o manejo semanal.
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Lotes ativos: {lotesAtivos.length}/7
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <h4 className="font-medium text-green-800">Sistema pronto para manejo</h4>
+                    </div>
+                    <p className="text-sm text-green-700">
+                      Todas as 7 caixas possuem lotes ativos. Você pode iniciar o processo de manejo semanal.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-2">
+                    {Array.from({ length: 7 }, (_, i) => i + 1).map(caixa => {
+                      const lote = lotesAtivos.find(l => l.caixa_atual === caixa);
+                      return (
+                        <Card key={caixa} className="text-center">
+                          <CardContent className="p-3">
+                            <div className="text-xs text-muted-foreground mb-1">Caixa {caixa}</div>
+                            {lote ? (
+                              <>
+                                <div className="text-sm font-medium">{lote.codigo}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {lote.peso_atual.toFixed(1)}kg
+                                </div>
+                                <Badge variant="default" className="text-xs mt-1">
+                                  Ativo
+                                </Badge>
+                              </>
+                            ) : (
+                              <div className="text-xs text-muted-foreground">Vazia</div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+
+                  <div className="text-center">
+                    <Button 
+                      onClick={() => setShowManejoSemanal(true)}
+                      size="lg"
+                      className="gap-2"
+                    >
+                      <Clock className="h-5 w-5" />
+                      Iniciar Processo de Manejo Semanal
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Tab: Histórico */}
@@ -289,6 +364,15 @@ const Lotes = () => {
           onFinalizar={finalizarLote}
         />
       )}
+
+      {/* Modal de Manejo Semanal */}
+      <ManejoSemanal
+        open={showManejoSemanal}
+        onClose={() => setShowManejoSemanal(false)}
+        lotes={lotesAtivos}
+        organizacao="CWB001"
+        onManejoCompleto={refetch}
+      />
     </div>
   );
 };
