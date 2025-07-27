@@ -119,6 +119,8 @@ export const EntregaFotosCapture: React.FC<EntregaFotosCaptureProps> = ({
 
   const retakePhoto = () => {
     setCapturedImage(null);
+    // Reiniciar a câmera após refazer a foto
+    startCamera();
   };
 
   const handleCancel = () => {

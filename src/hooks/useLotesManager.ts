@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useLoteUpdates } from '@/contexts/LoteContext';
 
 export interface LoteExtended {
   id: string;
@@ -93,6 +94,7 @@ export const useLotesManager = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user, profile } = useAuth();
+  const { subscribeToLoteUpdates } = useLoteUpdates();
 
   // Calcula peso esperado com redução de 3.15% por transferência
   const calcularPesoEsperado = (pesoInicial: number, semanaAtual: number): number => {
@@ -415,6 +417,17 @@ export const useLotesManager = () => {
       fetchLotes();
     }
   }, [user, profile?.organization_code]);
+
+  // Subscribe to lote updates from other hooks
+  useEffect(() => {
+    const unsubscribe = subscribeToLoteUpdates(() => {
+      if (user && profile?.organization_code) {
+        fetchLotes();
+      }
+    });
+
+    return unsubscribe;
+  }, [subscribeToLoteUpdates, user, profile?.organization_code]);
 
   return {
     lotes,

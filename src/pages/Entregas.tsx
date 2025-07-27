@@ -143,19 +143,34 @@ const Entregas = () => {
     refetchEntregas();
   };
 
-  const handleCancelFotos = () => {
-    setShowCamera(false);
-    
-    // Delete temporary delivery if it exists
+  const handleCancelFotos = async () => {
+    // Delete temporary delivery if it exists before hiding camera
     if (tempEntregaId) {
-      supabase
-        .from('entregas')
-        .delete()
-        .eq('id', tempEntregaId)
-        .then(() => {
-          setTempEntregaId(null);
+      try {
+        const { error } = await supabase
+          .from('entregas')
+          .delete()
+          .eq('id', tempEntregaId);
+        
+        if (error) throw error;
+        
+        setTempEntregaId(null);
+        toast({
+          title: "Cancelado",
+          description: "Entrega cancelada com sucesso",
         });
+      } catch (error) {
+        console.error('Erro ao cancelar entrega:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível cancelar a entrega",
+          variant: "destructive",
+        });
+        return; // Não fechar a câmera se houver erro
+      }
     }
+    
+    setShowCamera(false);
   };
 
 

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { LoteProvider } from "./contexts/LoteContext";
 import Dashboard from "./pages/Dashboard";
 import Voluntarios from "./pages/Voluntarios";
 import Entregas from "./pages/Entregas";
@@ -16,10 +17,11 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+    <LoteProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/" element={
@@ -55,6 +57,7 @@ const App = () => (
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
+    </LoteProvider>
   </QueryClientProvider>
 );
 

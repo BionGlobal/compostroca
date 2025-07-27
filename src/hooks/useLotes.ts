@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useLoteUpdates } from '@/contexts/LoteContext';
 
 export interface Lote {
   id: string;
@@ -30,6 +31,7 @@ export const useLotes = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user, profile } = useAuth();
+  const { notifyLoteUpdate } = useLoteUpdates();
 
   const fetchVoluntariosCount = async (loteCode: string) => {
     try {
@@ -274,6 +276,8 @@ export const useLotes = () => {
         setLoteAtivoCaixa01(prev => prev ? { ...prev, peso_atual: novoPeso } : null);
         // Atualizar contagem de voluntários também
         await fetchVoluntariosCount(loteAtivoCaixa01.codigo);
+        // Notificar outros hooks sobre a mudança
+        notifyLoteUpdate();
       }
     } catch (error) {
       console.error('Erro ao atualizar peso do lote:', error);
