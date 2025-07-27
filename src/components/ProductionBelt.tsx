@@ -101,7 +101,7 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }:
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Package className="h-4 w-4 sm:h-5 sm:w-5" />
-                      <span className="font-semibold text-sm sm:text-base">Box {numeroBox}</span>
+                      <span className="font-semibold text-sm sm:text-base">Caixa {numeroBox}</span>
                     </div>
                     {lote && getStatusIcon(lote.statusManejo)}
                   </div>
@@ -114,7 +114,7 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }:
                         <div>
                           <p className="text-xs text-muted-foreground">Lote</p>
                           <p className="text-sm font-medium truncate">
-                            {lote.codigo.split('-').pop()}
+                            {lote.codigo}
                           </p>
                         </div>
                         <div>
@@ -128,20 +128,12 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }:
                         </div>
                       </div>
 
-                      {/* Linha 2: Peso e Redução */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Peso Atual</p>
-                          <p className="text-lg font-bold">
-                            {lote.peso_atual.toFixed(1)}kg
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Redução</p>
-                          <p className="text-sm font-medium text-success">
-                            -{getReducaoPercentual(lote).toFixed(1)}%
-                          </p>
-                        </div>
+                      {/* Linha 2: Peso Atual */}
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Peso Atual</p>
+                        <p className="text-2xl font-bold text-primary">
+                          {lote.peso_atual.toFixed(1)}kg
+                        </p>
                       </div>
 
                       {/* Linha 3: Geolocalização */}
@@ -287,15 +279,15 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }:
       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-primary/20 border border-primary/30" />
-          <span>Entrada (Box 1)</span>
+          <span>Entrada (Caixa 1)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-secondary/20 border border-secondary/30" />
-          <span>Processamento (Box 2-6)</span>
+          <span>Processamento (Caixa 2-6)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-success/20 border border-success/30" />
-          <span>Finalização (Box 7)</span>
+          <span>Finalização (Caixa 7)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-muted/30 border border-muted border-dashed" />

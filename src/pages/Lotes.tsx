@@ -203,7 +203,7 @@ const Lotes = () => {
                 </div>
                 <Button 
                   onClick={() => setShowManejoSemanal(true)}
-                  disabled={lotesAtivos.length < 7}
+                  disabled={lotesAtivos.length === 0}
                   className="gap-2"
                 >
                   <Clock className="h-4 w-4" />
@@ -220,17 +220,6 @@ const Lotes = () => {
                     Não há lotes em processamento no momento
                   </p>
                 </div>
-              ) : lotesAtivos.length < 7 ? (
-                <div className="text-center py-8">
-                  <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-warning" />
-                  <h3 className="text-lg font-medium mb-2">Lotes insuficientes</h3>
-                  <p className="text-muted-foreground">
-                    É necessário ter lotes em todas as 7 caixas para realizar o manejo semanal.
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Lotes ativos: {lotesAtivos.length}/7
-                  </p>
-                </div>
               ) : (
                 <div className="space-y-4">
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -239,7 +228,7 @@ const Lotes = () => {
                       <h4 className="font-medium text-green-800">Sistema pronto para manejo</h4>
                     </div>
                     <p className="text-sm text-green-700">
-                      Todas as 7 caixas possuem lotes ativos. Você pode iniciar o processo de manejo semanal.
+                      {lotesAtivos.length} {lotesAtivos.length === 1 ? 'lote ativo' : 'lotes ativos'} na esteira. Você pode iniciar o processo de manejo semanal.
                     </p>
                   </div>
 
