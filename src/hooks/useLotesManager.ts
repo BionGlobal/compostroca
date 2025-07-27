@@ -303,7 +303,7 @@ export const useLotesManager = () => {
       : 100;
 
     const pesoBrutoProcessamento = ativos.reduce((acc, lote) => acc + lote.peso_atual, 0);
-    const compostoProduzido = finalizados.reduce((acc, lote) => acc + (lote.peso_inicial * 0.78), 0);
+    const compostoProduzido = finalizados.reduce((acc, lote) => acc + lote.peso_atual, 0);
 
     setMetrics({
       capacidadeUtilizada,

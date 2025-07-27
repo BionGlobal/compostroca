@@ -14,7 +14,8 @@ import {
   CheckCircle,
   AlertTriangle,
   BarChart3,
-  Activity
+  Activity,
+  Sprout
 } from 'lucide-react';
 
 import { useLotesManager } from '@/hooks/useLotesManager';
@@ -86,7 +87,7 @@ const Lotes = () => {
       </div>
 
       {/* Métricas Rápidas */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <StatCard
           title="Capacidade"
           value={`${metrics.capacidadeUtilizada.toFixed(0)}%`}
@@ -109,11 +110,27 @@ const Lotes = () => {
           variant="earth"
         />
         <StatCard
+          title="Entregas"
+          value={`${metrics.totalEntregas}`}
+          description="validadas realizadas"
+          icon={<Package className="h-6 w-6" />}
+          variant="default"
+        />
+        <StatCard
           title="Voluntários"
-          value={`${metrics.totalVoluntarios} | ${metrics.totalEntregas}`}
-          description="pessoas | entregas"
+          value={`${metrics.totalVoluntarios}`}
+          description="que fizeram entregas"
           icon={<Users className="h-6 w-6" />}
           variant="default"
+        />
+        <StatCard
+          title="Composto"
+          value={`${(metrics.compostoProduzido || 0) >= 1000 
+            ? `${((metrics.compostoProduzido || 0) / 1000).toFixed(1)}T` 
+            : `${(metrics.compostoProduzido || 0).toFixed(1)}kg`}`}
+          description="produzido finalizado"
+          icon={<Sprout className="h-6 w-6" />}
+          variant="earth"
         />
       </div>
 
