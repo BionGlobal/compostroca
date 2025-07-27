@@ -72,36 +72,23 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }:
 
   return (
     <div className="space-y-4">
-      {/* Header da Esteira */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Esteira de Produção</h3>
-          <p className="text-sm text-muted-foreground">
-            Processo de compostagem em 7 semanas
-          </p>
-        </div>
-        <Badge variant="outline" className="text-sm">
-          {lotesAtivos.length}/7 caixas ocupadas
-        </Badge>
-      </div>
-
       {/* Esteira Visual - Mobile-First Design */}
       <div className="overflow-x-auto pb-4 -mx-4 px-4">
         <div className="flex gap-3 sm:gap-4" style={{ minWidth: 'max-content' }}>
           {caixasPorLote.map(({ numeroBox, lote }, index) => (
             <div key={numeroBox} className="flex items-center">
-              {/* Caixa de Compostagem - Responsiva */}
+              {/* Caixa de Compostagem - Responsiva e Otimizada */}
               <Card className={`
-                relative w-72 sm:w-80 h-auto min-h-[320px] sm:min-h-[350px] transition-all duration-300
+                relative w-64 sm:w-72 h-auto min-h-[280px] sm:min-h-[300px] transition-all duration-300
                 ${getBoxColor(numeroBox, lote)}
-                ${lote ? 'organic-hover cursor-pointer' : ''}
+                ${lote ? 'hover:shadow-lg cursor-pointer' : ''}
               `}>
-                <CardContent className="p-3 sm:p-4 h-full flex flex-col">
+                <CardContent className="p-3 h-full flex flex-col">
                   {/* Header da Caixa */}
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 sm:h-5 sm:w-5" />
-                      <span className="font-semibold text-sm sm:text-base">Caixa {numeroBox}</span>
+                      <Package className="h-4 w-4" />
+                      <span className="font-semibold text-sm">Caixa {numeroBox}</span>
                     </div>
                     {lote && getStatusIcon(lote.statusManejo)}
                   </div>
@@ -109,68 +96,51 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }:
                   {/* Conteúdo da Caixa */}
                   {lote ? (
                     <div className="flex-1 space-y-3">
-                      {/* Linha 1: Código e Data/Hora */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Lote</p>
-                          <p className="text-sm font-medium truncate">
-                            {lote.codigo}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Entrada</p>
-                          <p className="text-xs font-medium">
-                            {formatarData(lote.dataEntradaCaixa)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatarHora(lote.dataEntradaCaixa)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Linha 2: Peso Atual */}
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground">Peso Atual</p>
-                        <p className="text-2xl font-bold text-primary">
-                          {lote.peso_atual.toFixed(1)}kg
+                      {/* Código do Lote - Destaque Principal */}
+                      <div className="text-center bg-primary/5 rounded-lg p-2">
+                        <p className="text-xs text-muted-foreground mb-1">Lote</p>
+                        <p className="text-sm font-bold text-primary">
+                          {lote.codigo}
                         </p>
                       </div>
 
-                      {/* Linha 3: Geolocalização */}
-                      {lote.latitude && lote.longitude && (
-                        <div>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            Localização
-                          </p>
-                          <p className="text-xs font-mono">
-                            {lote.latitude.toFixed(6)}, {lote.longitude.toFixed(6)}
-                          </p>
-                        </div>
-                      )}
+                      {/* Peso Atual - Destaque Secundário */}
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Peso Atual</p>
+                        <p className="text-xl font-bold text-foreground">
+                          {lote.peso_atual?.toFixed(1) || '0.0'}kg
+                        </p>
+                      </div>
 
-                      {/* Linha 4: Validador e Voluntários */}
-                      <div className="grid grid-cols-2 gap-3">
+                      {/* Data de Entrada */}
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Entrada</p>
+                        <p className="text-xs font-medium">
+                          {formatarData(lote.dataEntradaCaixa)} às {formatarHora(lote.dataEntradaCaixa)}
+                        </p>
+                      </div>
+
+                      {/* Validador e Voluntários */}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <p className="text-muted-foreground flex items-center gap-1">
                             <User className="h-3 w-3" />
                             Validador
                           </p>
-                          <p className="text-xs font-medium truncate">
+                          <p className="font-medium truncate">
                             {lote.validadorNome}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Voluntários</p>
-                          <p className="text-sm font-medium">
-                            {lote.voluntariosUnicos} pessoas
+                          <p className="text-muted-foreground">Voluntários</p>
+                          <p className="font-medium">
+                            {lote.voluntariosUnicos || 0} pessoas
                           </p>
                         </div>
                       </div>
 
-                      {/* Linha 5: Dados IoT */}
-                      <div className="bg-muted/30 rounded-lg p-2 space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground">Monitoramento IoT</p>
+                      {/* Dados IoT Simplificados */}
+                      <div className="bg-muted/30 rounded-lg p-2">
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div className="flex items-center gap-1">
                             <Thermometer className="h-3 w-3 text-orange-500" />
@@ -179,21 +149,6 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }:
                           <div className="flex items-center gap-1">
                             <Droplets className="h-3 w-3 text-blue-500" />
                             <span>{lote.umidade}%</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">pH:</span> {lote.ph}
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Cond:</span> {lote.condutividade}
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">N:</span> {lote.nitrogenio}ppm
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">P:</span> {lote.fosforo}ppm
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">K:</span> {lote.potassio}ppm
                           </div>
                         </div>
                       </div>

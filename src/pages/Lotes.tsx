@@ -149,12 +149,18 @@ const Lotes = () => {
 
         {/* Tab: Produção */}
         <TabsContent value="producao" className="space-y-6">
-          <Card className="glass-light border-0">
+            <Card className="glass-light border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
                 Esteira de Produção
+                <Badge variant="outline" className="text-sm ml-auto">
+                  {lotesAtivos.length}/7 caixas ocupadas
+                </Badge>
               </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Processo de compostagem em 7 semanas
+              </p>
             </CardHeader>
             <CardContent>
               <ProductionBelt
