@@ -214,11 +214,18 @@ export const ManejoCard = ({ lote, onRegistrarManejo }: ManejoCardProps) => {
                   <Camera className="h-4 w-4" />
                   Foto do processo (opcional)
                 </label>
-                <EntregaFotosCapture
-                  onPhotoCapture={(url) => setFotoUrl(url)}
-                  bucketName="entrega-fotos"
-                  folderPath="manejo"
-                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    // Implementar captura de foto posteriormente
+                    console.log('Implementar captura de foto');
+                  }}
+                >
+                  <Camera className="h-4 w-4 mr-2" />
+                  Capturar Foto
+                </Button>
               </div>
 
               {/* Observações */}

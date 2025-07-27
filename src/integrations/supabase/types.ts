@@ -157,6 +157,54 @@ export type Database = {
         }
         Relationships: []
       }
+      manejo_semanal: {
+        Row: {
+          caixa_destino: number
+          caixa_origem: number
+          created_at: string
+          foto_url: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          lote_id: string
+          observacoes: string | null
+          peso_antes: number
+          peso_depois: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          caixa_destino: number
+          caixa_origem: number
+          created_at?: string
+          foto_url?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          lote_id: string
+          observacoes?: string | null
+          peso_antes: number
+          peso_depois: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          caixa_destino?: number
+          caixa_origem?: number
+          created_at?: string
+          foto_url?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          lote_id?: string
+          observacoes?: string | null
+          peso_antes?: number
+          peso_depois?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
