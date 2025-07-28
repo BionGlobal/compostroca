@@ -21,7 +21,7 @@ import {
 import { useLotesManager } from '@/hooks/useLotesManager';
 import { ProductionBelt } from '@/components/ProductionBelt';
 import { ManejoCard } from '@/components/ManejoCard';
-import { ManejoSemanal } from '@/components/ManejoSemanal';
+import { ManejoSimplificado } from '@/components/ManejoSimplificado';
 import { PerformanceCharts } from '@/components/PerformanceCharts';
 import { FinalizationModal } from '@/components/FinalizationModal';
 import { StatCard } from '@/components/StatCard';
@@ -140,16 +140,15 @@ const Lotes = () => {
 
       {/* Tabs de navegação */}
       <Tabs defaultValue="producao" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="producao">Produção</TabsTrigger>
-          <TabsTrigger value="manejo">Manejo</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
           <TabsTrigger value="analise">Análise</TabsTrigger>
         </TabsList>
 
         {/* Tab: Produção */}
         <TabsContent value="producao" className="space-y-6">
-            <Card className="glass-light border-0">
+          <Card className="glass-light border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
@@ -168,6 +167,37 @@ const Lotes = () => {
                 onManejoClick={handleManejoClick}
                 onFinalizarClick={handleFinalizarClick}
               />
+            </CardContent>
+          </Card>
+
+          {/* Card de Manejo Semanal */}
+          <Card className="glass-light border-0">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Manejo Semanal
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Registre o manejo semanal dos lotes e faça a esteira avançar
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <h4 className="font-medium mb-1">Processo de Manejo</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Documente o manejo com fotos, informações e pesos. A esteira avançará automaticamente.
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => setShowManejoSemanal(true)}
+                  disabled={lotesAtivos.length === 0}
+                  className="gap-2"
+                >
+                  <Clock className="h-4 w-4" />
+                  Registre o manejo semanal dos lotes - Iniciar
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -193,92 +223,6 @@ const Lotes = () => {
           )}
         </TabsContent>
 
-        {/* Tab: Manejo */}
-        <TabsContent value="manejo" className="space-y-6">
-          <Card className="glass-light border-0">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5" />
-                    Manejo Semanal
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Processo integrado de transferência e finalização dos lotes
-                  </p>
-                </div>
-                <Button 
-                  onClick={() => setShowManejoSemanal(true)}
-                  disabled={lotesAtivos.length === 0}
-                  className="gap-2"
-                >
-                  <Clock className="h-4 w-4" />
-                  Iniciar Manejo
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {lotesAtivos.length === 0 ? (
-                <div className="text-center py-8">
-                  <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <h3 className="text-lg font-medium mb-2">Nenhum lote ativo</h3>
-                  <p className="text-muted-foreground">
-                    Não há lotes em processamento no momento
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                      <h4 className="font-medium text-green-800">Sistema pronto para manejo</h4>
-                    </div>
-                    <p className="text-sm text-green-700">
-                      {lotesAtivos.length} {lotesAtivos.length === 1 ? 'lote ativo' : 'lotes ativos'} na esteira. Você pode iniciar o processo de manejo semanal.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-2">
-                    {Array.from({ length: 7 }, (_, i) => i + 1).map(caixa => {
-                      const lote = lotesAtivos.find(l => l.caixa_atual === caixa);
-                      return (
-                        <Card key={caixa} className="text-center">
-                          <CardContent className="p-3">
-                            <div className="text-xs text-muted-foreground mb-1">Caixa {caixa}</div>
-                            {lote ? (
-                              <>
-                                <div className="text-sm font-medium">{lote.codigo}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {lote.peso_atual.toFixed(1)}kg
-                                </div>
-                                <Badge variant="default" className="text-xs mt-1">
-                                  Ativo
-                                </Badge>
-                              </>
-                            ) : (
-                              <div className="text-xs text-muted-foreground">Vazia</div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-
-                  <div className="text-center">
-                    <Button 
-                      onClick={() => setShowManejoSemanal(true)}
-                      size="lg"
-                      className="gap-2"
-                    >
-                      <Clock className="h-5 w-5" />
-                      Iniciar Processo de Manejo Semanal
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* Tab: Histórico */}
         <TabsContent value="historico" className="space-y-6">
@@ -336,8 +280,8 @@ const Lotes = () => {
         />
       )}
 
-      {/* Modal de Manejo Semanal */}
-      <ManejoSemanal
+      {/* Modal de Manejo Simplificado */}
+      <ManejoSimplificado
         open={showManejoSemanal}
         onClose={() => setShowManejoSemanal(false)}
         lotes={lotesAtivos}
