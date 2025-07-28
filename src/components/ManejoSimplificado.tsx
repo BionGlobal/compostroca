@@ -172,7 +172,7 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
         .from('lotes')
         .update({
           status: 'encerrado',
-          peso_atual: pesos[7] || lote7.peso_atual,
+          peso_atual: lote7.peso_atual * 0.9685, // Redução de 3.15%
           data_encerramento: new Date().toISOString()
         })
         .eq('id', lote7.id);
@@ -186,7 +186,7 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
           .from('lotes')
           .update({
             caixa_atual: caixa + 1,
-            peso_atual: pesos[caixa] || lote.peso_atual
+            peso_atual: lote.peso_atual * 0.9685 // Redução de 3.15%
           })
           .eq('id', lote.id);
       }
@@ -202,18 +202,18 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
     // Finalização da caixa 7
     const lote7 = lotesAtivos.find(l => l.caixa_atual === 7);
     if (lote7) {
-      operacoes.push({
-        lote_id: lote7.id,
-        user_id: user.id,
-        caixa_origem: 7,
-        caixa_destino: null,
-        peso_antes: lote7.peso_atual,
-        peso_depois: pesos[7] || lote7.peso_atual,
-        foto_url: fotoUrls[0] || null,
-        observacoes: `FINALIZAÇÃO - ${observacoes}`,
-        latitude: localizacao?.lat,
-        longitude: localizacao?.lng
-      });
+        operacoes.push({
+          lote_id: lote7.id,
+          user_id: user.id,
+          caixa_origem: 7,
+          caixa_destino: null,
+          peso_antes: lote7.peso_atual,
+          peso_depois: lote7.peso_atual * 0.9685, // Redução de 3.15%
+          foto_url: fotoUrls[0] || null,
+          observacoes: `FINALIZAÇÃO - ${observacoes}`,
+          latitude: localizacao?.lat,
+          longitude: localizacao?.lng
+        });
     }
 
     // Transferências
@@ -226,7 +226,7 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
           caixa_origem: caixa,
           caixa_destino: caixa + 1,
           peso_antes: lote.peso_atual,
-          peso_depois: pesos[caixa] || lote.peso_atual,
+          peso_depois: lote.peso_atual * 0.9685, // Redução de 3.15%
           foto_url: fotoUrls[Math.min(caixa - 1, fotoUrls.length - 1)] || null,
           observacoes: `TRANSFERÊNCIA ${caixa}→${caixa + 1} - ${observacoes}`,
           latitude: localizacao?.lat,
@@ -304,39 +304,6 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Status das Caixas */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Status Atual da Esteira</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-7 gap-2">
-                {Array.from({ length: 7 }, (_, i) => i + 1).map(caixa => {
-                  const lote = lotesAtivos.find(l => l.caixa_atual === caixa);
-                  return (
-                    <Card key={caixa} className="text-center">
-                      <CardContent className="p-3">
-                        <div className="text-xs text-muted-foreground mb-1">Caixa {caixa}</div>
-                        {lote ? (
-                          <>
-                            <div className="text-sm font-medium">{lote.codigo}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {lote.peso_atual.toFixed(1)}kg
-                            </div>
-                            <Badge variant={caixa === 7 ? "destructive" : "default"} className="text-xs mt-1">
-                              {caixa === 7 ? "Finalizar" : "Transferir"}
-                            </Badge>
-                          </>
-                        ) : (
-                          <div className="text-xs text-muted-foreground">Vazia</div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Upload de Fotos */}
           <Card>
@@ -401,38 +368,6 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
             </CardContent>
           </Card>
 
-          {/* Pesos das Caixas */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Scale className="h-4 w-4" />
-                Pesos Atualizados (kg)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {lotesAtivos.map(lote => (
-                  <div key={lote.id} className="space-y-2">
-                    <Label htmlFor={`peso-${lote.caixa_atual}`}>
-                      Caixa {lote.caixa_atual} - {lote.codigo}
-                    </Label>
-                    <Input
-                      id={`peso-${lote.caixa_atual}`}
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      value={pesos[lote.caixa_atual] || lote.peso_atual}
-                      onChange={(e) => setPesos(prev => ({
-                        ...prev,
-                        [lote.caixa_atual]: parseFloat(e.target.value) || 0
-                      }))}
-                      placeholder={`Atual: ${lote.peso_atual.toFixed(1)}`}
-                    />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Observações */}
           <Card>
