@@ -18,6 +18,10 @@ export const formatWeight = (weight: number): string => {
   return `${weight.toFixed(2)} kg`;
 };
 
+export const formatPesoDisplay = (weight: number): string => {
+  return `${weight.toFixed(3).replace('.', ',')} kg`;
+};
+
 export const calculateWeightReduction = (initial: number, final: number): number => {
   if (initial === 0) return 0;
   return ((initial - final) / initial) * 100;

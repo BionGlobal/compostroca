@@ -20,6 +20,7 @@ import { useEntregaFotos } from '@/hooks/useEntregaFotos';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LoteCard } from '@/components/LoteCard';
 import { useLotes } from '@/hooks/useLotes';
+import { formatPesoDisplay } from '@/lib/organizationUtils';
 
 const Entregas = () => {
   const [selectedVoluntario, setSelectedVoluntario] = useState<string>('');
@@ -330,7 +331,7 @@ const Entregas = () => {
                   <div className="flex items-center justify-between">
                     <div className="text-center">
                       <Badge className="bg-green-500 hover:bg-green-600 text-white font-bold text-lg px-4 py-2">
-                        {Number(entrega.peso).toFixed(3)}kg
+                        {formatPesoDisplay(Number(entrega.peso))}
                       </Badge>
                     </div>
                     <div className="flex items-center gap-1">
