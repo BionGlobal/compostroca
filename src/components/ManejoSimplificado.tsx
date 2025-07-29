@@ -11,9 +11,7 @@ import {
   Upload, 
   X, 
   Camera, 
-  Check, 
-  AlertTriangle,
-  Scale,
+  CheckCheck, 
   MapPin
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -87,7 +85,53 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
     }
   }, [open, lotesAtivos]);
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Função para comprimir imagem
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      const img = new Image();
+      
+      img.onload = () => {
+        // Definir tamanho máximo
+        const maxWidth = 1024;
+        const maxHeight = 1024;
+        let { width, height } = img;
+        
+        // Calcular novo tamanho mantendo proporção
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Desenhar e comprimir
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const compressedFile = new File([blob], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          }
+        }, 'image/jpeg', 0.8);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     if (fotos.length + files.length > 10) {
       toast({
@@ -98,13 +142,19 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
       return;
     }
 
-    const novasFotos: FotoUpload[] = files.map(file => ({
-      file,
-      preview: URL.createObjectURL(file),
-      uploading: false
-    }));
+    // Comprimir e processar imagens
+    const fotosComprimidas = await Promise.all(
+      files.map(async (file) => {
+        const compressedFile = await compressImage(file);
+        return {
+          file: compressedFile,
+          preview: URL.createObjectURL(compressedFile),
+          uploading: false
+        };
+      })
+    );
 
-    setFotos(prev => [...prev, ...novasFotos]);
+    setFotos(prev => [...prev, ...fotosComprimidas]);
   };
 
   const removerFoto = (index: number) => {
@@ -285,22 +335,17 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
 
   if (!open) return null;
 
-  const progresso = fotos.length > 0 && observacoes ? 100 : fotos.length > 0 ? 70 : 30;
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Scale className="h-5 w-5" />
-            Registrar Manejo Semanal
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <Camera className="h-6 w-6" />
+            Registro de Manejo
           </DialogTitle>
-          <div className="space-y-2">
-            <Progress value={progresso} className="w-full" />
-            <p className="text-sm text-muted-foreground">
-              Documente o processo com fotos e informações
-            </p>
-          </div>
+          <p className="text-muted-foreground">
+            Documente o processo de aeração, transferências de lotes e distribuição do composto pronto.
+          </p>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -308,24 +353,24 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
           {/* Upload de Fotos */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Camera className="h-4 w-4" />
-                Documentação Fotográfica
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                Upload de Fotos
                 <Badge variant="outline">{fotos.length}/10</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div 
-                  className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                  className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    Clique para adicionar fotos ou arraste arquivos aqui
+                  <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-base text-muted-foreground mb-1">
+                    Clique para selecionar fotos
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Máximo 10 fotos (JPG, PNG)
+                  <p className="text-sm text-muted-foreground">
+                    Máximo 10 fotos • JPG, PNG, WebP • Otimização automática
                   </p>
                 </div>
 
@@ -339,23 +384,23 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
                 />
 
                 {fotos.length > 0 && (
-                  <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
                     {fotos.map((foto, index) => (
-                      <div key={index} className="relative">
+                      <div key={index} className="relative group">
                         <img
                           src={foto.preview}
-                          alt={`Upload ${index + 1}`}
-                          className="w-full h-20 object-cover rounded-lg"
+                          alt={`Foto ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg border border-border"
                         />
                         {foto.uploading && (
                           <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                           </div>
                         )}
                         <Button
                           size="sm"
                           variant="destructive"
-                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => removerFoto(index)}
                         >
                           <X className="h-3 w-3" />
@@ -369,32 +414,27 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
           </Card>
 
 
-          {/* Observações */}
+          {/* Informações Adicionais */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Informações Adicionais</CardTitle>
+              <CardTitle className="text-lg">Informações Adicionais</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="observacoes">Observações do Manejo</Label>
-                  <Textarea
-                    id="observacoes"
-                    value={observacoes}
-                    onChange={(e) => setObservacoes(e.target.value)}
-                    placeholder="Descreva as condições dos lotes, alterações observadas, etc..."
-                    className="mt-1"
-                    rows={3}
-                  />
-                </div>
-
-                {localizacao && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    Localização capturada: {localizacao.lat.toFixed(6)}, {localizacao.lng.toFixed(6)}
-                  </div>
-                )}
+            <CardContent className="space-y-4">
+              <div>
+                <Textarea
+                  value={observacoes}
+                  onChange={(e) => setObservacoes(e.target.value)}
+                  placeholder="Observações sobre o processo de manejo, condições dos lotes, etc..."
+                  rows={4}
+                />
               </div>
+
+              {localizacao && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  Localização: {localizacao.lat.toFixed(6)}, {localizacao.lng.toFixed(6)}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -406,14 +446,13 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
               disabled={loading}
               className="flex-1"
             >
-              <X className="h-4 w-4 mr-2" />
               Cancelar
             </Button>
             
             <Button
               onClick={handleConfirmar}
               disabled={loading || fotos.length === 0 || uploadingAll}
-              className="flex-1"
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
             >
               {loading ? (
                 <>
@@ -422,8 +461,8 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
                 </>
               ) : (
                 <>
-                  <Check className="h-4 w-4 mr-2" />
-                  Confirmar Manejo e Avançar Esteira
+                  <CheckCheck className="h-4 w-4 mr-2" />
+                  Registrar
                 </>
               )}
             </Button>
