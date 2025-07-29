@@ -162,7 +162,7 @@ export type Database = {
       }
       manejo_semanal: {
         Row: {
-          caixa_destino: number
+          caixa_destino: number | null
           caixa_origem: number
           created_at: string
           foto_url: string | null
@@ -177,7 +177,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          caixa_destino: number
+          caixa_destino?: number | null
           caixa_origem: number
           created_at?: string
           foto_url?: string | null
@@ -192,7 +192,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          caixa_destino?: number
+          caixa_destino?: number | null
           caixa_origem?: number
           created_at?: string
           foto_url?: string | null

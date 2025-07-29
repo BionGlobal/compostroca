@@ -132,6 +132,8 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📁 File select triggered, files:', event.target.files?.length);
+    
     const files = Array.from(event.target.files || []);
     if (fotos.length + files.length > 10) {
       toast({
@@ -142,19 +144,34 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
       return;
     }
 
-    // Comprimir e processar imagens
-    const fotosComprimidas = await Promise.all(
-      files.map(async (file) => {
-        const compressedFile = await compressImage(file);
-        return {
-          file: compressedFile,
-          preview: URL.createObjectURL(compressedFile),
-          uploading: false
-        };
-      })
-    );
+    console.log('📁 Processing files:', files.length, 'Current photos:', fotos.length);
 
-    setFotos(prev => [...prev, ...fotosComprimidas]);
+    try {
+      // Comprimir e processar imagens
+      const fotosComprimidas = await Promise.all(
+        files.map(async (file, index) => {
+          console.log(`🔄 Compressing file ${index + 1}:`, file.name, 'Size:', file.size);
+          const compressedFile = await compressImage(file);
+          console.log(`✅ File ${index + 1} compressed:`, compressedFile.name, 'New size:', compressedFile.size);
+          
+          return {
+            file: compressedFile,
+            preview: URL.createObjectURL(compressedFile),
+            uploading: false
+          };
+        })
+      );
+
+      console.log('✅ All files processed, adding to state');
+      setFotos(prev => [...prev, ...fotosComprimidas]);
+    } catch (error) {
+      console.error('❌ Error processing files:', error);
+      toast({
+        title: "Erro no upload",
+        description: "Falha ao processar uma ou mais imagens",
+        variant: "destructive",
+      });
+    }
   };
 
   const removerFoto = (index: number) => {
@@ -169,13 +186,17 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
   const uploadFotos = async (): Promise<string[]> => {
     if (!user) throw new Error('Usuário não autenticado');
 
+    console.log('🔄 Starting photo upload process. Photos to upload:', fotos.length);
     setUploadingAll(true);
     const urlsFotos: string[] = [];
 
     try {
       for (let i = 0; i < fotos.length; i++) {
         const foto = fotos[i];
+        console.log(`📸 Processing photo ${i + 1}/${fotos.length}`);
+        
         if (foto.url) {
+          console.log(`✅ Photo ${i + 1} already uploaded, using existing URL`);
           urlsFotos.push(foto.url);
           continue;
         }
@@ -187,16 +208,22 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
         });
 
         const fileName = `${user.id}/manejo-${Date.now()}-${i}.jpg`;
+        console.log(`⬆️ Uploading photo ${i + 1} as:`, fileName);
+        
         const { error: uploadError } = await supabase.storage
           .from('manejo-fotos')
           .upload(fileName, foto.file);
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error(`❌ Upload error for photo ${i + 1}:`, uploadError);
+          throw uploadError;
+        }
 
         const { data } = supabase.storage
           .from('manejo-fotos')
           .getPublicUrl(fileName);
 
+        console.log(`✅ Photo ${i + 1} uploaded successfully:`, data.publicUrl);
         urlsFotos.push(data.publicUrl);
 
         setFotos(prev => {
@@ -205,6 +232,11 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
           return novasFotos;
         });
       }
+      
+      console.log('✅ All photos uploaded successfully. URLs:', urlsFotos);
+    } catch (error) {
+      console.error('❌ Photo upload failed:', error);
+      throw error;
     } finally {
       setUploadingAll(false);
     }
@@ -246,12 +278,17 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
   const registrarManejo = async (fotoUrls: string[]) => {
     if (!user) return;
 
+    console.log('💾 Starting data registration process');
+    console.log('📊 Active lots:', lotesAtivos);
+    console.log('📸 Photo URLs:', fotoUrls);
+
     // Registrar operações no banco
     const operacoes = [];
 
     // Finalização da caixa 7
     const lote7 = lotesAtivos.find(l => l.caixa_atual === 7);
     if (lote7) {
+        console.log('🏁 Processing finalization for box 7:', lote7);
         operacoes.push({
           lote_id: lote7.id,
           user_id: user.id,
@@ -270,6 +307,7 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
     for (let caixa = 6; caixa >= 1; caixa--) {
       const lote = lotesAtivos.find(l => l.caixa_atual === caixa);
       if (lote) {
+        console.log(`🔄 Processing transfer for box ${caixa}:`, lote);
         operacoes.push({
           lote_id: lote.id,
           user_id: user.id,
@@ -285,12 +323,19 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
       }
     }
 
+    console.log('💾 Operations to insert:', operacoes);
+
     // Inserir todas as operações
     const { error } = await supabase
       .from('manejo_semanal')
       .insert(operacoes);
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Database insertion error:', error);
+      throw error;
+    }
+
+    console.log('✅ All operations registered successfully');
   };
 
   const handleConfirmar = async () => {
@@ -423,9 +468,14 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
               <div>
                 <Textarea
                   value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
+                  onChange={(e) => {
+                    console.log('📝 Textarea onChange triggered:', e.target.value);
+                    setObservacoes(e.target.value);
+                  }}
                   placeholder="Observações sobre o processo de manejo, condições dos lotes, etc..."
                   rows={4}
+                  disabled={false}
+                  className="resize-none"
                 />
               </div>
 
