@@ -14,7 +14,7 @@ import {
   CheckCircle,
   AlertTriangle,
   BarChart3,
-  Activity,
+  Recycle,
   Sprout
 } from 'lucide-react';
 
@@ -148,6 +148,37 @@ const Lotes = () => {
 
         {/* Tab: Produção */}
         <TabsContent value="producao" className="space-y-6">
+          {/* Card de Manutenção Semanal - Movido para o topo */}
+          <Card className="border-emerald-200/50 bg-gradient-to-r from-emerald-500/10 to-green-500/10 shadow-lg hover:shadow-emerald-200/20 transition-all duration-300">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+                <Recycle className="h-5 w-5" />
+                Manutenção Semanal
+              </CardTitle>
+              <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-1">
+                Registre o processo semanal de aeração, transferência e distribuição do composto dos lotes e faça a esteira avançar
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-4 bg-white/50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200/30">
+                <div>
+                  <h4 className="font-medium mb-1 text-emerald-900 dark:text-emerald-200">Processo de Manutenção</h4>
+                  <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                    Documente o processo com fotos e observações. A esteira avançará automaticamente.
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => setShowManejoSemanal(true)}
+                  disabled={lotesAtivos.length === 0}
+                  className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                  <Recycle className="h-4 w-4" />
+                  Começar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="glass-light border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -167,37 +198,6 @@ const Lotes = () => {
                 onManejoClick={handleManejoClick}
                 onFinalizarClick={handleFinalizarClick}
               />
-            </CardContent>
-          </Card>
-
-          {/* Card de Manejo Semanal */}
-          <Card className="glass-light border-0">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Manejo Semanal
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Registre o manejo semanal dos lotes e faça a esteira avançar
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <div>
-                  <h4 className="font-medium mb-1">Processo de Manejo</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Documente o manejo com fotos, informações e pesos. A esteira avançará automaticamente.
-                  </p>
-                </div>
-                <Button 
-                  onClick={() => setShowManejoSemanal(true)}
-                  disabled={lotesAtivos.length === 0}
-                  className="gap-2"
-                >
-                  <Clock className="h-4 w-4" />
-                  Registre o manejo semanal dos lotes - Iniciar
-                </Button>
-              </div>
             </CardContent>
           </Card>
 
