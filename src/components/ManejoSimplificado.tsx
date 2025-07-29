@@ -1,12 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { Textarea } from './ui/textarea';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Progress } from './ui/progress';
 import { 
   Upload, 
   X, 
@@ -42,9 +38,7 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
 }) => {
   const [fotos, setFotos] = useState<FotoUpload[]>([]);
   const [observacoes, setObservacoes] = useState('');
-  const [pesos, setPesos] = useState<{ [caixa: number]: number }>({});
   const [loading, setLoading] = useState(false);
-  const [uploadingAll, setUploadingAll] = useState(false);
   const [localizacao, setLocalizacao] = useState<{lat: number, lng: number} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -58,7 +52,6 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
       // Resetar estado ao abrir
       setFotos([]);
       setObservacoes('');
-      setPesos({});
       setLocalizacao(null);
       
       // Obter localização
@@ -75,66 +68,72 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
           }
         );
       }
-
-      // Inicializar pesos com valores atuais
-      const pesosIniciais: { [caixa: number]: number } = {};
-      lotesAtivos.forEach(lote => {
-        pesosIniciais[lote.caixa_atual] = lote.peso_atual;
-      });
-      setPesos(pesosIniciais);
     }
-  }, [open, lotesAtivos]);
+  }, [open]);
 
   // Função para comprimir imagem
-  const compressImage = (file: File): Promise<File> => {
-    return new Promise((resolve) => {
+  const compressImage = useCallback((file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
+      const ctx = canvas.getContext('2d');
       const img = new Image();
       
+      if (!ctx) {
+        reject(new Error('Canvas context not available'));
+        return;
+      }
+      
       img.onload = () => {
-        // Definir tamanho máximo
-        const maxWidth = 1024;
-        const maxHeight = 1024;
-        let { width, height } = img;
-        
-        // Calcular novo tamanho mantendo proporção
-        if (width > height) {
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
+        try {
+          // Definir tamanho máximo
+          const maxWidth = 1024;
+          const maxHeight = 1024;
+          let { width, height } = img;
+          
+          // Calcular novo tamanho mantendo proporção
+          if (width > height) {
+            if (width > maxWidth) {
+              height = (height * maxWidth) / width;
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = (width * maxHeight) / height;
+              height = maxHeight;
+            }
           }
-        } else {
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          // Desenhar e comprimir
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Failed to compress image'));
+            }
+          }, 'image/jpeg', 0.8);
+        } catch (error) {
+          reject(error);
         }
-        
-        canvas.width = width;
-        canvas.height = height;
-        
-        // Desenhar e comprimir
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const compressedFile = new File([blob], file.name, {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
-            resolve(compressedFile);
-          }
-        }, 'image/jpeg', 0.8);
       };
       
+      img.onerror = () => reject(new Error('Failed to load image'));
       img.src = URL.createObjectURL(file);
     });
-  };
+  }, []);
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('📁 File select triggered, files:', event.target.files?.length);
-    
+  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
+    
+    if (files.length === 0) return;
+    
     if (fotos.length + files.length > 10) {
       toast({
         title: "Limite excedido",
@@ -144,16 +143,26 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
       return;
     }
 
-    console.log('📁 Processing files:', files.length, 'Current photos:', fotos.length);
-
     try {
-      // Comprimir e processar imagens
+      // Validar tipos de arquivo
+      const validFiles = files.filter(file => {
+        const isImage = file.type.startsWith('image/');
+        const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB max
+        return isImage && isValidSize;
+      });
+
+      if (validFiles.length !== files.length) {
+        toast({
+          title: "Arquivos inválidos",
+          description: "Apenas imagens até 10MB são permitidas",
+          variant: "destructive"
+        });
+      }
+
+      // Comprimir e processar imagens válidas
       const fotosComprimidas = await Promise.all(
-        files.map(async (file, index) => {
-          console.log(`🔄 Compressing file ${index + 1}:`, file.name, 'Size:', file.size);
+        validFiles.map(async (file) => {
           const compressedFile = await compressImage(file);
-          console.log(`✅ File ${index + 1} compressed:`, compressedFile.name, 'New size:', compressedFile.size);
-          
           return {
             file: compressedFile,
             preview: URL.createObjectURL(compressedFile),
@@ -162,45 +171,46 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
         })
       );
 
-      console.log('✅ All files processed, adding to state');
       setFotos(prev => [...prev, ...fotosComprimidas]);
+      
+      // Limpar input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     } catch (error) {
-      console.error('❌ Error processing files:', error);
+      console.error('Erro ao processar fotos:', error);
       toast({
         title: "Erro no upload",
         description: "Falha ao processar uma ou mais imagens",
         variant: "destructive",
       });
     }
-  };
+  }, [fotos.length, compressImage, toast]);
 
-  const removerFoto = (index: number) => {
+  const removerFoto = useCallback((index: number) => {
     setFotos(prev => {
       const novasFotos = [...prev];
       URL.revokeObjectURL(novasFotos[index].preview);
       novasFotos.splice(index, 1);
       return novasFotos;
     });
-  };
+  }, []);
 
   const uploadFotos = async (): Promise<string[]> => {
     if (!user) throw new Error('Usuário não autenticado');
 
-    console.log('🔄 Starting photo upload process. Photos to upload:', fotos.length);
-    setUploadingAll(true);
     const urlsFotos: string[] = [];
 
     try {
       for (let i = 0; i < fotos.length; i++) {
         const foto = fotos[i];
-        console.log(`📸 Processing photo ${i + 1}/${fotos.length}`);
         
         if (foto.url) {
-          console.log(`✅ Photo ${i + 1} already uploaded, using existing URL`);
           urlsFotos.push(foto.url);
           continue;
         }
 
+        // Marcar como fazendo upload
         setFotos(prev => {
           const novasFotos = [...prev];
           novasFotos[i] = { ...novasFotos[i], uploading: true };
@@ -208,14 +218,12 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
         });
 
         const fileName = `${user.id}/manejo-${Date.now()}-${i}.jpg`;
-        console.log(`⬆️ Uploading photo ${i + 1} as:`, fileName);
         
         const { error: uploadError } = await supabase.storage
           .from('manejo-fotos')
           .upload(fileName, foto.file);
 
         if (uploadError) {
-          console.error(`❌ Upload error for photo ${i + 1}:`, uploadError);
           throw uploadError;
         }
 
@@ -223,22 +231,18 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
           .from('manejo-fotos')
           .getPublicUrl(fileName);
 
-        console.log(`✅ Photo ${i + 1} uploaded successfully:`, data.publicUrl);
         urlsFotos.push(data.publicUrl);
 
+        // Marcar como concluído
         setFotos(prev => {
           const novasFotos = [...prev];
           novasFotos[i] = { ...novasFotos[i], uploading: false, url: data.publicUrl };
           return novasFotos;
         });
       }
-      
-      console.log('✅ All photos uploaded successfully. URLs:', urlsFotos);
     } catch (error) {
-      console.error('❌ Photo upload failed:', error);
+      console.error('Erro no upload das fotos:', error);
       throw error;
-    } finally {
-      setUploadingAll(false);
     }
 
     return urlsFotos;
@@ -278,17 +282,12 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
   const registrarManejo = async (fotoUrls: string[]) => {
     if (!user) return;
 
-    console.log('💾 Starting data registration process');
-    console.log('📊 Active lots:', lotesAtivos);
-    console.log('📸 Photo URLs:', fotoUrls);
-
     // Registrar operações no banco
     const operacoes = [];
 
     // Finalização da caixa 7
     const lote7 = lotesAtivos.find(l => l.caixa_atual === 7);
     if (lote7) {
-        console.log('🏁 Processing finalization for box 7:', lote7);
         operacoes.push({
           lote_id: lote7.id,
           user_id: user.id,
@@ -307,7 +306,6 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
     for (let caixa = 6; caixa >= 1; caixa--) {
       const lote = lotesAtivos.find(l => l.caixa_atual === caixa);
       if (lote) {
-        console.log(`🔄 Processing transfer for box ${caixa}:`, lote);
         operacoes.push({
           lote_id: lote.id,
           user_id: user.id,
@@ -323,19 +321,14 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
       }
     }
 
-    console.log('💾 Operations to insert:', operacoes);
-
     // Inserir todas as operações
     const { error } = await supabase
       .from('manejo_semanal')
       .insert(operacoes);
 
     if (error) {
-      console.error('❌ Database insertion error:', error);
       throw error;
     }
-
-    console.log('✅ All operations registered successfully');
   };
 
   const handleConfirmar = async () => {
@@ -378,11 +371,15 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
     }
   };
 
+  const handleObservacoesChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setObservacoes(e.target.value);
+  }, []);
+
   if (!open) return null;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Camera className="h-6 w-6" />
@@ -394,7 +391,6 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
-
           {/* Upload de Fotos */}
           <Card>
             <CardHeader>
@@ -406,20 +402,21 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div 
-                  className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                  onClick={() => fileInputRef.current?.click()}
+                <label
+                  htmlFor="file-upload"
+                  className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors block"
                 >
                   <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
                   <p className="text-base text-muted-foreground mb-1">
                     Clique para selecionar fotos
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Máximo 10 fotos • JPG, PNG, WebP • Otimização automática
+                    Máximo 10 fotos • JPG, PNG, WebP • Até 10MB cada
                   </p>
-                </div>
+                </label>
 
                 <input
+                  id="file-upload"
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
@@ -458,7 +455,6 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
             </CardContent>
           </Card>
 
-
           {/* Informações Adicionais */}
           <Card>
             <CardHeader>
@@ -466,16 +462,16 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Textarea
+                <label htmlFor="observacoes" className="text-sm font-medium mb-2 block">
+                  Observações
+                </label>
+                <textarea
+                  id="observacoes"
                   value={observacoes}
-                  onChange={(e) => {
-                    console.log('📝 Textarea onChange triggered:', e.target.value);
-                    setObservacoes(e.target.value);
-                  }}
+                  onChange={handleObservacoesChange}
                   placeholder="Observações sobre o processo de manejo, condições dos lotes, etc..."
                   rows={4}
-                  disabled={false}
-                  className="resize-none"
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 />
               </div>
 
@@ -501,7 +497,7 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
             
             <Button
               onClick={handleConfirmar}
-              disabled={loading || fotos.length === 0 || uploadingAll}
+              disabled={loading || fotos.length === 0}
               className="flex-1 bg-emerald-600 hover:bg-emerald-700"
             >
               {loading ? (
