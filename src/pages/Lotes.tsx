@@ -14,7 +14,7 @@ import {
   CheckCircle,
   AlertTriangle,
   BarChart3,
-  Recycle,
+  Camera,
   Sprout
 } from 'lucide-react';
 
@@ -148,31 +148,30 @@ const Lotes = () => {
 
         {/* Tab: Produção */}
         <TabsContent value="producao" className="space-y-6">
-          {/* Card de Manutenção Semanal - Movido para o topo */}
+          {/* Card de Manutenção Semanal - Simplificado */}
           <Card className="border-emerald-200/50 bg-gradient-to-r from-emerald-500/10 to-green-500/10 shadow-lg hover:shadow-emerald-200/20 transition-all duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
-                <Recycle className="h-5 w-5" />
+                <Camera className="h-5 w-5" />
                 Manutenção Semanal
               </CardTitle>
               <p className="text-sm text-emerald-700 dark:text-emerald-400 mt-1">
-                Registre o processo semanal de aeração, transferência e distribuição do composto dos lotes e faça a esteira avançar
+                Registre o processo semanal com fotos e observações
               </p>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between p-4 bg-white/50 dark:bg-emerald-950/30 rounded-lg border border-emerald-200/30">
-                <div>
-                  <h4 className="font-medium mb-1 text-emerald-900 dark:text-emerald-200">Processo de Manutenção</h4>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="text-center md:text-left">
                   <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                    Documente o processo com fotos e observações. A esteira avançará automaticamente.
+                    A esteira avançará automaticamente após o registro
                   </p>
                 </div>
                 <Button 
                   onClick={() => setShowManejoSemanal(true)}
                   disabled={lotesAtivos.length === 0}
-                  className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+                  className="w-full md:w-auto gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
                 >
-                  <Recycle className="h-4 w-4" />
+                  <Camera className="h-4 w-4" />
                   Começar
                 </Button>
               </div>
