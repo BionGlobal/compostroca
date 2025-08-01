@@ -214,6 +214,44 @@ export const useManejoSemanal = () => {
           });
       }
 
+      // Criar novo lote na caixa 1 após o manejo
+      const gerarCodigoLote = (): string => {
+        const now = new Date();
+        const year = now.getFullYear().toString().slice(-2);
+        const month = (now.getMonth() + 1).toString().padStart(2, '0');
+        const day = now.getDate().toString().padStart(2, '0');
+        const hour = now.getHours().toString().padStart(2, '0');
+        const minute = now.getMinutes().toString().padStart(2, '0');
+        return `LT${year}${month}${day}${hour}${minute}`;
+      };
+
+      const getProximaSegunda = (): Date => {
+        const hoje = new Date();
+        const diasAteSegunda = (8 - hoje.getDay()) % 7;
+        const proximaSegunda = new Date(hoje);
+        proximaSegunda.setDate(hoje.getDate() + (diasAteSegunda === 0 ? 7 : diasAteSegunda));
+        proximaSegunda.setHours(8, 0, 0, 0);
+        return proximaSegunda;
+      };
+
+      // Criar novo lote na caixa 1
+      await supabase
+        .from('lotes')
+        .insert({
+          codigo: gerarCodigoLote(),
+          unidade: estadoManejo.organizacao,
+          criado_por: user.id,
+          criado_por_nome: user.email || 'Sistema',
+          caixa_atual: 1,
+          semana_atual: 1,
+          status: 'ativo',
+          linha_producao: 'A',
+          data_inicio: new Date().toISOString(),
+          data_proxima_transferencia: getProximaSegunda().toISOString(),
+          peso_inicial: 0,
+          peso_atual: 0
+        });
+
       // Limpar estado
       setEstadoManejo(null);
       localStorage.removeItem('manejo_em_andamento');
