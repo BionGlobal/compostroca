@@ -165,16 +165,7 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }:
 
                       {/* Ações */}
                       <div className="mt-auto pt-2">
-                        {numeroBox === 7 ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
-                            onClick={() => onFinalizarClick(lote)}
-                          >
-                            Finalizar
-                          </Button>
-                        ) : lote.statusManejo !== 'realizado' ? (
+                        {numeroBox !== 7 && lote.statusManejo !== 'realizado' ? (
                           <Button
                             variant="outline"
                             size="sm"
