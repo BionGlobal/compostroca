@@ -210,31 +210,46 @@ export type Database = {
       }
       profiles: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
+          authorized_units: string[] | null
           created_at: string
           full_name: string | null
           id: string
           organization_code: string
           role: string
+          status: Database["public"]["Enums"]["approval_status"]
           updated_at: string
           user_id: string
+          user_role: Database["public"]["Enums"]["user_role_enum"]
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          authorized_units?: string[] | null
           created_at?: string
           full_name?: string | null
           id?: string
           organization_code?: string
           role?: string
+          status?: Database["public"]["Enums"]["approval_status"]
           updated_at?: string
           user_id: string
+          user_role?: Database["public"]["Enums"]["user_role_enum"]
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          authorized_units?: string[] | null
           created_at?: string
           full_name?: string | null
           id?: string
           organization_code?: string
           role?: string
+          status?: Database["public"]["Enums"]["approval_status"]
           updated_at?: string
           user_id?: string
+          user_role?: Database["public"]["Enums"]["user_role_enum"]
         }
         Relationships: []
       }
@@ -291,10 +306,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_modify_data: {
+        Args: { user_id?: string }
+        Returns: boolean
+      }
+      has_unit_access: {
+        Args: { unit_code: string; user_id?: string }
+        Returns: boolean
+      }
+      is_super_admin: {
+        Args: { user_id?: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      approval_status: "pending" | "approved" | "rejected"
+      user_role_enum: "super_admin" | "local_admin" | "auditor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -421,6 +448,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      approval_status: ["pending", "approved", "rejected"],
+      user_role_enum: ["super_admin", "local_admin", "auditor"],
+    },
   },
 } as const
