@@ -9,6 +9,9 @@ export interface Profile {
   full_name: string | null;
   organization_code: string;
   role: string;
+  user_role: 'super_admin' | 'local_admin' | 'auditor';
+  status: 'pending' | 'approved' | 'rejected';
+  authorized_units: string[];
   created_at: string;
   updated_at: string;
 }

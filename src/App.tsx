@@ -11,7 +11,9 @@ import Voluntarios from "./pages/Voluntarios";
 import Entregas from "./pages/Entregas";
 import Lotes from "./pages/Lotes";
 import Auth from "./pages/Auth";
+import PendingUsers from "./pages/PendingUsers";
 import NotFound from "./pages/NotFound";
+import { AdminRoute } from "./components/AdminRoute";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +51,15 @@ const App = () => (
             <ProtectedRoute>
               <Layout>
                 <Lotes />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/usuarios" element={
+            <ProtectedRoute>
+              <Layout>
+                <AdminRoute requireSuperAdmin={true}>
+                  <PendingUsers />
+                </AdminRoute>
               </Layout>
             </ProtectedRoute>
           } />

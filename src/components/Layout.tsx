@@ -2,8 +2,9 @@ import { ReactNode } from 'react';
 import { BottomNavigation } from './BottomNavigation';
 import { BackgroundParticles } from './BackgroundParticles';
 import { Button } from '@/components/ui/button';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { Link } from 'react-router-dom';
 const compostrocaIcon = '/lovable-uploads/41d1fc0c-7816-49f3-91e3-59ed2ae3fefe.png';
 
 interface LayoutProps {
@@ -31,6 +32,18 @@ export const Layout = ({ children }: LayoutProps) => {
             </div>
           </div>
           <div className="flex items-center space-x-4">
+            {profile?.user_role === 'super_admin' && (
+              <Link to="/admin/usuarios">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Users className="h-4 w-4" />
+                  <span className="hidden sm:ml-2 sm:inline">Usuários</span>
+                </Button>
+              </Link>
+            )}
             <div className="flex items-center space-x-2">
               <User className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground hidden sm:inline">
