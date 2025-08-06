@@ -253,6 +253,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_activity_logs: {
+        Row: {
+          action_description: string
+          action_type: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          record_id: string | null
+          table_affected: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action_description: string
+          action_type: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          record_id?: string | null
+          table_affected?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action_description?: string
+          action_type?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          record_id?: string | null
+          table_affected?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       voluntarios: {
         Row: {
           ativo: boolean
@@ -317,6 +353,16 @@ export type Database = {
       is_super_admin: {
         Args: { user_id?: string }
         Returns: boolean
+      }
+      log_user_activity: {
+        Args: {
+          p_user_id: string
+          p_action_type: string
+          p_action_description: string
+          p_table_affected?: string
+          p_record_id?: string
+        }
+        Returns: undefined
       }
     }
     Enums: {
