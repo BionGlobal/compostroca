@@ -97,7 +97,7 @@ export const useLotesManager = () => {
   const { subscribeToLoteUpdates } = useLoteUpdates();
 
   const calcularPesoEsperado = (pesoInicial: number, semanaAtual: number): number => {
-    const reducaoPorSemana = 0.0315; // 3.15%
+    const reducaoPorSemana = 0.0367; // 3.67%
     let peso = pesoInicial;
     for (let i = 1; i < semanaAtual; i++) {
       peso *= (1 - reducaoPorSemana);

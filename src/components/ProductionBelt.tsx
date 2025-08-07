@@ -112,11 +112,14 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }:
                         </p>
                       </div>
 
-                      {/* Data de Entrada */}
+                       {/* Data de Entrada e Final */}
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground">Entrada</p>
                         <p className="text-xs font-medium">
-                          {formatarData(lote.dataEntradaCaixa)} às {formatarHora(lote.dataEntradaCaixa)}
+                          {formatarData(lote.data_inicio)} às {formatarHora(lote.data_inicio)}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Final: {formatarData(new Date(new Date(lote.data_inicio).getTime() + 7 * 7 * 24 * 60 * 60 * 1000).toISOString())}
                         </p>
                       </div>
 

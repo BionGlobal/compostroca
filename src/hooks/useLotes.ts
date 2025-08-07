@@ -235,11 +235,27 @@ export const useLotes = () => {
       setLoading(true);
       console.log('🔒 Finalizando entregas do lote:', loteId);
 
+      // Calcular peso inicial total com cepilho (35% adicional)
+      const { data: entregas, error: entregasError } = await supabase
+        .from('entregas')
+        .select('peso')
+        .eq('lote_codigo', loteAtivoCaixa01?.codigo);
+
+      if (entregasError) throw entregasError;
+
+      const pesoEntregas = entregas?.reduce((acc, entrega) => acc + Number(entrega.peso), 0) || 0;
+      const pesoInicialTotal = pesoEntregas + (pesoEntregas * 0.35); // Resíduos + cepilho (35%)
+
+      console.log('📊 Peso das entregas:', pesoEntregas, 'kg');
+      console.log('📊 Peso inicial total (com cepilho):', pesoInicialTotal, 'kg');
+
       const { error } = await supabase
         .from('lotes')
         .update({
           status: 'em_processamento',
           data_encerramento: new Date().toISOString(),
+          peso_inicial: pesoInicialTotal,
+          peso_atual: pesoInicialTotal,
         })
         .eq('id', loteId);
 
@@ -254,7 +270,7 @@ export const useLotes = () => {
       
       toast({
         title: "Sucesso",
-        description: "Entregas finalizadas! Lote transferido para a esteira de produção.",
+        description: `Entregas finalizadas! Lote transferido para a esteira com ${pesoInicialTotal.toFixed(1)}kg (incluindo cepilho).`,
       });
 
       return true;
