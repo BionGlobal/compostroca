@@ -69,18 +69,9 @@ export const useVoluntarios = () => {
     } catch (error: any) {
       console.error('Erro ao criar voluntário:', error);
       
-      let message = "Erro ao cadastrar voluntário";
-      if (error?.code === '23505') {
-        if (error.detail?.includes('cpf')) {
-          message = "CPF já cadastrado";
-        } else if (error.detail?.includes('numero_balde')) {
-          message = "Número do balde já está em uso nesta unidade";
-        }
-      }
-      
       toast({
         title: "Erro",
-        description: message,
+        description: "Erro ao cadastrar voluntário",
         variant: "destructive",
       });
       
@@ -112,18 +103,9 @@ export const useVoluntarios = () => {
     } catch (error: any) {
       console.error('Erro ao atualizar voluntário:', error);
       
-      let message = "Erro ao atualizar voluntário";
-      if (error?.code === '23505') {
-        if (error.detail?.includes('cpf')) {
-          message = "CPF já cadastrado";
-        } else if (error.detail?.includes('numero_balde')) {
-          message = "Número do balde já está em uso nesta unidade";
-        }
-      }
-      
       toast({
         title: "Erro",
-        description: message,
+        description: "Erro ao atualizar voluntário",
         variant: "destructive",
       });
       
