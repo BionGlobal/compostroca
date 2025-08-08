@@ -1,7 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Camera, RotateCcw, Check, Upload } from 'lucide-react';
+import { Camera, RotateCcw, Check, Upload, AlertTriangle, Settings } from 'lucide-react';
+import { useIOSPermissions } from '@/hooks/useIOSPermissions';
 
 interface ManejoCameraProps {
   onPhotoCapture: (file: File) => void;
@@ -22,6 +23,15 @@ export const ManejoCamera: React.FC<ManejoCameraProps> = ({
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  const { 
+    deviceInfo, 
+    permissions, 
+    requestCameraAccess, 
+    checkSecureContext,
+    showIOSInstructions 
+  } = useIOSPermissions();
 
   useEffect(() => {
     startCamera();
@@ -35,21 +45,41 @@ export const ManejoCamera: React.FC<ManejoCameraProps> = ({
   const startCamera = async () => {
     try {
       setCameraError(null);
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      });
+      setIsRetrying(true);
       
-      setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
+      // Verificar contexto seguro primeiro
+      if (!checkSecureContext()) {
+        setCameraError('É necessário usar HTTPS para acessar a câmera.');
+        setIsRetrying(false);
+        return;
+      }
+      
+      // Usar o hook especializado para iOS
+      const mediaStream = await requestCameraAccess();
+      
+      if (mediaStream) {
+        setStream(mediaStream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          
+          // Aguardar o vídeo carregar
+          videoRef.current.onloadedmetadata = () => {
+            console.log('📹 Vídeo carregado com sucesso');
+          };
+        }
+      } else {
+        setCameraError('Não foi possível acessar a câmera. Você pode fazer upload de uma foto.');
+        
+        // Mostrar instruções específicas para iOS
+        if (deviceInfo?.isIOS) {
+          showIOSInstructions();
+        }
       }
     } catch (error) {
       console.error('Erro ao acessar câmera:', error);
       setCameraError('Não foi possível acessar a câmera. Você pode fazer upload de uma foto.');
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -135,10 +165,35 @@ export const ManejoCamera: React.FC<ManejoCameraProps> = ({
           </div>
         ) : (
           <div className="bg-muted rounded-lg p-8 text-center">
-            <Upload className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground mb-4">
-              {cameraError}
-            </p>
+            <div className="flex flex-col items-center">
+              {deviceInfo?.isIOS && permissions.camera === 'denied' ? (
+                <AlertTriangle className="h-12 w-12 mx-auto mb-2 text-orange-500" />
+              ) : (
+                <Upload className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+              )}
+              
+              <p className="text-sm text-muted-foreground mb-4">
+                {cameraError}
+              </p>
+              
+              {deviceInfo?.isIOS && permissions.camera === 'denied' && (
+                <div className="text-xs text-muted-foreground space-y-2 max-w-sm">
+                  <p className="font-medium">Para habilitar a câmera no iOS:</p>
+                  <div className="text-left">
+                    <p>1. Abra as <strong>Configurações</strong> do iPhone</p>
+                    <p>2. Vá em <strong>Safari</strong></p>
+                    <p>3. Toque em <strong>Câmera</strong></p>
+                    <p>4. Selecione <strong>Permitir</strong></p>
+                  </div>
+                </div>
+              )}
+              
+              {deviceInfo?.isIOS && !deviceInfo.isHTTPS && (
+                <p className="text-xs text-orange-600 mt-2">
+                  ⚠️ HTTPS é necessário para acessar a câmera no iOS
+                </p>
+              )}
+            </div>
           </div>
         )}
 
@@ -151,6 +206,18 @@ export const ManejoCamera: React.FC<ManejoCameraProps> = ({
             >
               <Camera className="h-4 w-4 mr-2" />
               Capturar
+            </Button>
+          )}
+          
+          {cameraError && deviceInfo?.isIOS && permissions.camera === 'denied' && (
+            <Button
+              onClick={startCamera}
+              variant="outline"
+              className="flex-1"
+              disabled={isRetrying}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              {isRetrying ? 'Tentando...' : 'Tentar Novamente'}
             </Button>
           )}
 

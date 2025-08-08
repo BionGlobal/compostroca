@@ -1,8 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Camera, RotateCcw, Check, X } from 'lucide-react';
+import { Camera, RotateCcw, Check, X, AlertTriangle } from 'lucide-react';
 import { useEntregaFotos } from '@/hooks/useEntregaFotos';
+import { useIOSPermissions } from '@/hooks/useIOSPermissions';
 
 interface EntregaFotosCaptureProps {
   entregaId: string;
@@ -36,8 +37,16 @@ export const EntregaFotosCapture: React.FC<EntregaFotosCaptureProps> = ({
   const [cameraActive, setCameraActive] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const { uploadFoto, uploading, validateAllPhotos } = useEntregaFotos(entregaId);
+  const { 
+    deviceInfo, 
+    permissions, 
+    requestCameraAccess, 
+    checkSecureContext,
+    showIOSInstructions 
+  } = useIOSPermissions();
 
   const startCamera = async () => {
     try {
@@ -47,22 +56,39 @@ export const EntregaFotosCapture: React.FC<EntregaFotosCaptureProps> = ({
       }
       
       setCameraActive(false);
+      setCameraError(null);
       
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
+      // Verificar contexto seguro primeiro
+      if (!checkSecureContext()) {
+        setCameraError('É necessário usar HTTPS para acessar a câmera.');
+        return;
+      }
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        setStream(mediaStream);
+      // Usar o hook especializado para iOS
+      const mediaStream = await requestCameraAccess();
+      
+      if (mediaStream) {
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          setStream(mediaStream);
+          
+          // Aguarda o vídeo estar pronto antes de marcar como ativo
+          videoRef.current.onloadedmetadata = () => {
+            setCameraActive(true);
+            console.log('📹 Vídeo da entrega carregado com sucesso');
+          };
+        }
+      } else {
+        setCameraError('Não foi possível acessar a câmera.');
         
-        // Aguarda o vídeo estar pronto antes de marcar como ativo
-        videoRef.current.onloadedmetadata = () => {
-          setCameraActive(true);
-        };
+        // Mostrar instruções específicas para iOS
+        if (deviceInfo?.isIOS) {
+          showIOSInstructions();
+        }
       }
     } catch (error) {
       console.error('Erro ao acessar câmera:', error);
+      setCameraError('Erro ao acessar a câmera.');
     }
   };
 
@@ -171,7 +197,33 @@ export const EntregaFotosCapture: React.FC<EntregaFotosCaptureProps> = ({
         </p>
 
         <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-          {!capturedImage ? (
+          {cameraError ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+              {deviceInfo?.isIOS && permissions.camera === 'denied' ? (
+                <AlertTriangle className="h-12 w-12 mb-2 text-orange-500" />
+              ) : (
+                <Camera className="h-12 w-12 mb-2 text-muted-foreground" />
+              )}
+              
+              <p className="text-sm text-white mb-4">{cameraError}</p>
+              
+              {deviceInfo?.isIOS && permissions.camera === 'denied' && (
+                <div className="text-xs text-gray-300 space-y-1 max-w-xs">
+                  <p className="font-medium">Para habilitar a câmera:</p>
+                  <p>Configurações → Safari → Câmera → Permitir</p>
+                </div>
+              )}
+              
+              <Button
+                onClick={startCamera}
+                variant="outline"
+                size="sm"
+                className="mt-2"
+              >
+                Tentar Novamente
+              </Button>
+            </div>
+          ) : !capturedImage ? (
             <video
               ref={videoRef}
               autoPlay
@@ -204,7 +256,7 @@ export const EntregaFotosCapture: React.FC<EntregaFotosCaptureProps> = ({
               
               <Button
                 onClick={capturePhoto}
-                disabled={!cameraActive}
+                disabled={!cameraActive || !!cameraError}
                 className="flex-1"
               >
                 <Camera className="h-4 w-4 mr-2" />

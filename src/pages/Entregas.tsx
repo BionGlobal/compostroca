@@ -21,6 +21,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LoteCard } from '@/components/LoteCard';
 import { useLotes } from '@/hooks/useLotes';
 import { formatPesoDisplay } from '@/lib/organizationUtils';
+import { useIOSPermissions } from '@/hooks/useIOSPermissions';
+import { IOSPermissionsAlert } from '@/components/IOSPermissionsAlert';
 
 const Entregas = () => {
   const [selectedVoluntario, setSelectedVoluntario] = useState<string>('');
@@ -36,6 +38,13 @@ const Entregas = () => {
   const { toast } = useToast();
   const { validateAllPhotos } = useEntregaFotos(tempEntregaId || undefined);
   const { loteAtivoCaixa01, atualizarPesoLote } = useLotes();
+  
+  const { 
+    deviceInfo, 
+    permissions, 
+    requestGeolocationAccess, 
+    showIOSInstructions 
+  } = useIOSPermissions();
 
   // Filter volunteers who haven't delivered to current lot
   const availableVoluntarios = voluntarios.filter(v => !hasDeliveredToCurrentLot(v.id, loteAtivoCaixa01?.codigo || null));
@@ -48,19 +57,18 @@ const Entregas = () => {
   console.log('🔍 Debug Entregas - isFormDisabled:', isFormDisabled);
   console.log('🔍 Debug Entregas - loading:', loading);
 
-  const getCurrentLocation = (): Promise<GeolocationPosition> => {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error('Geolocalização não é suportada neste navegador'));
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(resolve, reject, {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      });
-    });
+  const getCurrentLocation = async (): Promise<GeolocationPosition | null> => {
+    console.log('📍 Solicitando geolocalização...');
+    
+    // Usar o hook especializado para iOS
+    const position = await requestGeolocationAccess();
+    
+    if (!position && deviceInfo?.isIOS) {
+      // Mostrar instruções específicas para iOS
+      showIOSInstructions();
+    }
+    
+    return position;
   };
 
   const handleFazerFotos = async () => {
@@ -89,6 +97,17 @@ const Entregas = () => {
       
       // Get current location
       const position = await getCurrentLocation();
+      
+      if (!position) {
+        toast({
+          title: "Erro de Localização",
+          description: "Não foi possível obter sua localização. Verifique as permissões e tente novamente.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      
       console.log('📍 Localização obtida:', position.coords.latitude, position.coords.longitude);
       
       const { data, error } = await supabase
@@ -196,6 +215,9 @@ const Entregas = () => {
 
   return (
     <div className="p-4 space-y-6">
+      {/* Alerta de Permissões iOS */}
+      <IOSPermissionsAlert showOnlyWhenNeeded compact />
+      
       {/* Card do Lote */}
       <LoteCard />
       
