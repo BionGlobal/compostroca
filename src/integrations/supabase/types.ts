@@ -291,48 +291,51 @@ export type Database = {
       }
       voluntarios: {
         Row: {
-          ativo: boolean
-          cpf: string
-          created_at: string
-          email: string
-          endereco: string
+          ativo: boolean | null
+          cpf: string | null
+          created_at: string | null
+          deleted_at: string | null
+          email: string | null
+          endereco: string | null
           foto_url: string | null
           id: string
-          nome: string
-          numero_balde: number
-          telefone: string
-          unidade: string
-          updated_at: string
+          nome: string | null
+          numero_balde: number | null
+          telefone: string | null
+          unidade: string | null
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
-          ativo?: boolean
-          cpf: string
-          created_at?: string
-          email: string
-          endereco: string
+          ativo?: boolean | null
+          cpf?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          email?: string | null
+          endereco?: string | null
           foto_url?: string | null
           id?: string
-          nome: string
-          numero_balde: number
-          telefone: string
-          unidade?: string
-          updated_at?: string
+          nome?: string | null
+          numero_balde?: number | null
+          telefone?: string | null
+          unidade?: string | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
-          ativo?: boolean
-          cpf?: string
-          created_at?: string
-          email?: string
-          endereco?: string
+          ativo?: boolean | null
+          cpf?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          email?: string | null
+          endereco?: string | null
           foto_url?: string | null
           id?: string
-          nome?: string
-          numero_balde?: number
-          telefone?: string
-          unidade?: string
-          updated_at?: string
+          nome?: string | null
+          numero_balde?: number | null
+          telefone?: string | null
+          unidade?: string | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: []
