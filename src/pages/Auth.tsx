@@ -170,6 +170,11 @@ const Auth = () => {
             </Tabs>
           </CardContent>
         </Card>
+        <footer className="w-full py-3 text-center text-xs text-muted-foreground relative z-10 mt-4">
+          <a href="https://www.bion.global" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+            Powered by Bion ⚡
+          </a>
+        </footer>
       </div>
     </div>
   );
