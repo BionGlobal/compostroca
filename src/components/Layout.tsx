@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import { BottomNavigation } from './BottomNavigation';
 import { BackgroundParticles } from './BackgroundParticles';
-import { MobileMenu } from './MobileMenu';
 import { Button } from '@/components/ui/button';
 import { LogOut, User, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,9 +21,8 @@ export const Layout = ({ children }: LayoutProps) => {
       <header className="glass-light border-0 border-b border-border/20 p-4 relative z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <MobileMenu />
             <img src={compostrocaIcon} alt="Compostroca" className="h-8 w-8 float" />
-            <div className="hidden sm:block">
+            <div>
               <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                 Compostroca
               </h1>
@@ -33,9 +31,7 @@ export const Layout = ({ children }: LayoutProps) => {
               </p>
             </div>
           </div>
-          
-          {/* Desktop menu */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="flex items-center space-x-4">
             {profile?.user_role === 'super_admin' && (
               <Link to="/admin/usuarios">
                 <Button
@@ -44,13 +40,13 @@ export const Layout = ({ children }: LayoutProps) => {
                   className="text-muted-foreground hover:text-foreground"
                 >
                   <Users className="h-4 w-4" />
-                  <span className="ml-2">Usuários</span>
+                  <span className="hidden sm:ml-2 sm:inline">Usuários</span>
                 </Button>
               </Link>
             )}
             <div className="flex items-center space-x-2">
               <User className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-muted-foreground hidden sm:inline">
                 {profile?.full_name || 'Usuário'}
               </span>
             </div>
@@ -61,16 +57,21 @@ export const Layout = ({ children }: LayoutProps) => {
               className="text-muted-foreground hover:text-foreground"
             >
               <LogOut className="h-4 w-4" />
-              <span className="ml-2">Sair</span>
+              <span className="hidden sm:ml-2 sm:inline">Sair</span>
             </Button>
           </div>
         </div>
       </header>
       
-      <main className="flex-1 pb-28 relative z-10">
+      <main className="flex-1 pb-20 relative z-10">
         {children}
       </main>
       
+      <footer className="w-full py-3 text-center text-xs text-muted-foreground relative z-10">
+        <a href="https://www.bion.global" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+          Powered by Bion ⚡
+        </a>
+      </footer>
       <BottomNavigation />
     </div>
   );
