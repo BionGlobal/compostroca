@@ -58,43 +58,45 @@ export default function PendingUsers() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 p-4 sm:space-y-6 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Users className="h-6 w-6 text-primary" />
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <Users className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             Gerenciamento de Usuários
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gerencie usuários pendentes, aprovados e monitore atividades do sistema
           </p>
         </div>
       </div>
 
-      <Tabs defaultValue="pending" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="pending" className="flex items-center gap-2">
+      <Tabs defaultValue="pending" className="space-y-4 sm:space-y-6">
+        <TabsList className="grid w-full grid-cols-3 h-auto">
+          <TabsTrigger value="pending" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
             <Clock className="h-4 w-4" />
-            Pendentes ({pendingUsers.length})
+            <span className="text-xs sm:text-sm">Pendentes</span>
+            <span className="text-xs">({pendingUsers.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="approved" className="flex items-center gap-2">
+          <TabsTrigger value="approved" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
             <UserCheck className="h-4 w-4" />
-            Aprovados ({approvedUsers.length})
+            <span className="text-xs sm:text-sm">Aprovados</span>
+            <span className="text-xs">({approvedUsers.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="activities" className="flex items-center gap-2">
+          <TabsTrigger value="activities" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
             <Activity className="h-4 w-4" />
-            Atividades
+            <span className="text-xs sm:text-sm">Atividades</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Usuários Pendentes</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h2 className="text-lg sm:text-xl font-semibold">Usuários Pendentes</h2>
             <Button 
               onClick={refreshPendingUsers}
               variant="outline"
               size="sm"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full sm:w-auto"
             >
               <RefreshCw className="h-4 w-4" />
               Atualizar
@@ -119,40 +121,42 @@ export default function PendingUsers() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-3 sm:gap-4">
               {pendingUsers.map((user) => (
                 <Card key={user.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        {user.full_name || 'Usuário sem nome'}
-                        <Badge variant="secondary" className="flex items-center gap-1">
+                  <CardHeader className="pb-3 p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <CardTitle className="text-base sm:text-lg">
+                          {user.full_name || 'Usuário sem nome'}
+                        </CardTitle>
+                        <Badge variant="secondary" className="flex items-center gap-1 w-fit">
                           <Clock className="h-3 w-3" />
                           Pendente
                         </Badge>
-                      </CardTitle>
+                      </div>
                       <Button
                         onClick={() => handleUserClick(user)}
                         size="sm"
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-2 w-full sm:w-auto"
                       >
                         <UserCheck className="h-4 w-4" />
                         Analisar
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <CardContent className="p-4 sm:p-6 pt-0">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-sm">
                       <div>
-                        <p className="font-medium text-muted-foreground">Organização</p>
-                        <p>{user.organization_code}</p>
+                        <p className="font-medium text-muted-foreground mb-1">Organização</p>
+                        <p className="break-all">{user.organization_code}</p>
                       </div>
                       <div>
-                        <p className="font-medium text-muted-foreground">Data do Cadastro</p>
+                        <p className="font-medium text-muted-foreground mb-1">Data do Cadastro</p>
                         <p>{new Date(user.created_at).toLocaleDateString('pt-BR')}</p>
                       </div>
                       <div>
-                        <p className="font-medium text-muted-foreground">Status</p>
+                        <p className="font-medium text-muted-foreground mb-1">Status</p>
                         <Badge variant="outline" className="capitalize">
                           {user.status}
                         </Badge>
