@@ -64,8 +64,8 @@ const Auth = () => {
           <div className="p-2 rounded-full mb-4">
             <img src="/lovable-uploads/compostroca-app-logo.png" alt="Compostroca App Logo" className="h-12 w-12" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">CompostRoca</h1>
-          <p className="text-muted-foreground text-center">Sistema de Gestão de Compostagem</p>
+          <h1 className="text-2xl font-bold text-foreground">Compostroca</h1>
+          <p className="text-muted-foreground text-center">Gestão de Compostagem Comunitária</p>
         </div>
 
         <Card>
