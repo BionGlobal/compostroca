@@ -1,145 +1,181 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
-import { User } from '@supabase/supabase-js';
+import { useToast } from '@/hooks/use-toast';
+
+export interface Profile {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  organization_code: string;
+  role: string;
+  user_role: 'super_admin' | 'local_admin' | 'auditor';
+  status: 'pending' | 'approved' | 'rejected';
+  authorized_units: string[];
+  created_at: string;
+  updated_at: string;
+}
 
 export const useAuth = () => {
-  const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  const checkUser = useCallback(async () => {
-    try {
-      setLoading(true);
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Error getting session:', error);
-      }
-
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      setIsAuthenticated(!!currentUser);
-
-      if (currentUser) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', currentUser.id)
-          .single();
-
-        if (profileError) {
-          console.error('Error fetching user role:', profileError.message);
-          setIsAdmin(false);
-        } else {
-          setIsAdmin(profile?.role === 'admin');
-        }
-      } else {
-        setIsAdmin(false);
-      }
-    } catch (error) {
-      console.error("An unexpected error occurred:", error);
-      setUser(null);
-      setIsAuthenticated(false);
-      setIsAdmin(false);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { toast } = useToast();
 
   useEffect(() => {
-    checkUser();
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      checkUser();
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Defer profile fetching to avoid deadlock
+        if (session?.user) {
+          setTimeout(() => {
+            fetchProfile(session.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+        
+        setLoading(false);
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        setTimeout(() => {
+          fetchProfile(session.user.id);
+        }, 0);
+      }
+      
+      setLoading(false);
     });
 
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, [checkUser]);
+    return () => subscription.unsubscribe();
+  }, []);
 
-  const signIn = async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast({
-        title: 'Erro no login',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } else {
-      toast({
-        title: 'Login bem-sucedido!',
-        description: 'Bem-vindo de volta!',
-      });
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
     }
   };
 
-  const signUp = async (email, password, fullName) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
+  const signUp = async (email: string, password: string, fullName: string) => {
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: fullName
+          }
+        }
+      });
 
-    if (error) {
+      if (error) throw error;
+
       toast({
-        title: 'Erro no cadastro',
-        description: error.message,
-        variant: 'destructive',
+        title: "Conta criada com sucesso!",
+        description: "Você pode fazer login agora.",
       });
-    } else {
+
+      return { data, error: null };
+    } catch (error: any) {
+      console.error('Erro no cadastro:', error);
+      
+      let message = "Erro ao criar conta";
+      if (error?.message?.includes('User already registered')) {
+        message = "Este email já está cadastrado";
+      }
+      
       toast({
-        title: 'Cadastro quase completo!',
-        description: 'Enviamos um link de confirmação para o seu email.',
+        title: "Erro",
+        description: message,
+        variant: "destructive",
       });
+      
+      return { data: null, error };
     }
-    return { data, error };
   };
-  
-  const sendPasswordResetEmail = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/`,
-    });
 
-    if (error) {
-      toast({
-        title: 'Erro ao enviar email',
-        description: "Não foi possível enviar o link de recuperação. Verifique o email digitado.",
-        variant: 'destructive',
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      return;
-    }
 
-    toast({
-      title: 'Email de recuperação enviado',
-      description: `Se o email estiver cadastrado, você receberá um link para redefinir sua senha.`,
-    });
+      if (error) throw error;
+
+      toast({
+        title: "Login realizado com sucesso!",
+        description: "Bem-vindo de volta!",
+      });
+
+      return { data, error: null };
+    } catch (error: any) {
+      console.error('Erro no login:', error);
+      
+      let message = "Erro ao fazer login";
+      if (error?.message?.includes('Invalid login credentials')) {
+        message = "Email ou senha incorretos";
+      }
+      
+      toast({
+        title: "Erro",
+        description: message,
+        variant: "destructive",
+      });
+      
+      return { data: null, error };
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setIsAuthenticated(false);
-    setIsAdmin(false);
-    toast({
-      title: 'Você saiu da sua conta.',
-    });
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      toast({
+        title: "Logout realizado com sucesso!",
+        description: "Até logo!",
+      });
+    } catch (error: any) {
+      console.error('Erro no logout:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao fazer logout",
+        variant: "destructive",
+      });
+    }
   };
 
   return {
     user,
-    isAuthenticated,
+    session,
+    profile,
     loading,
-    isAdmin,
-    signIn,
     signUp,
+    signIn,
     signOut,
-    sendPasswordResetEmail,
+    isAuthenticated: !!user,
   };
 };

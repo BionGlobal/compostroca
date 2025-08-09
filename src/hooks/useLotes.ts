@@ -1,47 +1,342 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Lote } from '@/types'; // Assumindo que o tipo Lote está definido em types.ts
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useLoteUpdates } from '@/contexts/LoteContext';
+
+export interface Lote {
+  id: string;
+  codigo: string;
+  unidade: string;
+  linha_producao: string;
+  caixa_atual: number;
+  semana_atual: number;
+  status: 'ativo' | 'em_processamento' | 'encerrado';
+  data_inicio: string;
+  data_encerramento?: string;
+  data_proxima_transferencia?: string;
+  latitude?: number;
+  longitude?: number;
+  peso_inicial: number;
+  peso_atual: number;
+  criado_por: string;
+  criado_por_nome: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export const useLotes = () => {
-  const [lotes, setLotes] = useState<Lote[]>([]);
+  const [loteAtivoCaixa01, setLoteAtivoCaixa01] = useState<Lote | null>(null);
+  const [voluntariosCount, setVoluntariosCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<any>(null);
+  const { toast } = useToast();
+  const { user, profile } = useAuth();
+  const { notifyLoteUpdate, subscribeToLoteUpdates } = useLoteUpdates();
 
-  const fetchLotes = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const fetchVoluntariosCount = async (loteCode: string) => {
     try {
-      // --- CONSULTA CORRIGIDA ---
-      // A consulta agora é mais explícita e robusta, selecionando os nomes das
-      // tabelas relacionadas e ordenando pela data de início.
+      console.log('🔍 Buscando voluntários para lote:', loteCode);
       const { data, error } = await supabase
-        .from('lotes')
-        .select(`
-          id,
-          start_date,
-          status,
-          pilhas_de_composto ( name ),
-          coletivos ( name )
-        `)
-        .order('start_date', { ascending: false });
+        .from('entregas')
+        .select('voluntario_id')
+        .eq('lote_codigo', loteCode);
 
       if (error) {
+        console.error('Erro ao buscar entregas:', error);
         throw error;
       }
-      
-      setLotes(data || []);
 
-    } catch (err: any) {
-      setError(err);
-      console.error('Error fetching lotes:', err);
+      console.log('📊 Entregas encontradas:', data);
+      
+      // Contar voluntários únicos
+      const uniqueVoluntarios = new Set(data?.map(entrega => entrega.voluntario_id) || []);
+      const count = uniqueVoluntarios.size;
+      
+      console.log('👥 Voluntários únicos encontrados:', count);
+      setVoluntariosCount(count);
+    } catch (error) {
+      console.error('Erro ao buscar contagem de voluntários:', error);
+      setVoluntariosCount(0);
+    }
+  };
+
+  const fetchLoteAtivoCaixa01 = async () => {
+    if (!user || !profile) {
+      console.log('❌ Usuário ou perfil não disponível');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('🔄 Buscando lote ativo da organização:', profile.organization_code);
+      
+      const { data, error } = await supabase
+        .from('lotes')
+        .select('*')
+        .eq('unidade', profile.organization_code)
+        .eq('caixa_atual', 1)
+        .eq('status', 'ativo')
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Erro ao buscar lote:', error);
+        throw error;
+      }
+
+      console.log('📦 Lote encontrado:', data);
+      setLoteAtivoCaixa01(data ? data as Lote : null);
+      
+      // Se há um lote ativo, buscar contagem de voluntários
+      if (data) {
+        await fetchVoluntariosCount(data.codigo);
+      } else {
+        console.log('ℹ️ Nenhum lote ativo encontrado');
+        setVoluntariosCount(0);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar lote ativo na caixa 01:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar informações do lote ativo",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
+
+  const gerarCodigoLote = (unidade: string, linhaProducao: string) => {
+    const agora = new Date();
+    const dia = agora.getDate().toString().padStart(2, '0');
+    const mes = (agora.getMonth() + 1).toString().padStart(2, '0');
+    const ano = agora.getFullYear().toString();
+    // Adicionar 3 dígitos aleatórios para permitir múltiplos lotes por dia (teste)
+    const randomDigits = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `${unidade}-${dia}${mes}${ano}${linhaProducao}${randomDigits}`;
+  };
+
+  const getProximaSegunda = () => {
+    const hoje = new Date();
+    const diasAteSegunda = (8 - hoje.getDay()) % 7 || 7;
+    const proximaSegunda = new Date(hoje);
+    proximaSegunda.setDate(hoje.getDate() + diasAteSegunda);
+    proximaSegunda.setHours(8, 0, 0, 0); // 8h da manhã
+    return proximaSegunda;
+  };
+
+  const getCurrentLocation = (): Promise<GeolocationPosition> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocalização não suportada'));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
+      });
+    });
+  };
+
+  const criarNovoLote = async () => {
+    if (!user || !profile) {
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    try {
+      setLoading(true);
+      console.log('🆕 Criando novo lote...');
+
+      // Verificar se já existe lote ativo na caixa 01
+      if (loteAtivoCaixa01) {
+        toast({
+          title: "Atenção",
+          description: "Já existe um lote ativo na Caixa 01",
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      // Capturar geolocalização
+      const position = await getCurrentLocation();
+      const { latitude, longitude } = position.coords;
+
+      // Gerar código único
+      const codigo = gerarCodigoLote(profile.organization_code, 'A');
+      console.log('🏷️ Código gerado:', codigo);
+
+      // Criar novo lote
+      const novoLote = {
+        codigo,
+        unidade: profile.organization_code,
+        linha_producao: 'A',
+        caixa_atual: 1,
+        semana_atual: 1,
+        status: 'ativo' as const,
+        data_proxima_transferencia: getProximaSegunda().toISOString(),
+        latitude,
+        longitude,
+        peso_inicial: 0,
+        peso_atual: 0,
+        criado_por: user.id,
+        criado_por_nome: profile.full_name || user.email || 'Usuário',
+      };
+
+      const { data, error } = await supabase
+        .from('lotes')
+        .insert(novoLote)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log('✅ Lote criado com sucesso:', data);
+      setLoteAtivoCaixa01(data as Lote);
+      
+      // Notificar outros componentes
+      notifyLoteUpdate();
+      
+      toast({
+        title: "Sucesso",
+        description: `Lote ${codigo} criado com sucesso!`,
+      });
+
+      return data;
+    } catch (error: any) {
+      console.error('Erro ao criar novo lote:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível criar o lote",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const encerrarLote = async (loteId: string) => {
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      setLoading(true);
+      console.log('🔒 Finalizando entregas do lote:', loteId);
+
+      // Calcular peso inicial total com cepilho (35% adicional)
+      const { data: entregas, error: entregasError } = await supabase
+        .from('entregas')
+        .select('peso')
+        .eq('lote_codigo', loteAtivoCaixa01?.codigo);
+
+      if (entregasError) throw entregasError;
+
+      const pesoEntregas = entregas?.reduce((acc, entrega) => acc + Number(entrega.peso), 0) || 0;
+      const pesoInicialTotal = pesoEntregas + (pesoEntregas * 0.35); // Resíduos + cepilho (35%)
+
+      console.log('📊 Peso das entregas:', pesoEntregas, 'kg');
+      console.log('📊 Peso inicial total (com cepilho):', pesoInicialTotal, 'kg');
+
+      const { error } = await supabase
+        .from('lotes')
+        .update({
+          status: 'em_processamento',
+          data_encerramento: new Date().toISOString(),
+          peso_inicial: pesoInicialTotal,
+          peso_atual: pesoInicialTotal,
+        })
+        .eq('id', loteId);
+
+      if (error) throw error;
+
+      console.log('✅ Entregas finalizadas - lote transferido para esteira de produção');
+      setLoteAtivoCaixa01(null);
+      setVoluntariosCount(0);
+      
+      // Notificar outros componentes
+      notifyLoteUpdate();
+      
+      toast({
+        title: "Sucesso",
+        description: `Entregas finalizadas! Lote transferido para a esteira com ${pesoInicialTotal.toFixed(1)}kg (incluindo cepilho).`,
+      });
+
+      return true;
+    } catch (error: any) {
+      console.error('Erro ao encerrar lote:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível encerrar o lote",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const atualizarPesoLote = async (loteId: string, novoPeso: number) => {
+    try {
+      console.log('⚖️ Atualizando peso do lote:', loteId, 'para:', novoPeso);
+      
+      const { error } = await supabase
+        .from('lotes')
+        .update({ peso_atual: novoPeso })
+        .eq('id', loteId);
+
+      if (error) throw error;
+
+      console.log('✅ Peso atualizado com sucesso');
+      
+      // Atualizar estado local
+      if (loteAtivoCaixa01?.id === loteId) {
+        setLoteAtivoCaixa01(prev => prev ? { ...prev, peso_atual: novoPeso } : null);
+        // Atualizar contagem de voluntários também
+        await fetchVoluntariosCount(loteAtivoCaixa01.codigo);
+      }
+      
+      // Notificar outros hooks sobre a mudança
+      notifyLoteUpdate();
+    } catch (error) {
+      console.error('Erro ao atualizar peso do lote:', error);
+    }
+  };
+
+  // Subscribe to lote updates
+  useEffect(() => {
+    const unsubscribe = subscribeToLoteUpdates(() => {
+      console.log('🔄 Recebida notificação de atualização de lote');
+      fetchLoteAtivoCaixa01();
+    });
+
+    return unsubscribe;
+  }, [subscribeToLoteUpdates]);
 
   useEffect(() => {
-    fetchLotes();
-  }, [fetchLotes]);
+    if (user && profile) {
+      fetchLoteAtivoCaixa01();
+    }
+  }, [user, profile]);
 
-  return { lotes, loading, error, refetch: fetchLotes };
+  return {
+    loteAtivoCaixa01,
+    voluntariosCount,
+    loading,
+    criarNovoLote,
+    encerrarLote,
+    atualizarPesoLote,
+    refetch: fetchLoteAtivoCaixa01,
+  };
 };
