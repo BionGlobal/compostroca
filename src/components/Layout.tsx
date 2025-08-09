@@ -1,46 +1,78 @@
-// src/components/Layout.tsx (Nova versão)
-import React from 'react';
-import BottomNavigation from './BottomNavigation';
-import { useAuth } from '../hooks/useAuth';
+import { ReactNode } from 'react';
+import { BottomNavigation } from './BottomNavigation';
+import { BackgroundParticles } from './BackgroundParticles';
+import { Button } from '@/components/ui/button';
+import { LogOut, User, Users } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Link } from 'react-router-dom';
+const compostrocaIcon = '/lovable-uploads/compostroca-app-logo.png';
 
 interface LayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { user } = useAuth();
-
-  // Calcula o padding inferior dinamicamente
-  // Se o usuário estiver logado, o padding precisa acomodar a navegação E a assinatura.
-  // Se não, não precisa de padding extra.
-  const mainContentPaddingBottom = user ? 'pb-32' : 'pb-4';
+export const Layout = ({ children }: LayoutProps) => {
+  const { signOut, profile } = useAuth();
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Conteúdo principal da página com padding inferior para não ser sobreposto pelo menu */}
-      <main className={`flex-grow ${mainContentPaddingBottom}`}>{children}</main>
-
-      {/* Se o usuário estiver logado, exibe a navegação e a assinatura */}
-      {user && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border">
-          {/* Menu de navegação inferior que você já tinha */}
-          <BottomNavigation />
-
-          {/* Nova assinatura "Powered by Bion" */}
-          <div className="text-center text-xs text-muted-foreground py-1">
-            <a
-              href="https://www.bion.global"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-primary transition-colors"
+    <div className="min-h-screen flex flex-col relative">
+      <BackgroundParticles />
+      
+      <header className="glass-light border-0 border-b border-border/20 p-4 relative z-10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={compostrocaIcon} alt="Compostroca" className="h-8 w-8 float" />
+            <div>
+              <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                Compostroca
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Gestão de Compostagem Urbana
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+            {profile?.user_role === 'super_admin' && (
+              <Link to="/admin/usuarios">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Users className="h-4 w-4" />
+                  <span className="hidden sm:ml-2 sm:inline">Usuários</span>
+                </Button>
+              </Link>
+            )}
+            <div className="flex items-center space-x-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground hidden sm:inline">
+                {profile?.full_name || 'Usuário'}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={signOut}
+              className="text-muted-foreground hover:text-foreground"
             >
-              powered by Bion⚡
-            </a>
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:ml-2 sm:inline">Sair</span>
+            </Button>
           </div>
         </div>
-      )}
+      </header>
+      
+      <main className="flex-1 pb-20 relative z-10">
+        {children}
+      </main>
+      
+      <footer className="w-full py-3 text-center text-xs text-muted-foreground relative z-10">
+        <a href="https://www.bion.global" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+          Powered by Bion ⚡
+        </a>
+      </footer>
+      <BottomNavigation />
     </div>
   );
 };
-
-export default Layout;
