@@ -49,7 +49,7 @@ const Auth = () => {
     return (
       <div className="dark min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center space-y-4 text-foreground">
-          <img src="/lovable-uploads/bion-logo1.png" alt="Bion" className="h-12 w-12" />
+          <img src="/lovable-uploads/bion-logo1.png" alt="Bion" className="h-36 w-36" />
           <Loader2 className="h-8 w-8 animate-spin" />
           <p className="opacity-80">Carregando...</p>
         </div>
@@ -64,7 +64,7 @@ const Auth = () => {
           <div className="p-2 rounded-full mb-4">
             <img src="/lovable-uploads/compostroca-app-logo.png" alt="Compostroca App Logo" className="h-12 w-12" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">CompostRoca</h1>
+          <h1 className="text-2xl font-bold text-foreground">Compostroca</h1>
           <p className="text-muted-foreground text-center">Gestão de Compostagem Comunitária</p>
         </div>
 
