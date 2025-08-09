@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, TreePine } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 const Auth = () => {
@@ -47,24 +47,25 @@ const Auth = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-100">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-          <p className="text-emerald-700">Carregando...</p>
+      <div className="dark min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center space-y-4 text-foreground">
+          <img src="/lovable-uploads/bion-logo1.png" alt="Bion" className="h-12 w-12" />
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <p className="opacity-80">Carregando...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-100 p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <div className="p-2 rounded-full mb-4">
-            <img src="/lovable-uploads/41d1fc0c-7816-49f3-91e3-59ed2ae3fefe.png" alt="CompostRoca" className="h-12 w-12" />
+            <img src="/lovable-uploads/compostroca-app-logo.png" alt="Compostroca App Logo" className="h-12 w-12" />
           </div>
-          <h1 className="text-2xl font-bold text-emerald-900">CompostRoca</h1>
-          <p className="text-emerald-700 text-center">Sistema de Gestão de Compostagem</p>
+          <h1 className="text-2xl font-bold text-foreground">CompostRoca</h1>
+          <p className="text-muted-foreground text-center">Sistema de Gestão de Compostagem</p>
         </div>
 
         <Card>

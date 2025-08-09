@@ -22,17 +22,15 @@ Tons orgânicos modernos com glassmorphism e fluidez
     --popover: 0 0% 100%;
     --popover-foreground: 140 20% 15%;
 
-    /* Verde esmeralda moderno - inspirado em jade */
-    --primary: 150 60% 45%;  /* Esmeralda vibrante */
-    --primary-glow: 150 40% 70%;
+    /* Paleta Compostroca (verde, marrom, marrom claro) */
+    --primary: 149 55% 37%; /* Verde #2b925d */
+    --primary-glow: 149 60% 45%;
     --primary-foreground: 0 0% 100%;
 
-    /* Verde água secundário */
-    --secondary: 165 50% 55%;  /* Verde-água elegante */
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 50 51% 64%; /* Marrom claro #d1c273 */
+    --secondary-foreground: 0 0% 15%;
 
-    /* Terra orgânica com tom mais suave */
-    --earth: 35 30% 50%;  /* Terra dourada */
+    --earth: 39 19% 50%; /* Marrom #988767 */
     --earth-foreground: 0 0% 100%;
 
     /* Tons suaves modernos */
@@ -51,14 +49,14 @@ Tons orgânicos modernos com glassmorphism e fluidez
     --warning: 40 90% 55%;
     --warning-foreground: 0 0% 100%;
 
-    --border: rgba(0, 150, 70, 0.12);
-    --input: 150 15% 94%;
-    --ring: 150 60% 45%;
+    --border: rgba(43, 146, 93, 0.12);
+    --input: 149 15% 94%;
+    --ring: 149 55% 37%;
 
     /* Gradientes orgânicos */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-earth: linear-gradient(135deg, hsl(var(--earth)), hsl(35 40% 65%));
-    --gradient-card: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,255,254,0.8));
+    --gradient-earth: linear-gradient(135deg, hsl(var(--earth)), hsl(var(--secondary)));
+    --gradient-card: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(252,249,244,0.85));
     
     /* Sombras suaves e orgânicas */
     --shadow-soft: 0 4px 20px -4px rgba(0, 150, 70, 0.1);
@@ -103,15 +101,15 @@ Tons orgânicos modernos com glassmorphism e fluidez
     --popover: 140 20% 8%;
     --popover-foreground: 150 15% 90%;
 
-    /* Verde moderno escuro */
-    --primary: 150 50% 50%;
-    --primary-glow: 150 35% 65%;
+    /* Paleta escura alinhada à identidade */
+    --primary: 149 50% 45%;
+    --primary-glow: 149 40% 60%;
     --primary-foreground: 140 20% 6%;
 
-    --secondary: 165 40% 40%;
+    --secondary: 50 45% 50%;
     --secondary-foreground: 0 0% 100%;
 
-    --earth: 35 25% 35%;
+    --earth: 39 20% 35%;
     --earth-foreground: 0 0% 100%;
 
     --muted: 140 15% 12%;
@@ -129,9 +127,9 @@ Tons orgânicos modernos com glassmorphism e fluidez
     --warning: 40 80% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: rgba(0, 150, 70, 0.2);
+    --border: rgba(43, 146, 93, 0.2);
     --input: 140 15% 12%;
-    --ring: 150 50% 50%;
+    --ring: 149 50% 45%;
 
     /* Gradientes escuros */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));

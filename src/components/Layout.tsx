@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { LogOut, User, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Link } from 'react-router-dom';
-const compostrocaIcon = '/lovable-uploads/41d1fc0c-7816-49f3-91e3-59ed2ae3fefe.png';
+const compostrocaIcon = '/lovable-uploads/compostroca-app-logo.png';
 
 interface LayoutProps {
   children: ReactNode;
@@ -67,6 +67,11 @@ export const Layout = ({ children }: LayoutProps) => {
         {children}
       </main>
       
+      <footer className="w-full py-3 text-center text-xs text-muted-foreground relative z-10">
+        <a href="https://www.bion.global" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
+          Powered by Bion ⚡
+        </a>
+      </footer>
       <BottomNavigation />
     </div>
   );
