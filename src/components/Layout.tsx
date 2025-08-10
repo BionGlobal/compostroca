@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { BottomNavigation } from './BottomNavigation';
 import { BackgroundParticles } from './BackgroundParticles';
+import { MobileMenu } from './MobileMenu';
 import { Button } from '@/components/ui/button';
 import { LogOut, User, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -32,33 +33,39 @@ export const Layout = ({ children }: LayoutProps) => {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            {profile?.user_role === 'super_admin' && (
-              <Link to="/admin/usuarios">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <Users className="h-4 w-4" />
-                  <span className="hidden sm:ml-2 sm:inline">Usuários</span>
-                </Button>
-              </Link>
-            )}
-            <div className="flex items-center space-x-2">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground hidden sm:inline">
-                {profile?.full_name || 'Usuário'}
-              </span>
+            {/* Desktop Menu */}
+            <div className="hidden sm:flex items-center space-x-4">
+              {profile?.user_role === 'super_admin' && (
+                <Link to="/admin/usuarios">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Users className="h-4 w-4" />
+                    <span className="ml-2">Usuários</span>
+                  </Button>
+                </Link>
+              )}
+              <div className="flex items-center space-x-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  {profile?.full_name || 'Usuário'}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={signOut}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="ml-2">Sair</span>
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={signOut}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:ml-2 sm:inline">Sair</span>
-            </Button>
+            
+            {/* Mobile Menu */}
+            <MobileMenu />
           </div>
         </div>
       </header>
