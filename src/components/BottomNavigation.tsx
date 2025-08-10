@@ -33,6 +33,11 @@ export const BottomNavigation = () => {
           </NavLink>
         ))}
       </div>
+      <div className="w-full py-2 text-center text-xs text-muted-foreground border-t border-border/10">
+        <a href="https://www.bion.global" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
+          Powered by Bion ⚡
+        </a>
+      </div>
     </nav>
   );
 };

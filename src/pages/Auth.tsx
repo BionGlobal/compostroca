@@ -170,6 +170,12 @@ const Auth = () => {
             </Tabs>
           </CardContent>
         </Card>
+        
+        <div className="w-full mt-8 text-center text-xs text-muted-foreground">
+          <a href="https://www.bion.global" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
+            Powered by Bion ⚡
+          </a>
+        </div>
       </div>
     </div>
   );

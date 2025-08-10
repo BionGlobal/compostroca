@@ -63,15 +63,9 @@ export const Layout = ({ children }: LayoutProps) => {
         </div>
       </header>
       
-      <main className="flex-1 pb-20 relative z-10">
+      <main className="flex-1 pb-24 relative z-10">
         {children}
       </main>
-      
-      <footer className="w-full py-3 text-center text-xs text-muted-foreground relative z-10">
-        <a href="https://www.bion.global" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">
-          Powered by Bion ⚡
-        </a>
-      </footer>
       <BottomNavigation />
     </div>
   );
