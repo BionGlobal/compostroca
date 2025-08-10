@@ -178,6 +178,36 @@ export const useUserManagement = () => {
     }
   };
 
+  const deleteUser = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          status: 'rejected',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Usuário excluído",
+        description: "Usuário foi excluído do sistema com sucesso.",
+      });
+
+      await fetchApprovedUsers();
+      return true;
+    } catch (error) {
+      console.error('Erro ao excluir usuário:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir usuário",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   useEffect(() => {
     fetchPendingUsers();
     fetchApprovedUsers();
@@ -191,6 +221,7 @@ export const useUserManagement = () => {
     activitiesLoading,
     approveUser,
     rejectUser,
+    deleteUser,
     fetchUserActivities,
     refreshPendingUsers: fetchPendingUsers,
     refreshApprovedUsers: fetchApprovedUsers,
