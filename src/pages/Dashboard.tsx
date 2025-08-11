@@ -7,11 +7,8 @@ import { useDashboard } from '@/hooks/useDashboard';
 const Dashboard = () => {
   const { stats, loading } = useDashboard();
 
-  const entregasRecentes = [
-    { voluntario: 'Maria Silva', balde: '05', peso: 2.3, data: '23/07/2024 14:30' },
-    { voluntario: 'João Santos', balde: '12', peso: 1.8, data: '23/07/2024 10:15' },
-    { voluntario: 'Ana Costa', balde: '08', peso: 3.2, data: '22/07/2024 16:45' },
-  ];
+  // Entregas recentes virão da página /entregas
+  const entregasRecentes: any[] = [];
 
   return (
     <div className="p-4 space-y-6">
@@ -93,22 +90,34 @@ const Dashboard = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {entregasRecentes.map((entrega, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between p-3 glass-light rounded-xl organic-hover border-0"
-            >
-              <div className="flex-1">
-                <p className="font-medium text-sm">{entrega.voluntario}</p>
-                <p className="text-xs text-muted-foreground">
-                  Balde {entrega.balde} • {entrega.peso}kg
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">{entrega.data}</p>
-              </div>
+          {entregasRecentes.length === 0 ? (
+            <div className="text-center p-6 glass-light rounded-xl">
+              <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">
+                Nenhuma entrega registrada ainda
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                As entregas aparecerão aqui conforme forem sendo registradas
+              </p>
             </div>
-          ))}
+          ) : (
+            entregasRecentes.map((entrega, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-3 glass-light rounded-xl organic-hover border-0"
+              >
+                <div className="flex-1">
+                  <p className="font-medium text-sm">{entrega.voluntario}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Balde {entrega.balde} • {entrega.peso}kg
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">{entrega.data}</p>
+                </div>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
 

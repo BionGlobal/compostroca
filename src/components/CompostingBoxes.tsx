@@ -10,12 +10,17 @@ import {
   ChevronRight,
   ArrowRight
 } from 'lucide-react';
+import { useLotesManager } from '@/hooks/useLotesManager';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface CompostingBox {
   number: number;
   weight: number; // kg
-  status: 'iniciada' | 'maturando' | 'pronta' | 'distribuida';
+  status: 'mesofilica' | 'termofilico' | 'resfriamento' | 'maturacao' | 'vazia';
   week: number;
+  loteCode?: string;
+  loteData?: string;
   temperature?: number; // Apenas na caixa 1
   chemistry?: {
     ph: number;
@@ -26,76 +31,63 @@ interface CompostingBox {
 }
 
 export const CompostingBoxes = () => {
-  // Simulação do peso inicial baseado nas entregas
-  const initialWeight = 48.5; // kg - peso das entregas da semana
-  
-  // Cálculo do peso com redução de 3.2% por semana
-  const calculateWeight = (week: number) => {
-    if (week === 1) return initialWeight;
-    return initialWeight * Math.pow(0.968, week - 1); // 3.2% de redução por semana
+  const { lotesAtivos, loading } = useLotesManager();
+
+  const getPhaseStatus = (caixa: number, semana: number): 'mesofilica' | 'termofilico' | 'resfriamento' | 'maturacao' | 'vazia' => {
+    if (caixa === 1) return 'mesofilica';
+    if (caixa >= 2 && caixa <= 5) return 'termofilico';
+    if (caixa === 6) return 'resfriamento';
+    if (caixa === 7) {
+      // Primeiros 3 dias da semana 7 = resfriamento, depois maturação
+      return semana === 7 ? 'resfriamento' : 'maturacao';
+    }
+    return 'vazia';
   };
 
-  const boxes: CompostingBox[] = [
-    {
-      number: 1,
-      weight: calculateWeight(1),
-      status: 'iniciada',
-      week: 1,
-      temperature: 55, // °C - temperatura IoT
-    },
-    {
-      number: 2,
-      weight: calculateWeight(2),
-      status: 'maturando',
-      week: 2,
-    },
-    {
-      number: 3,
-      weight: calculateWeight(3),
-      status: 'maturando',
-      week: 3,
-    },
-    {
-      number: 4,
-      weight: calculateWeight(4),
-      status: 'maturando',
-      week: 4,
-    },
-    {
-      number: 5,
-      weight: calculateWeight(5),
-      status: 'maturando',
-      week: 5,
-    },
-    {
-      number: 6,
-      weight: calculateWeight(6),
-      status: 'maturando',
-      week: 6,
-      chemistry: {
-        ph: 7.2,
-        nitrogen: 2.1,
-        phosphorus: 0.8,
-        potassium: 1.5,
-      }
-    },
-    {
-      number: 7,
-      weight: calculateWeight(7),
-      status: 'pronta',
-      week: 7,
-    },
-  ];
+  const createBox = (boxNumber: number): CompostingBox => {
+    const loteNaCaixa = lotesAtivos.find(lote => lote.caixa_atual === boxNumber);
+    
+    if (!loteNaCaixa) {
+      return {
+        number: boxNumber,
+        weight: 0,
+        status: 'vazia',
+        week: 0,
+      };
+    }
+
+    const status = getPhaseStatus(loteNaCaixa.caixa_atual, loteNaCaixa.semana_atual);
+    
+    return {
+      number: boxNumber,
+      weight: loteNaCaixa.peso_atual,
+      status,
+      week: loteNaCaixa.semana_atual,
+      loteCode: loteNaCaixa.codigo,
+      loteData: loteNaCaixa.data_inicio,
+      temperature: boxNumber === 1 ? loteNaCaixa.temperatura : undefined,
+      chemistry: boxNumber === 6 ? {
+        ph: loteNaCaixa.ph || 7.2,
+        nitrogen: (loteNaCaixa.nitrogenio || 21) / 10, // Converte de mg/kg para %
+        phosphorus: (loteNaCaixa.fosforo || 8) / 10,
+        potassium: (loteNaCaixa.potassio || 15) / 10,
+      } : undefined,
+    };
+  };
+
+  const boxes: CompostingBox[] = Array.from({ length: 7 }, (_, i) => createBox(i + 1));
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'iniciada':
+      case 'mesofilica':
         return 'bg-warning text-warning-foreground';
-      case 'maturando':
+      case 'termofilico':
+        return 'bg-destructive text-destructive-foreground';
+      case 'resfriamento':
         return 'bg-primary text-primary-foreground';
-      case 'pronta':
+      case 'maturacao':
         return 'bg-success text-success-foreground';
-      case 'distribuida':
+      case 'vazia':
         return 'bg-muted text-muted-foreground';
       default:
         return 'bg-muted text-muted-foreground';
@@ -104,10 +96,11 @@ export const CompostingBoxes = () => {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'iniciada': return 'Iniciada';
-      case 'maturando': return 'Maturando';
-      case 'pronta': return 'Pronta';
-      case 'distribuida': return 'Distribuída';
+      case 'mesofilica': return 'Mesofílica';
+      case 'termofilico': return 'Termofílico';
+      case 'resfriamento': return 'Resfriamento';
+      case 'maturacao': return 'Maturação';
+      case 'vazia': return 'Vazia';
       default: return status;
     }
   };
@@ -173,7 +166,21 @@ export const CompostingBoxes = () => {
                       </div>
                       <div>
                         <h3 className="font-semibold text-lg">Caixa {box.number}</h3>
-                        <p className="text-xs text-muted-foreground">Semana {box.week}</p>
+                        {box.status !== 'vazia' ? (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Semana {box.week}</p>
+                            {box.loteCode && (
+                              <p className="text-xs font-medium">{box.loteCode}</p>
+                            )}
+                            {box.loteData && (
+                              <p className="text-xs text-muted-foreground">
+                                {format(new Date(box.loteData), 'dd/MM/yyyy', { locale: ptBR })}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">Aguardando lote</p>
+                        )}
                       </div>
                     </div>
                     <Badge className={getStatusColor(box.status)}>
@@ -182,26 +189,25 @@ export const CompostingBoxes = () => {
                   </div>
 
                   {/* Progresso */}
-                  <div className="mb-3">
-                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                      <span>Progresso</span>
-                      <span>{Math.round(getProgressPercentage(box.week))}%</span>
+                  {box.status !== 'vazia' && (
+                    <div className="mb-3">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                        <span>Progresso</span>
+                        <span>{Math.round(getProgressPercentage(box.week))}%</span>
+                      </div>
+                      <Progress value={getProgressPercentage(box.week)} className="h-2" />
                     </div>
-                    <Progress value={getProgressPercentage(box.week)} className="h-2" />
-                  </div>
+                  )}
 
                   {/* Peso */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <Scale className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">
-                      {box.weight.toFixed(1)} kg
-                    </span>
-                    {index > 0 && (
-                      <span className="text-xs text-success">
-                        (-{(((boxes[index-1]?.weight || 0) - box.weight) / (boxes[index-1]?.weight || 1) * 100).toFixed(1)}%)
+                  {box.status !== 'vazia' && (
+                    <div className="flex items-center gap-2 mb-3">
+                      <Scale className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">
+                        {box.weight.toFixed(1)} kg
                       </span>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {/* Dados IoT - Temperatura (Caixa 1) */}
                   {box.temperature && (
@@ -246,22 +252,28 @@ export const CompostingBoxes = () => {
       <Card className="glass-light border-0">
         <CardContent className="p-4">
           <h3 className="font-semibold mb-3 text-center">Resumo do Processo</h3>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-xs text-muted-foreground">Peso Inicial</p>
-              <p className="font-bold text-lg">{initialWeight} kg</p>
+          {loading ? (
+            <div className="text-center text-muted-foreground">Carregando...</div>
+          ) : (
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-xs text-muted-foreground">Caixas Ocupadas</p>
+                <p className="font-bold text-lg">{boxes.filter(b => b.status !== 'vazia').length}/7</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Peso em Esteira</p>
+                <p className="font-bold text-lg text-success">
+                  {boxes.reduce((acc, box) => acc + box.weight, 0).toFixed(1)} kg
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Capacidade</p>
+                <p className="font-bold text-lg text-earth">
+                  {Math.round((boxes.filter(b => b.status !== 'vazia').length / 7) * 100)}%
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Peso Final</p>
-              <p className="font-bold text-lg text-success">{calculateWeight(7).toFixed(1)} kg</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Redução</p>
-              <p className="font-bold text-lg text-earth">
-                {Math.round((1 - calculateWeight(7) / initialWeight) * 100)}%
-              </p>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

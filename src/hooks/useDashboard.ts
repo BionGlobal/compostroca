@@ -63,9 +63,10 @@ export const useDashboard = () => {
       const residuosColetados = lotes
         .reduce((total, lote) => total + (Number(lote.peso_atual) || 0), 0) / 1000; // converter para toneladas
 
-      // Lotes em andamento - status ativo em qualquer caixa da esteira (1-7)
+      // Lotes em andamento - status ativo ou em_processamento na esteira (1-7)
       const lotesAndamento = lotes.filter(l => 
-        l.status === 'ativo' && l.caixa_atual >= 1 && l.caixa_atual <= 7
+        (l.status === 'ativo' || l.status === 'em_processamento') && 
+        l.caixa_atual >= 1 && l.caixa_atual <= 7
       ).length;
 
       // Lotes finalizados - status encerrado
