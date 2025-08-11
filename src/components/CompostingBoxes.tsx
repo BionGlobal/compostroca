@@ -105,8 +105,15 @@ export const CompostingBoxes = () => {
     }
   };
 
-  const getProgressPercentage = (week: number) => {
-    return (week / 7) * 100;
+  const getProgressPercentage = (box: CompostingBox) => {
+    if (box.status === 'vazia' || !box.loteData) return 0;
+    
+    const inicioLote = new Date(box.loteData);
+    const hoje = new Date();
+    const diasDecorridos = Math.floor((hoje.getTime() - inicioLote.getTime()) / (1000 * 60 * 60 * 24));
+    const totalDias = 49; // 49 dias até completar o processo
+    
+    return Math.min(Math.max((diasDecorridos / totalDias) * 100, 0), 100);
   };
 
   const renderChemistryIndicators = (chemistry: CompostingBox['chemistry']) => {
@@ -192,10 +199,10 @@ export const CompostingBoxes = () => {
                   {box.status !== 'vazia' && (
                     <div className="mb-3">
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>Progresso</span>
-                        <span>{Math.round(getProgressPercentage(box.week))}%</span>
+                        <span>Progresso (49 dias)</span>
+                        <span>{Math.round(getProgressPercentage(box))}%</span>
                       </div>
-                      <Progress value={getProgressPercentage(box.week)} className="h-2" />
+                      <Progress value={getProgressPercentage(box)} className="h-2" />
                     </div>
                   )}
 
