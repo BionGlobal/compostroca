@@ -41,27 +41,31 @@ const Dashboard = () => {
           value={loading ? "..." : stats.voluntariosAtivos}
           icon={<Users />}
           variant="primary"
+          tooltip="Número total de voluntários cadastrados ativos. Não inclui usuários excluídos ou em soft delete."
         />
         <StatCard
-          title="Resíduos (kg)"
-          value={loading ? "..." : stats.residuosColetados.toFixed(1)}
+          title="Resíduos (Ton)"
+          value={loading ? "..." : stats.residuosColetados.toFixed(2)}
           icon={<Package />}
-          description="Validados"
+          description="Processados"
           variant="earth"
+          tooltip="Soma do peso atual de todos os lotes (lotes na esteira de compostagem e já finalizados) em toneladas."
         />
         <StatCard
-          title="CO2e Evitado (kg)"
-          value={loading ? "..." : stats.co2eEvitado.toFixed(1)}
+          title="CO2e Evitado (Ton)"
+          value={loading ? "..." : stats.co2eEvitado.toFixed(2)}
           icon={<Leaf />}
           description="Sustentabilidade"
           variant="earth"
+          tooltip="Soma do peso atual de todos os lotes multiplicado por 0.766 (conforme estudo Embrapa: https://www.infoteca.cnptia.embrapa.br/infoteca/handle/doc/882162)."
         />
         <StatCard
-          title="Composto Produzido (kg)"
-          value={loading ? "..." : stats.compostoProduzido.toFixed(1)}
+          title="Composto Produzido (Ton)"
+          value={loading ? "..." : stats.compostoProduzido.toFixed(2)}
           icon={<Sprout />}
           description="Resultado final"
           variant="primary"
+          tooltip="Soma do peso atual do total de lotes já processados com sucesso e finalizados em toneladas."
         />
         <StatCard
           title="Lotes em Andamento"

@@ -56,13 +56,12 @@ export const useDashboard = () => {
 
   useEffect(() => {
     const calculateStats = () => {
-      // Voluntários ativos
+      // Voluntários ativos - total de voluntários cadastrados ativos (não contar soft delete)
       const voluntariosAtivos = voluntarios.filter(v => v.ativo).length;
 
-      // Resíduos coletados - soma de todas as entregas validadas
-      const residuosColetados = entregas
-        .filter(e => e.geolocalizacao_validada)
-        .reduce((total, entrega) => total + Number(entrega.peso), 0);
+      // Resíduos em toneladas - soma do peso atual de todos os lotes (na esteira e finalizados)
+      const residuosColetados = lotes
+        .reduce((total, lote) => total + (Number(lote.peso_atual) || 0), 0) / 1000; // converter para toneladas
 
       // Lotes em andamento - status ativo em qualquer caixa da esteira (1-7)
       const lotesAndamento = lotes.filter(l => 
@@ -72,13 +71,14 @@ export const useDashboard = () => {
       // Lotes finalizados - status encerrado
       const lotesFinalizados = lotes.filter(l => l.status === 'encerrado').length;
 
-      // CO2e evitado - 0.766kg de CO2e por kg de resíduo
-      const co2eEvitado = residuosColetados * 0.766;
+      // CO2e evitado em toneladas - peso atual de todos os lotes * 0.766 (estudo Embrapa)
+      const co2eEvitado = (lotes
+        .reduce((total, lote) => total + (Number(lote.peso_atual) || 0), 0) * 0.766) / 1000; // converter para toneladas
 
-      // Composto produzido - peso inicial dos lotes finalizados menos 22%
+      // Composto produzido em toneladas - peso atual dos lotes finalizados
       const compostoProduzido = lotes
         .filter(l => l.status === 'encerrado')
-        .reduce((total, lote) => total + (Number(lote.peso_inicial) || 0), 0) * 0.78;
+        .reduce((total, lote) => total + (Number(lote.peso_atual) || 0), 0) / 1000; // converter para toneladas
 
       setStats({
         voluntariosAtivos,
