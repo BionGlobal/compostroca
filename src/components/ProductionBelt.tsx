@@ -1,20 +1,16 @@
-import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Clock, CheckCircle, AlertTriangle, Package, Settings, Thermometer, Droplets } from 'lucide-react';
+import { Clock, CheckCircle, AlertTriangle, Package, ArrowRight, Settings, MapPin, User, Thermometer, Droplets } from 'lucide-react';
 import { LoteExtended } from '@/hooks/useLotesManager';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { toast } from '@/components/ui/use-toast';
 
 interface ProductionBeltProps {
   lotesAtivos: LoteExtended[];
   onManejoClick: (lote: LoteExtended) => void;
   onFinalizarClick: (lote: LoteExtended) => void;
-  maintenanceState?: 'none' | 'in_progress' | 'post_maintenance';
 }
 
-export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, maintenanceState = 'none' }: ProductionBeltProps) => {
+export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }: ProductionBeltProps) => {
   // Organiza lotes por caixa (1-7)
   const caixasPorLote = Array.from({ length: 7 }, (_, index) => {
     const numeroBox = index + 1;
@@ -74,225 +70,179 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, m
     });
   };
 
-  // Helpers
-  const getPhaseLabel = (box: number) => {
-    if (box === 1) return 'Mesofílica';
-    if (box >= 2 && box <= 5) return 'Termofílico';
-    return 'Maturação';
-  };
-
-  const getDotClass = (box: number, hasLote: boolean) => {
-    if (!hasLote) return 'bg-muted';
-    if (maintenanceState === 'in_progress') return 'bg-destructive shadow-[0_0_16px_hsl(var(--destructive))]';
-    if (maintenanceState === 'post_maintenance') {
-      return box === 1
-        ? 'bg-warning shadow-[0_0_16px_hsl(var(--warning))]'
-        : 'bg-success shadow-[0_0_16px_hsl(var(--success))]';
-    }
-    return 'bg-success shadow-[0_0_16px_hsl(var(--success))]';
-  };
-
-  const daysElapsed = (startISO?: string) => {
-    if (!startISO) return 1;
-    const start = new Date(startISO);
-    const now = new Date();
-    const diff = Math.max(0, now.getTime() - start.getTime());
-    const days = Math.min(49, Math.max(1, Math.floor(diff / (1000 * 60 * 60 * 24)) + 1));
-    return days;
-  };
-
-  const playFlipSound = () => {
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = 'sine';
-      o.frequency.setValueAtTime(480, ctx.currentTime);
-      o.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
-      g.gain.setValueAtTime(0.0001, ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.05, ctx.currentTime + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
-      o.connect(g);
-      g.connect(ctx.destination);
-      o.start();
-      o.stop(ctx.currentTime + 0.2);
-    } catch {}
-  };
-
-  const BoxFlipCard = ({ numeroBox, lote }: { numeroBox: number; lote?: LoteExtended }) => {
-    const [flipped, setFlipped] = useState(false);
-
-    const hasLote = !!lote;
-    const day = hasLote ? daysElapsed(lote!.data_inicio) : 0;
-    const progress = hasLote ? Math.round((day / 49) * 100) : 0;
-
-    const toggle = () => {
-      if (!hasLote) return;
-      playFlipSound();
-      setFlipped((f) => !f);
-    };
-
-    return (
-      <div className="relative w-full sm:w-[360px] md:w-[420px] lg:w-[480px] aspect-square [perspective:1000px] select-none">
-        <div
-          onClick={toggle}
-          className={`relative w-full h-full transition-transform duration-500 [transform-style:preserve-3d] ${
-            flipped ? '[transform:rotateY(180deg)]' : ''
-          }`}
-        >
-          {/* Front */}
-          <Card className={`absolute inset-0 rounded-2xl overflow-hidden border ${getBoxColor(numeroBox, lote)} [backface-visibility:hidden]`}>
-            <CardContent className="p-4 h-full flex flex-col">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">Caixa {numeroBox}</span>
-                <span className={`inline-block w-2.5 h-2.5 rounded-full ring-2 ring-background ${getDotClass(numeroBox, hasLote)} animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]`} />
-              </div>
-
-              {hasLote ? (
-                <div className="mt-2 flex-1 flex flex-col gap-2">
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground">Lote</p>
-                    <p className="text-sm font-bold truncate">{lote!.codigo}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-center">
-                    <div>
-                      <p className="text-[11px] text-muted-foreground">Peso atual</p>
-                      <p className="text-base font-semibold">{(lote!.peso_atual || 0).toFixed(1)} kg</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] text-muted-foreground">Início</p>
-                      <p className="text-xs font-medium">{formatarData(lote!.data_inicio)}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mt-1">
-                    <Badge variant="outline" className="text-[10px] px-2 py-0.5">
-                      {getPhaseLabel(numeroBox)}
-                    </Badge>
-                    <span className="text-[11px] text-muted-foreground">{day} de 49 dias</span>
-                  </div>
-
-                  {numeroBox === 1 && (
-                    <div className="mt-1 text-xs flex items-center justify-center gap-2 bg-muted/40 rounded-md py-1">
-                      <Thermometer className="h-3.5 w-3.5" />
-                      <span>{lote!.temperatura}°C</span>
-                    </div>
-                  )}
-                  {numeroBox === 6 && (
-                    <div className="mt-1 text-[11px] grid grid-cols-3 gap-1 bg-muted/40 rounded-md p-2 text-center">
-                      <div>pH {lote!.ph}</div>
-                      <div>N {lote!.nitrogenio}</div>
-                      <div>P {lote!.fosforo} · K {lote!.potassio}</div>
-                    </div>
-                  )}
-
-                  <div className="mt-auto">
-                    <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center text-muted-foreground">
-                    <Package className="h-8 w-8 mx-auto mb-2 opacity-60" />
-                    <p className="text-sm">Caixa vazia</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Back */}
-          <Card className="absolute inset-0 rounded-2xl overflow-hidden border glass-light [transform:rotateY(180deg)] [backface-visibility:hidden]">
-            <CardContent className="p-4 h-full flex flex-col gap-2">
-              {hasLote ? (
-                <>
-                  <div className="text-xs font-medium">Caixa {numeroBox} · {lote!.codigo}</div>
-
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <p className="text-[11px] text-muted-foreground">Peso inicial</p>
-                      <p className="text-sm font-semibold">{(lote!.peso_inicial || 0).toFixed(1)} kg</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] text-muted-foreground">Peso atual</p>
-                      <p className="text-sm font-semibold">{(lote!.peso_atual || 0).toFixed(1)} kg</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] text-muted-foreground">Estimado final</p>
-                      <p className="text-sm font-semibold">{(lote!.pesoEsperadoFinal || 0).toFixed(1)} kg</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <p className="text-muted-foreground">Início</p>
-                      <p className="font-medium">{formatarData(lote!.data_inicio)} {formatarHora(lote!.data_inicio)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Conclusão prevista</p>
-                      <p className="font-medium">
-                        {formatarData(new Date(new Date(lote!.data_inicio).getTime() + 49 * 24 * 60 * 60 * 1000).toISOString())}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <p className="text-muted-foreground">Voluntários</p>
-                      <p className="font-medium">{lote!.voluntariosUnicos || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Validador</p>
-                      <p className="font-medium truncate">{lote!.validadorNome}</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-1 border border-dashed rounded-md h-16 flex items-center justify-center text-xs text-muted-foreground">
-                    QR Code
-                  </div>
-
-                  <div className="mt-auto grid grid-cols-2 gap-2">
-                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); toast({ title: 'Em desenvolvimento', description: 'Galeria de fotos estará disponível em breve.' }); }}>
-                      Fotos
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); toast({ title: 'Em desenvolvimento', description: 'Exportação de PDF estará disponível em breve.' }); }}>
-                      Baixar PDF
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-                  Sem dados
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-4">
-      <Carousel
-        opts={{ align: 'start', loop: false }}
-        className="w-full"
-      >
-        <CarouselContent className="pb-2">
-          {caixasPorLote.map(({ numeroBox, lote }) => (
-            <CarouselItem key={numeroBox} className="basis-[85%] sm:basis-auto">
-              <div className="flex justify-center">
-                <BoxFlipCard numeroBox={numeroBox} lote={lote} />
-              </div>
-            </CarouselItem>
+      {/* Esteira Visual - Mobile-First Design */}
+      <div className="overflow-x-auto pb-4 -mx-4 px-4">
+        <div className="flex gap-3 sm:gap-4" style={{ minWidth: 'max-content' }}>
+          {caixasPorLote.map(({ numeroBox, lote }, index) => (
+            <div key={numeroBox} className="flex items-center">
+              {/* Caixa de Compostagem - Responsiva e Otimizada */}
+              <Card className={`
+                relative w-64 sm:w-72 h-auto min-h-[280px] sm:min-h-[300px] transition-all duration-300
+                ${getBoxColor(numeroBox, lote)}
+                ${lote ? 'hover:shadow-lg cursor-pointer' : ''}
+              `}>
+                <CardContent className="p-3 h-full flex flex-col">
+                  {/* Header da Caixa */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      <span className="font-semibold text-sm">Caixa {numeroBox}</span>
+                    </div>
+                    {lote && getStatusIcon(lote.statusManejo)}
+                  </div>
+
+                  {/* Conteúdo da Caixa */}
+                  {lote ? (
+                    <div className="flex-1 space-y-3">
+                      {/* Código do Lote - Destaque Principal */}
+                      <div className="text-center bg-primary/5 rounded-lg p-2">
+                        <p className="text-xs text-muted-foreground mb-1">Lote</p>
+                        <p className="text-sm font-bold text-primary">
+                          {lote.codigo}
+                        </p>
+                      </div>
+
+                      {/* Peso Atual - Destaque Secundário */}
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Peso Atual</p>
+                        <p className="text-xl font-bold text-foreground">
+                          {lote.peso_atual?.toFixed(1) || '0.0'}kg
+                        </p>
+                      </div>
+
+                       {/* Data de Entrada e Final */}
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Entrada</p>
+                        <p className="text-xs font-medium">
+                          {formatarData(lote.data_inicio)} às {formatarHora(lote.data_inicio)}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Final: {formatarData(new Date(new Date(lote.data_inicio).getTime() + 7 * 7 * 24 * 60 * 60 * 1000).toISOString())}
+                        </p>
+                      </div>
+
+                      {/* Validador e Voluntários */}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <p className="text-muted-foreground flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            Validador
+                          </p>
+                          <p className="font-medium truncate">
+                            {lote.validadorNome}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Voluntários</p>
+                          <p className="font-medium">
+                            {lote.voluntariosUnicos || 0} pessoas
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Dados IoT Simplificados */}
+                      <div className="bg-muted/30 rounded-lg p-2">
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="flex items-center gap-1">
+                            <Thermometer className="h-3 w-3 text-orange-500" />
+                            <span>{lote.temperatura}°C</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Droplets className="h-3 w-3 text-blue-500" />
+                            <span>{lote.umidade}%</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Status Badge */}
+                      <Badge
+                        variant={getStatusBadgeVariant(lote.statusManejo)}
+                        className="text-xs w-full justify-center"
+                      >
+                        {lote.statusManejo === 'atrasado' && 'Atrasado'}
+                        {lote.statusManejo === 'pendente' && 'Pendente'}
+                        {lote.statusManejo === 'realizado' && 'Em dia'}
+                      </Badge>
+
+                      {/* Ações */}
+                      <div className="mt-auto pt-2">
+                        {numeroBox !== 7 && lote.statusManejo !== 'realizado' ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => onManejoClick(lote)}
+                          >
+                            <Settings className="h-3 w-3 mr-1" />
+                            Manejo
+                          </Button>
+                        ) : (
+                          <div className="text-center">
+                            <p className="text-xs text-muted-foreground">
+                              Semana {lote.semana_atual} de 7
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="text-center">
+                        <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                        <p className="text-sm text-muted-foreground">
+                          Caixa vazia
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Aguardando lote
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+
+                {/* Indicador de Progresso */}
+                {lote && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted rounded-b-lg overflow-hidden">
+                    <div
+                      className="h-full bg-primary transition-all duration-500"
+                      style={{ width: `${lote.progressoPercentual}%` }}
+                    />
+                  </div>
+                )}
+              </Card>
+
+              {/* Seta de Fluxo - Responsiva */}
+              {index < caixasPorLote.length - 1 && (
+                <div className="mx-1 sm:mx-2 flex items-center">
+                  <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground animate-pulse" />
+                </div>
+              )}
+            </div>
           ))}
-        </CarouselContent>
-        <CarouselPrevious className="hidden md:flex" />
-        <CarouselNext className="hidden md:flex" />
-      </Carousel>
+        </div>
+      </div>
+
+      {/* Legenda */}
+      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded bg-primary/20 border border-primary/30" />
+          <span>Entrada (Caixa 1)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded bg-secondary/20 border border-secondary/30" />
+          <span>Processamento (Caixa 2-6)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded bg-success/20 border border-success/30" />
+          <span>Finalização (Caixa 7)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded bg-muted/30 border border-muted border-dashed" />
+          <span>Vazia</span>
+        </div>
+      </div>
     </div>
   );
 };
