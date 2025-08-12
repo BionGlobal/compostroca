@@ -29,6 +29,7 @@ export interface LoteExtended {
   pesoEsperadoFinal: number;
   reducaoAcumulada: number;
   voluntariosUnicos: number;
+  voluntariosIds?: string[];
   statusManejo: 'pendente' | 'realizado' | 'atrasado';
   progressoPercentual: number;
   dataEntradaCaixa: string;
