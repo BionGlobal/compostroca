@@ -22,11 +22,12 @@ import { useLotesManager } from '@/hooks/useLotesManager';
 import { ProductionBelt } from '@/components/ProductionBelt';
 import { ManejoCard } from '@/components/ManejoCard';
 import { ManejoSimplificado } from '@/components/ManejoSimplificado';
-import { PerformanceCharts } from '@/components/PerformanceCharts';
+// import { PerformanceCharts } from '@/components/PerformanceCharts';
 import { FinalizationModal } from '@/components/FinalizationModal';
 import { StatCard } from '@/components/StatCard';
 import { LoteHistoricoCard } from '@/components/LoteHistoricoCard';
 import { LoteDetalhesModal } from '@/components/LoteDetalhesModal';
+import { toast } from '@/components/ui/use-toast';
 
 const Lotes = () => {
   const {
@@ -143,11 +144,33 @@ const Lotes = () => {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="producao">Produção</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
-          <TabsTrigger value="analise">Análise</TabsTrigger>
+          <TabsTrigger value="analise" onClick={() => toast({ title: 'Em desenvolvimento', description: 'Em breve você poderá acompanhar indicadores avançados.' })}>Análise</TabsTrigger>
         </TabsList>
 
         {/* Tab: Produção */}
         <TabsContent value="producao" className="space-y-6">
+          <Card className="glass-light border-0">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Esteira de Produção
+                <Badge variant="outline" className="text-sm ml-auto">
+                  {lotesAtivos.length}/7 caixas ocupadas
+                </Badge>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Processo de compostagem em 7 semanas
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ProductionBelt
+                lotesAtivos={lotesAtivos}
+                onManejoClick={handleManejoClick}
+                onFinalizarClick={handleFinalizarClick}
+              />
+            </CardContent>
+          </Card>
+
           {/* Card de Manutenção Semanal - Simplificado */}
           <Card className="border-emerald-200/50 bg-gradient-to-r from-emerald-500/10 to-green-500/10 shadow-lg hover:shadow-emerald-200/20 transition-all duration-300">
             <CardHeader>
@@ -175,28 +198,6 @@ const Lotes = () => {
                   Começar
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-light border-0">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Esteira de Produção
-                <Badge variant="outline" className="text-sm ml-auto">
-                  {lotesAtivos.length}/7 caixas ocupadas
-                </Badge>
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Processo de compostagem em 7 semanas
-              </p>
-            </CardHeader>
-            <CardContent>
-              <ProductionBelt
-                lotesAtivos={lotesAtivos}
-                onManejoClick={handleManejoClick}
-                onFinalizarClick={handleFinalizarClick}
-              />
             </CardContent>
           </Card>
 
@@ -259,11 +260,9 @@ const Lotes = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <PerformanceCharts
-                metrics={metrics}
-                lotesAtivos={lotesAtivos}
-                lotesFinalizados={lotesFinalizados}
-              />
+              <div className="p-8 text-center text-muted-foreground">
+                Em desenvolvimento. Em breve você poderá acompanhar indicadores e comparativos avançados.
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,6 +1,8 @@
 import { MapPin, Clock, User, Scale, TrendingDown } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/use-toast';
 import { formatWeight, calculateWeightReduction, calculateProcessingTime, getOrganizationName, formatLocation } from '@/lib/organizationUtils';
 
 interface LoteHistoricoCardProps {
@@ -85,6 +87,15 @@ export const LoteHistoricoCard = ({ lote, onClick }: LoteHistoricoCardProps) => 
           <span className="text-xs text-muted-foreground">
             Tempo de processamento: <span className="font-medium">{processingTime}</span>
           </span>
+        </div>
+        {/* Ações */}
+        <div className="mt-4 flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); toast({ title: "Em desenvolvimento", description: "Galeria de fotos estará disponível em breve." }); }}>
+            Fotos
+          </Button>
+          <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); toast({ title: "Em desenvolvimento", description: "Exportação de PDF estará disponível em breve." }); }}>
+            Baixar PDF
+          </Button>
         </div>
       </CardContent>
     </Card>

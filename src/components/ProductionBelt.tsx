@@ -4,6 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Clock, CheckCircle, AlertTriangle, Package, Settings, Thermometer, Droplets } from 'lucide-react';
 import { LoteExtended } from '@/hooks/useLotesManager';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { toast } from '@/components/ui/use-toast';
 
 interface ProductionBeltProps {
   lotesAtivos: LoteExtended[];
@@ -131,7 +133,7 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, m
     };
 
     return (
-      <div className="relative w-36 sm:w-44 md:w-56 aspect-square [perspective:1000px] select-none">
+      <div className="relative w-full sm:w-[360px] md:w-[420px] lg:w-[480px] aspect-square [perspective:1000px] select-none">
         <div
           onClick={toggle}
           className={`relative w-full h-full transition-transform duration-500 [transform-style:preserve-3d] ${
@@ -140,7 +142,7 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, m
         >
           {/* Front */}
           <Card className={`absolute inset-0 rounded-2xl overflow-hidden border ${getBoxColor(numeroBox, lote)} [backface-visibility:hidden]`}>
-            <CardContent className="p-3 h-full flex flex-col">
+            <CardContent className="p-4 h-full flex flex-col">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold">Caixa {numeroBox}</span>
                 <span className={`inline-block w-2.5 h-2.5 rounded-full ring-2 ring-background ${getDotClass(numeroBox, hasLote)} animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]`} />
@@ -204,7 +206,7 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, m
 
           {/* Back */}
           <Card className="absolute inset-0 rounded-2xl overflow-hidden border glass-light [transform:rotateY(180deg)] [backface-visibility:hidden]">
-            <CardContent className="p-3 h-full flex flex-col gap-2">
+            <CardContent className="p-4 h-full flex flex-col gap-2">
               {hasLote ? (
                 <>
                   <div className="text-xs font-medium">Caixa {numeroBox} · {lote!.codigo}</div>
@@ -253,10 +255,10 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, m
                   </div>
 
                   <div className="mt-auto grid grid-cols-2 gap-2">
-                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); /* toast elsewhere */ }}>
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); toast({ title: 'Em desenvolvimento', description: 'Galeria de fotos estará disponível em breve.' }); }}>
                       Fotos
                     </Button>
-                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); }}>
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); toast({ title: 'Em desenvolvimento', description: 'Exportação de PDF estará disponível em breve.' }); }}>
                       Baixar PDF
                     </Button>
                   </div>
@@ -275,11 +277,22 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, m
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
-        {caixasPorLote.map(({ numeroBox, lote }) => (
-          <BoxFlipCard key={numeroBox} numeroBox={numeroBox} lote={lote} />
-        ))}
-      </div>
+      <Carousel
+        opts={{ align: 'start', loop: false }}
+        className="w-full"
+      >
+        <CarouselContent className="pb-2">
+          {caixasPorLote.map(({ numeroBox, lote }) => (
+            <CarouselItem key={numeroBox} className="basis-[85%] sm:basis-auto">
+              <div className="flex justify-center">
+                <BoxFlipCard numeroBox={numeroBox} lote={lote} />
+              </div>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        <CarouselPrevious className="hidden md:flex" />
+        <CarouselNext className="hidden md:flex" />
+      </Carousel>
     </div>
   );
 };
