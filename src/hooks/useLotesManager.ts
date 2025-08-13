@@ -71,6 +71,10 @@ export interface ProductionMetrics {
   totalLotesFinalizados: number;
   pesoBrutoProcessamento: number;
   compostoProduzido: number;
+  // Métricas adicionais para cards de "Sistema de Lotes"
+  voluntariosEngajadosAtivos: number; // voluntários únicos que entregaram para lotes ativos
+  totalVoluntariosUnidade: number; // total de voluntários ativos na unidade
+  co2eEvitadoAtivosKg: number; // CO2e evitado (kg) considerando somente lotes ativos
 }
 
 export const useLotesManager = () => {
@@ -90,6 +94,9 @@ export const useLotesManager = () => {
     totalLotesFinalizados: 0,
     pesoBrutoProcessamento: 0,
     compostoProduzido: 0,
+    voluntariosEngajadosAtivos: 0,
+    totalVoluntariosUnidade: 0,
+    co2eEvitadoAtivosKg: 0,
   });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -298,13 +305,14 @@ export const useLotesManager = () => {
     const pesoTotalTodosLotes = [...ativos, ...finalizados].reduce((acc, lote) => acc + lote.peso_inicial, 0);
     const pesoTotalCompostado = pesoTotalTodosLotes / 1000; // Converter para toneladas
 
-    // CO2e evitado (baseado em lotes finalizados)
+    // CO2e evitado (baseado em lotes finalizados) em toneladas
     const pesoInicialFinalizados = finalizados.reduce((acc, lote) => acc + lote.peso_inicial, 0);
     const co2eEvitado = (pesoInicialFinalizados * 0.766) / 1000; // 1kg = 0.766kg CO2e, converter para toneladas
 
-    // Buscar dados de voluntários
+    // Buscar dados de voluntários gerais (existente)
     const voluntariosStats = await fetchVoluntariosStats();
 
+    // Tempo médio de ciclo
     const tempoMedioCiclo = finalizados.length > 0
       ? finalizados.reduce((acc, lote) => {
           const inicio = new Date(lote.data_inicio);
@@ -322,6 +330,42 @@ export const useLotesManager = () => {
     const pesoBrutoProcessamento = ativos.reduce((acc, lote) => acc + lote.peso_atual, 0);
     const compostoProduzido = finalizados.reduce((acc, lote) => acc + lote.peso_atual, 0);
 
+    // Novas métricas específicas dos lotes ATIVOS
+    const ativosCodigos = ativos.map(l => l.codigo);
+    let voluntariosEngajadosAtivos = 0;
+    let totalVoluntariosUnidade = 0;
+
+    if (ativosCodigos.length > 0) {
+      const { data: entregasAtivos, error: entregasAtivosErr } = await supabase
+        .from('entregas')
+        .select('voluntario_id, lote_codigo')
+        .in('lote_codigo', ativosCodigos);
+
+      if (entregasAtivosErr) {
+        console.error('Erro ao buscar voluntários engajados nos ativos:', entregasAtivosErr);
+      } else {
+        const setEngajados = new Set<string>();
+        (entregasAtivos || []).forEach(e => {
+          if (e.voluntario_id) setEngajados.add(e.voluntario_id);
+        });
+        voluntariosEngajadosAtivos = setEngajados.size;
+      }
+    }
+
+    const { count: totalVolCount, error: volCountErr } = await supabase
+      .from('voluntarios')
+      .select('*', { count: 'exact', head: true })
+      .eq('ativo', true)
+      .eq('unidade', profile?.organization_code || '');
+
+    if (volCountErr) {
+      console.error('Erro ao contar voluntários da unidade:', volCountErr);
+    } else {
+      totalVoluntariosUnidade = totalVolCount || 0;
+    }
+
+    const co2eEvitadoAtivosKg = ativos.reduce((acc, lote) => acc + (lote.peso_inicial * 0.766), 0);
+
     setMetrics({
       capacidadeUtilizada,
       pesoTotalCompostado,
@@ -334,6 +378,9 @@ export const useLotesManager = () => {
       totalLotesFinalizados: finalizados.length,
       pesoBrutoProcessamento,
       compostoProduzido,
+      voluntariosEngajadosAtivos,
+      totalVoluntariosUnidade,
+      co2eEvitadoAtivosKg,
     });
   };
 

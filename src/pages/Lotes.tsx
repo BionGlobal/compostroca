@@ -91,49 +91,33 @@ const Lotes = () => {
       </div>
 
       {/* Métricas Rápidas */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Capacidade"
-          value={`${metrics.capacidadeUtilizada.toFixed(0)}%`}
-          description="da esteira ocupada"
-          icon={<Gauge className="h-6 w-6" />}
-          variant={metrics.capacidadeUtilizada > 85 ? 'earth' : 'default'}
-        />
-        <StatCard
-          title="Peso Total"
-          value={`${metrics.pesoTotalCompostado.toFixed(1)}T`}
-          description="resíduo compostado"
-          icon={<Scale className="h-6 w-6" />}
-          variant={metrics.pesoTotalCompostado > 5 ? 'primary' : 'default'}
-        />
-        <StatCard
-          title="CO2e Evitado"
-          value={`${metrics.co2eEvitado.toFixed(1)}T`}
-          description="impacto ambiental"
-          icon={<Leaf className="h-6 w-6" />}
-          variant="earth"
-        />
-        <StatCard
-          title="Entregas"
-          value={`${metrics.totalEntregas}`}
-          description="validadas realizadas"
+          title="Lotes Ativos"
+          value={`${metrics.totalLotesAtivos}`}
+          description="na esteira"
           icon={<Package className="h-6 w-6" />}
           variant="default"
         />
         <StatCard
+          title="Peso Total"
+          value={`${(metrics.pesoBrutoProcessamento || 0).toFixed(1)}kg`}
+          description="peso atual dos ativos"
+          icon={<Scale className="h-6 w-6" />}
+          variant="primary"
+        />
+        <StatCard
           title="Voluntários"
-          value={`${metrics.totalVoluntarios}`}
-          description="que fizeram entregas"
+          value={`${metrics.voluntariosEngajadosAtivos || 0}`}
+          description={`${metrics.totalVoluntariosUnidade > 0 ? Math.round(((metrics.voluntariosEngajadosAtivos || 0) / metrics.totalVoluntariosUnidade) * 100) : 0}% engajados (${metrics.voluntariosEngajadosAtivos || 0}/${metrics.totalVoluntariosUnidade || 0})`}
           icon={<Users className="h-6 w-6" />}
           variant="default"
         />
         <StatCard
-          title="Composto"
-          value={`${(metrics.compostoProduzido || 0) >= 1000 
-            ? `${((metrics.compostoProduzido || 0) / 1000).toFixed(1)}T` 
-            : `${(metrics.compostoProduzido || 0).toFixed(1)}kg`}`}
-          description="produzido finalizado"
-          icon={<Sprout className="h-6 w-6" />}
+          title="CO2e Evitado"
+          value={`${(metrics.co2eEvitadoAtivosKg || 0).toFixed(0)}kg`}
+          description="evitado pelos ativos"
+          icon={<Leaf className="h-6 w-6" />}
           variant="earth"
         />
       </div>
