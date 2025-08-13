@@ -1,11 +1,7 @@
 import { ReactNode } from 'react';
 import { BottomNavigation } from './BottomNavigation';
 import { BackgroundParticles } from './BackgroundParticles';
-import { MobileMenu } from './MobileMenu';
-import { Button } from '@/components/ui/button';
-import { LogOut, User, Users } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { Link } from 'react-router-dom';
+import { HamburgerMenu } from './HamburgerMenu';
 const compostrocaIcon = '/lovable-uploads/compostroca-app-logo.png';
 
 interface LayoutProps {
@@ -13,8 +9,6 @@ interface LayoutProps {
 }
 
 export const Layout = ({ children }: LayoutProps) => {
-  const { signOut, profile } = useAuth();
-
   return (
     <div className="min-h-screen flex flex-col relative">
       <BackgroundParticles />
@@ -32,41 +26,9 @@ export const Layout = ({ children }: LayoutProps) => {
               </p>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
-            {/* Desktop Menu */}
-            <div className="hidden sm:flex items-center space-x-4">
-              {profile?.user_role === 'super_admin' && (
-                <Link to="/admin/usuarios">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <Users className="h-4 w-4" />
-                    <span className="ml-2">Usuários</span>
-                  </Button>
-                </Link>
-              )}
-              <div className="flex items-center space-x-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  {profile?.full_name || 'Usuário'}
-                </span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={signOut}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="ml-2">Sair</span>
-              </Button>
-            </div>
-            
-            {/* Mobile Menu */}
-            <MobileMenu />
-          </div>
+          
+          {/* Hamburger Menu for all devices */}
+          <HamburgerMenu />
         </div>
       </header>
       

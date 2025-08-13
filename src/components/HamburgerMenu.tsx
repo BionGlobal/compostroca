@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Menu, Settings, Users, FileText, LogOut } from 'lucide-react';
+import { Menu, Settings, Users, FileText, LogOut, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
 import { Link } from 'react-router-dom';
+import { DeviceTestModal } from './DeviceTestModal';
 
 const getRoleBadgeVariant = (role: string) => {
   switch (role) {
@@ -31,8 +32,9 @@ const getRoleLabel = (role: string) => {
   }
 };
 
-export const MobileMenu = () => {
+export const HamburgerMenu = () => {
   const [open, setOpen] = useState(false);
+  const [deviceTestOpen, setDeviceTestOpen] = useState(false);
   const { signOut, profile } = useAuth();
 
   const handleSignOut = () => {
@@ -42,15 +44,20 @@ export const MobileMenu = () => {
 
   const closeMenu = () => setOpen(false);
 
+  const openDeviceTest = () => {
+    setDeviceTestOpen(true);
+    setOpen(false);
+  };
+
   return (
-    <div className="sm:hidden">
+    <>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="sm" className="p-2">
             <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="right" className="w-80 p-0">
+        <SheetContent side="right" className="w-80 sm:w-96 p-0">
           <div className="flex flex-col h-full">
             {/* User Info Section */}
             <div className="p-6 space-y-4">
@@ -81,17 +88,19 @@ export const MobileMenu = () => {
 
             {/* Menu Items */}
             <div className="flex-1 p-6 space-y-2">
-              {profile?.user_role === 'super_admin' && (
+              {(profile?.user_role === 'super_admin' || profile?.user_role === 'local_admin') && (
                 <>
-                  <Link to="/admin/configuracoes" onClick={closeMenu}>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start gap-3 h-12"
-                    >
-                      <Settings className="h-5 w-5" />
-                      Configurações do Sistema
-                    </Button>
-                  </Link>
+                  {profile?.user_role === 'super_admin' && (
+                    <Link to="/admin/configuracoes" onClick={closeMenu}>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start gap-3 h-12"
+                      >
+                        <Settings className="h-5 w-5" />
+                        Configurações do Sistema
+                      </Button>
+                    </Link>
+                  )}
                   
                   <Link to="/admin/usuarios" onClick={closeMenu}>
                     <Button
@@ -102,6 +111,15 @@ export const MobileMenu = () => {
                       Gerenciar Usuários
                     </Button>
                   </Link>
+                  
+                  <Button
+                    variant="ghost"
+                    onClick={openDeviceTest}
+                    className="w-full justify-start gap-3 h-12"
+                  >
+                    <Smartphone className="h-5 w-5" />
+                    Testar Aparelho
+                  </Button>
                 </>
               )}
               
@@ -132,6 +150,11 @@ export const MobileMenu = () => {
           </div>
         </SheetContent>
       </Sheet>
-    </div>
+      
+      <DeviceTestModal 
+        open={deviceTestOpen} 
+        onOpenChange={setDeviceTestOpen} 
+      />
+    </>
   );
 };
