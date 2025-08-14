@@ -14,7 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { StarRating } from '@/components/StarRating';
-import { EntregaFotosCapture } from '@/components/EntregaFotosCapture';
+import { EntregaFotosUpload } from '@/components/EntregaFotosUpload';
 import { EntregaFotosGaleria } from '@/components/EntregaFotosGaleria';
 import { useEntregaFotos } from '@/hooks/useEntregaFotos';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -204,7 +204,7 @@ const Entregas = () => {
   if (showCamera && tempEntregaId) {
     return (
       <div className="p-4">
-        <EntregaFotosCapture 
+        <EntregaFotosUpload 
           entregaId={tempEntregaId}
           onComplete={handleFotosComplete}
           onCancel={handleCancelFotos}
