@@ -7,15 +7,16 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { MapPin, Star, Plus, Calendar, Camera, Eye, User, Clock, ExternalLink, Package } from 'lucide-react';
+import { MapPin, Star, Plus, Calendar, Camera, Eye, User, Clock, ExternalLink, Package, Edit } from 'lucide-react';
 import { useVoluntarios } from '@/hooks/useVoluntarios';
-import { useEntregas } from '@/hooks/useEntregas';
+import { useEntregas, Entrega } from '@/hooks/useEntregas';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { StarRating } from '@/components/StarRating';
 import { EntregaFotosUpload } from '@/components/EntregaFotosUpload';
 import { EntregaFotosGaleria } from '@/components/EntregaFotosGaleria';
+import { EditEntregaModal } from '@/components/EditEntregaModal';
 import { useEntregaFotos } from '@/hooks/useEntregaFotos';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LoteCard } from '@/components/LoteCard';
@@ -31,10 +32,12 @@ const Entregas = () => {
   const [loading, setLoading] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [tempEntregaId, setTempEntregaId] = useState<string | null>(null);
+  const [editingEntrega, setEditingEntrega] = useState<Entrega | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const { voluntarios } = useVoluntarios();
   const { entregas, hasDeliveredToday, hasDeliveredToCurrentLot, refetch: refetchEntregas } = useEntregas();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   const { validateAllPhotos } = useEntregaFotos(tempEntregaId || undefined);
   const { loteAtivoCaixa01, atualizarPesoLote } = useLotes();
@@ -51,6 +54,9 @@ const Entregas = () => {
   
   // Check if form should be disabled (no active lot)
   const isFormDisabled = !loteAtivoCaixa01;
+  
+  // Check if user is super admin
+  const isSuperAdmin = profile?.user_role === 'super_admin';
   
   // Debug logs
   console.log('🔍 Debug Entregas - loteAtivoCaixa01:', loteAtivoCaixa01);
@@ -199,6 +205,15 @@ const Entregas = () => {
     }
     
     setShowCamera(false);
+  };
+
+  const handleEditEntrega = (entrega: Entrega) => {
+    setEditingEntrega(entrega);
+    setShowEditModal(true);
+  };
+
+  const handleEditSuccess = () => {
+    refetchEntregas();
   };
 
   if (showCamera && tempEntregaId) {
@@ -416,8 +431,8 @@ const Entregas = () => {
 
                   <Separator />
 
-                  {/* Botão Ver Fotos Centralizado */}
-                  <div className="flex justify-center pt-2">
+                  {/* Botões de Ação */}
+                  <div className="flex justify-center gap-2 pt-2">
                     <EntregaFotosGaleria 
                       entregaId={entrega.id} 
                       numeroBalde={voluntario?.numero_balde || 0}
@@ -425,12 +440,24 @@ const Entregas = () => {
                       <Button
                         variant="default"
                         size="default"
-                        className="px-8"
+                        className="px-6"
                       >
                         <Eye className="h-4 w-4 mr-2" />
                         Ver Fotos
                       </Button>
                     </EntregaFotosGaleria>
+                    
+                    {isSuperAdmin && (
+                      <Button
+                        variant="outline"
+                        size="default"
+                        className="px-6"
+                        onClick={() => handleEditEntrega(entrega)}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </Button>
+                    )}
                   </div>
                 </div>
               );
@@ -438,6 +465,17 @@ const Entregas = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Edição */}
+      <EditEntregaModal
+        entrega={editingEntrega}
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingEntrega(null);
+        }}
+        onSuccess={handleEditSuccess}
+      />
     </div>
   );
 };
