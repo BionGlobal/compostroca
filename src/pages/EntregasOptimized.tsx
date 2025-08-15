@@ -49,7 +49,6 @@ const EntregasOptimized = () => {
     showIOSInstructions 
   } = useIOSPermissions();
 
-  // Filtra voluntários que ainda não fizeram entrega no lote atual
   const availableVoluntarios = voluntarios.filter(v => {
     if (!loteAtivoCaixa01) return true;
     return !entregas.some(entrega => 
@@ -61,13 +60,19 @@ const EntregasOptimized = () => {
   const isFormDisabled = !loteAtivoCaixa01;
   const isSuperAdmin = profile?.user_role === 'super_admin';
 
-  const getCurrentLocation = async (): Promise<GeolocationPosition | null> => {
+  const getCurrentLocation = async (): Promise<GeolocationPosition> => {
     console.log('📍 Solicitando geolocalização...');
-    const position = await requestGeolocationAccess();
-    if (!position && deviceInfo?.isIOS) {
-      showIOSInstructions();
-    }
-    return position;
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error("Geolocalização não é suportada pelo seu navegador."));
+        }
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => resolve(position),
+            (error) => reject(error),
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+    });
   };
 
   const handleFazerFotos = async () => {
@@ -81,13 +86,9 @@ const EntregasOptimized = () => {
     }
 
     setLoading(true);
+
     try {
       const position = await getCurrentLocation();
-      if (!position) {
-        toast({ title: "Erro de Localização", description: "Não foi possível obter sua localização.", variant: "destructive" });
-        setLoading(false);
-        return;
-      }
       
       const { data, error } = await supabase
         .from('entregas')
@@ -108,9 +109,26 @@ const EntregasOptimized = () => {
 
       setTempEntregaId(data.id);
       setShowCamera(true);
-    } catch (error) {
-      console.error('Erro ao criar entrega:', error);
-      toast({ title: "Erro", description: "Não foi possível criar a entrega", variant: "destructive" });
+
+    } catch (error: any) {
+      console.error('Erro detalhado de geolocalização:', error.code, error.message);
+      
+      let description = "Não foi possível obter sua localização. Tente novamente.";
+      if (error.code === 1) { // PERMISSION_DENIED
+        description = "A permissão de localização foi negada. Por favor, habilite-a nas configurações do seu iPhone para o Safari.";
+      } else if (error.code === 2) { // POSITION_UNAVAILABLE
+        description = "Sua localização não está disponível no momento. Verifique sua conexão ou sinal de GPS.";
+      }
+
+      description += " Se o problema persistir, tente abrir o site diretamente no navegador Safari (e não por um link no Instagram, etc.).";
+
+      toast({
+        title: "Erro de Localização",
+        description: description,
+        variant: "destructive",
+        duration: 9000,
+      });
+      
     } finally {
       setLoading(false);
     }
@@ -157,7 +175,6 @@ const EntregasOptimized = () => {
     refetch();
   };
 
-  // Helper function to safely get initials
   const getInitials = (name?: string | null): string => {
     if (!name) return 'V';
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
@@ -219,7 +236,7 @@ const EntregasOptimized = () => {
           </div>
 
           <Button onClick={handleFazerFotos} disabled={isFormDisabled || !selectedVoluntario || !peso || qualidadeResiduo === 0 || loading} className="w-full">
-            <Camera className="h-4 w-4 mr-2" />{loading ? 'Preparando...' : 'Fazer Fotos'}
+            <Camera className="h-4 w-4 mr-2" />{loading ? 'Aguarde...' : 'Fazer Fotos'}
           </Button>
         </CardContent>
       </Card>
@@ -242,7 +259,6 @@ const EntregasOptimized = () => {
                       <div className="flex-grow flex items-center gap-3">
                         <Avatar className="h-10 w-10 border flex-shrink-0">
                           <AvatarImage src={voluntario?.foto_url || undefined} />
-                          {/* --- LINHA CORRIGIDA PARA EVITAR O ERRO --- */}
                           <AvatarFallback>{getInitials(voluntario?.nome)}</AvatarFallback>
                         </Avatar>
 
