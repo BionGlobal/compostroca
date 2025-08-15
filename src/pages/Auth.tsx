@@ -61,9 +61,10 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* --- AJUSTE 1 --- */}
-        <div className="flex flex-col items-center mb-4"> {/* Alterado de mb-6 para mb-4 */}
+      {/* --- INÍCIO DA ÚNICA ALTERAÇÃO --- */}
+      <div className="w-full max-w-md relative" style={{ bottom: '20px' }}>
+      {/* --- FIM DA ÚNICA ALTERAÇÃO --- */}
+        <div className="flex flex-col items-center mb-6">
           <div className="p-2 rounded-full mb-4">
             <img src="/lovable-uploads/compostroca-app-logo.png" alt="Compostroca App Logo" className="h-12 w-12" />
           </div>
@@ -202,8 +203,7 @@ const Auth = () => {
           </CardContent>
         </Card>
         
-        {/* --- AJUSTE 2 --- */}
-        <div className="w-full mt-6 text-center text-xs text-muted-foreground"> {/* Alterado de mt-8 para mt-6 */}
+        <div className="w-full mt-8 text-center text-xs text-muted-foreground">
           <a href="https://www.bion.global" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
             Powered by Bion ⚡
           </a>
