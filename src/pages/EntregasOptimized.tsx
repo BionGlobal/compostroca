@@ -5,8 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { MapPin, Star, Plus, Calendar, Camera, Eye, User, Clock, Package, Edit, AlertTriangle, Scale } from 'lucide-react';
+import { MapPin, Star, Camera, Eye, Clock, Edit, AlertTriangle, Scale } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -158,6 +157,12 @@ const EntregasOptimized = () => {
     refetch();
   };
 
+  // Helper function to safely get initials
+  const getInitials = (name?: string | null): string => {
+    if (!name) return 'V';
+    return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  };
+
   if (showCamera && tempEntregaId) {
     return (
       <div className="p-4">
@@ -228,7 +233,6 @@ const EntregasOptimized = () => {
             <p className="text-muted-foreground text-center py-4">Nenhuma entrega registrada ainda.</p>
           ) : (
             <div className="space-y-4">
-              {/* --- ALTERAÇÃO: LISTA AGORA MOSTRA 20 ITENS --- */}
               {entregas.slice(0, 20).map((entrega) => {
                 const voluntario = voluntarios.find(v => v.id === entrega.voluntario_id);
                 
@@ -236,12 +240,10 @@ const EntregasOptimized = () => {
                   <Card key={entrega.id} className="p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div className="flex-grow flex items-center gap-3">
-                        {/* --- ALTERAÇÃO: ÍCONE SUBSTITUÍDO POR AVATAR --- */}
                         <Avatar className="h-10 w-10 border flex-shrink-0">
                           <AvatarImage src={voluntario?.foto_url || undefined} />
-                          <AvatarFallback>
-                            {voluntario?.nome?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'V'}
-                          </AvatarFallback>
+                          {/* --- LINHA CORRIGIDA PARA EVITAR O ERRO --- */}
+                          <AvatarFallback>{getInitials(voluntario?.nome)}</AvatarFallback>
                         </Avatar>
 
                         <div className="min-w-0">
