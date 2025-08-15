@@ -60,9 +60,7 @@ const Auth = () => {
   }
 
   return (
-    /* --- INÍCIO DA ÚNICA ALTERAÇÃO --- */
-    <div className="min-h-screen flex items-center justify-center px-4 py-2"> {/* Alterado de p-4 para px-4 py-2 */}
-    {/* --- FIM DA ÚNICA ALTERAÇÃO --- */}
+    <div className="min-h-screen flex items-center justify-center p-3"> {/* Alterado de p-4 para p-3 */}
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-6">
           <div className="p-2 rounded-full mb-4">
