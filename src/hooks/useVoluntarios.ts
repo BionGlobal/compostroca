@@ -27,13 +27,20 @@ export const useVoluntarios = () => {
   const fetchVoluntarios = async () => {
     try {
       setLoading(true);
+      console.log('🔍 Fetching voluntários...');
+      
       const { data, error } = await supabase
         .from('voluntarios')
         .select('*')
         .eq('ativo', true)
         .order('nome');
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error fetching voluntários:', error);
+        throw error;
+      }
+      
+      console.log('✅ Voluntários fetched:', data?.length, 'items');
       setVoluntarios(data || []);
     } catch (error) {
       console.error('Erro ao buscar voluntários:', error);

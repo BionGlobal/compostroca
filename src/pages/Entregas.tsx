@@ -62,6 +62,10 @@ const Entregas = () => {
   console.log('🔍 Debug Entregas - loteAtivoCaixa01:', loteAtivoCaixa01);
   console.log('🔍 Debug Entregas - isFormDisabled:', isFormDisabled);
   console.log('🔍 Debug Entregas - loading:', loading);
+  console.log('🔍 Debug Entregas - user:', user?.id);
+  console.log('🔍 Debug Entregas - profile:', profile?.user_role, profile?.status);
+  console.log('🔍 Debug Entregas - voluntarios count:', voluntarios.length);
+  console.log('🔍 Debug Entregas - availableVoluntarios count:', availableVoluntarios.length);
 
   const getCurrentLocation = async (): Promise<GeolocationPosition | null> => {
     console.log('📍 Solicitando geolocalização...');
