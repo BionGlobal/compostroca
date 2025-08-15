@@ -62,7 +62,7 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       {/* --- INÍCIO DA ÚNICA ALTERAÇÃO --- */}
-      <div className="w-full max-w-md relative" style={{ bottom: '5px' }}>
+      <div className="w-full max-w-md relative" style={{ bottom: '-7px' }}>
       {/* --- FIM DA ÚNICA ALTERAÇÃO --- */}
         <div className="flex flex-col items-center mb-6">
           <div className="p-2 rounded-full mb-4">
