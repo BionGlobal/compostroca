@@ -2,10 +2,11 @@ import { StatCard } from '@/components/StatCard';
 import { CompostingBoxes } from '@/components/CompostingBoxes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Package, RotateCcw, CheckCircle, Clock, MapPin, Home, Leaf, Sprout } from 'lucide-react';
-import { useDashboard } from '@/hooks/useDashboard';
+import { useOrganizationData } from '@/hooks/useOrganizationData';
+import { StatsSkeletonLoader } from '@/components/ui/skeleton-loader';
 
 const Dashboard = () => {
-  const { stats, loading } = useDashboard();
+  const { stats, loading } = useOrganizationData();
 
   // Entregas recentes virão da página /entregas
   const entregasRecentes: any[] = [];
@@ -33,49 +34,55 @@ const Dashboard = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-4">
-        <StatCard
-          title="Voluntários Ativos"
-          value={loading ? "..." : stats.voluntariosAtivos}
-          icon={<Users />}
-          variant="primary"
-          tooltip="Número total de voluntários cadastrados ativos. Não inclui usuários excluídos ou em soft delete."
-        />
-        <StatCard
-          title="Resíduos (Ton)"
-          value={loading ? "..." : stats.residuosColetados.toFixed(2)}
-          icon={<Package />}
-          description="Processados"
-          variant="earth"
-          tooltip="Soma do peso atual de todos os lotes (lotes na esteira de compostagem e já finalizados) em toneladas."
-        />
-        <StatCard
-          title="CO2e Evitado (Ton)"
-          value={loading ? "..." : stats.co2eEvitado.toFixed(2)}
-          icon={<Leaf />}
-          description="Sustentabilidade"
-          variant="earth"
-          tooltip="Soma do peso atual de todos os lotes multiplicado por 0.766 (conforme estudo Embrapa: https://www.infoteca.cnptia.embrapa.br/infoteca/handle/doc/882162)."
-        />
-        <StatCard
-          title="Composto Produzido (Ton)"
-          value={loading ? "..." : stats.compostoProduzido.toFixed(2)}
-          icon={<Sprout />}
-          description="Resultado final"
-          variant="primary"
-          tooltip="Soma do peso atual do total de lotes já processados com sucesso e finalizados em toneladas."
-        />
-        <StatCard
-          title="Lotes em Andamento"
-          value={loading ? "..." : stats.lotesAndamento}
-          icon={<Clock />}
-          description="Na esteira"
-        />
-        <StatCard
-          title="Lotes Finalizados"
-          value={loading ? "..." : stats.lotesFinalizados}
-          icon={<CheckCircle />}
-          description="Concluídos"
-        />
+        {loading.stats ? (
+          [...Array(6)].map((_, i) => <StatsSkeletonLoader key={i} />)
+        ) : (
+          <>
+            <StatCard
+              title="Voluntários Ativos"
+              value={stats.voluntariosAtivos}
+              icon={<Users />}
+              variant="primary"
+              tooltip="Número total de voluntários cadastrados ativos. Não inclui usuários excluídos ou em soft delete."
+            />
+            <StatCard
+              title="Resíduos (Ton)"
+              value={stats.residuosColetados.toFixed(2)}
+              icon={<Package />}
+              description="Processados"
+              variant="earth"
+              tooltip="Soma do peso atual de todos os lotes (lotes na esteira de compostagem e já finalizados) em toneladas."
+            />
+            <StatCard
+              title="CO2e Evitado (Ton)"
+              value={stats.co2eEvitado.toFixed(2)}
+              icon={<Leaf />}
+              description="Sustentabilidade"
+              variant="earth"
+              tooltip="Soma do peso atual de todos os lotes multiplicado por 0.766 (conforme estudo Embrapa: https://www.infoteca.cnptia.embrapa.br/infoteca/handle/doc/882162)."
+            />
+            <StatCard
+              title="Composto Produzido (Ton)"
+              value={stats.compostoProduzido.toFixed(2)}
+              icon={<Sprout />}
+              description="Resultado final"
+              variant="primary"
+              tooltip="Soma do peso atual do total de lotes já processados com sucesso e finalizados em toneladas."
+            />
+            <StatCard
+              title="Lotes em Andamento"
+              value={stats.lotesAndamento}
+              icon={<Clock />}
+              description="Na esteira"
+            />
+            <StatCard
+              title="Lotes Finalizados"
+              value={stats.lotesFinalizados}
+              icon={<CheckCircle />}
+              description="Concluídos"
+            />
+          </>
+        )}
       </div>
 
       {/* Processo de Compostagem */}

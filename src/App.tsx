@@ -8,7 +8,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoteProvider } from "./contexts/LoteContext";
 import Dashboard from "./pages/Dashboard";
 import Voluntarios from "./pages/Voluntarios";
-import Entregas from "./pages/Entregas";
+import EntregasOptimized from "./pages/EntregasOptimized";
 import Lotes from "./pages/Lotes";
 import Auth from "./pages/Auth";
 import PendingUsers from "./pages/PendingUsers";
@@ -43,7 +43,7 @@ const App = () => (
           <Route path="/entregas" element={
             <ProtectedRoute>
               <Layout>
-                <Entregas />
+                <EntregasOptimized />
               </Layout>
             </ProtectedRoute>
           } />
