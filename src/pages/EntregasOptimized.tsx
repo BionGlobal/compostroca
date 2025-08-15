@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { MapPin, Star, Plus, Calendar, Camera, Eye, User, Clock, ExternalLink, Package, Edit, AlertTriangle, Scale } from 'lucide-react';
+import { MapPin, Star, Plus, Calendar, Camera, Eye, User, Clock, Package, Edit, AlertTriangle, Scale } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +14,6 @@ import { StarRating } from '@/components/StarRating';
 import { EntregaFotosUpload } from '@/components/EntregaFotosUpload';
 import { EntregaFotosGaleria } from '@/components/EntregaFotosGaleria';
 import { EditEntregaModal } from '@/components/EditEntregaModal';
-import { useEntregaFotos } from '@/hooks/useEntregaFotos';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LoteCard } from '@/components/LoteCard';
 import { formatPesoDisplay } from '@/lib/organizationUtils';
@@ -38,23 +37,20 @@ const EntregasOptimized = () => {
     voluntarios, 
     entregas, 
     loteAtivo: loteAtivoCaixa01, 
-    voluntariosCount,
     loading: dataLoading,
     refetch 
   } = useOrganizationData();
   
   const { user, profile } = useAuth();
   const { toast } = useToast();
-  const { validateAllPhotos } = useEntregaFotos(tempEntregaId || undefined);
   
   const { 
     deviceInfo, 
-    permissions, 
     requestGeolocationAccess, 
     showIOSInstructions 
   } = useIOSPermissions();
 
-  // Filter volunteers who haven't delivered to current lot
+  // Filtra voluntários que ainda não fizeram entrega no lote atual
   const availableVoluntarios = voluntarios.filter(v => {
     if (!loteAtivoCaixa01) return true;
     return !entregas.some(entrega => 
@@ -63,60 +59,36 @@ const EntregasOptimized = () => {
     );
   });
   
-  // Check if form should be disabled (no active lot)
   const isFormDisabled = !loteAtivoCaixa01;
-  
-  // Check if user is super admin
   const isSuperAdmin = profile?.user_role === 'super_admin';
 
   const getCurrentLocation = async (): Promise<GeolocationPosition | null> => {
     console.log('📍 Solicitando geolocalização...');
-    
     const position = await requestGeolocationAccess();
-    
     if (!position && deviceInfo?.isIOS) {
       showIOSInstructions();
     }
-    
     return position;
   };
 
   const handleFazerFotos = async () => {
     if (!selectedVoluntario || !peso || !user || qualidadeResiduo === 0) {
-      toast({
-        title: "Erro",
-        description: "Preencha todos os campos obrigatórios",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "Preencha todos os campos obrigatórios", variant: "destructive" });
       return;
     }
-
     if (!loteAtivoCaixa01) {
-      toast({
-        title: "Erro",
-        description: "Não há lote ativo na Caixa 01. Inicie um novo lote antes de registrar entregas.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "Não há lote ativo na Caixa 01. Inicie um novo lote.", variant: "destructive" });
       return;
     }
 
     setLoading(true);
     try {
-      console.log('📸 Iniciando processo de fotos para entrega');
-      
       const position = await getCurrentLocation();
-      
       if (!position) {
-        toast({
-          title: "Erro de Localização",
-          description: "Não foi possível obter sua localização. Verifique as permissões e tente novamente.",
-          variant: "destructive",
-        });
+        toast({ title: "Erro de Localização", description: "Não foi possível obter sua localização.", variant: "destructive" });
         setLoading(false);
         return;
       }
-      
-      console.log('📍 Localização obtida:', position.coords.latitude, position.coords.longitude);
       
       const { data, error } = await supabase
         .from('entregas')
@@ -135,80 +107,45 @@ const EntregasOptimized = () => {
 
       if (error) throw error;
 
-      console.log('✅ Entrega criada:', data);
       setTempEntregaId(data.id);
       setShowCamera(true);
     } catch (error) {
       console.error('Erro ao criar entrega:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar a entrega",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "Não foi possível criar a entrega", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   const handleFotosComplete = async () => {
-    console.log('📸 Fotos concluídas, finalizando entrega');
     setShowCamera(false);
     
-    // Atualizar peso do lote ativo
     if (loteAtivoCaixa01 && peso) {
-      const novoPeso = loteAtivoCaixa01.peso_atual + parseFloat(peso);
-      console.log('⚖️ Atualizando peso do lote:', loteAtivoCaixa01.peso_atual, '+', parseFloat(peso), '=', novoPeso);
-      
-      await supabase
-        .from('lotes')
-        .update({ peso_atual: novoPeso })
-        .eq('id', loteAtivoCaixa01.id);
+      const novoPeso = (loteAtivoCaixa01.peso_atual || 0) + parseFloat(peso);
+      await supabase.from('lotes').update({ peso_atual: novoPeso }).eq('id', loteAtivoCaixa01.id);
     }
     
     setTempEntregaId(null);
-    
-    toast({
-      title: "Sucesso",
-      description: "Entrega registrada com sucesso!",
-    });
+    toast({ title: "Sucesso", description: "Entrega registrada com sucesso!" });
 
-    // Reset form
     setSelectedVoluntario('');
     setPeso('');
     setQualidadeResiduo(0);
     
-    // Refresh data
     refetch();
   };
 
   const handleCancelFotos = async () => {
-    console.log('❌ Cancelando entrega');
-    
     if (tempEntregaId) {
       try {
-        const { error } = await supabase
-          .from('entregas')
-          .delete()
-          .eq('id', tempEntregaId);
-        
-        if (error) throw error;
-        
+        await supabase.from('entregas').delete().eq('id', tempEntregaId);
         setTempEntregaId(null);
-        toast({
-          title: "Cancelado",
-          description: "Entrega cancelada com sucesso",
-        });
+        toast({ title: "Cancelado", description: "Entrega cancelada com sucesso" });
       } catch (error) {
-        console.error('Erro ao cancelar entrega:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível cancelar a entrega",
-          variant: "destructive",
-        });
+        toast({ title: "Erro", description: "Não foi possível cancelar a entrega", variant: "destructive" });
         return;
       }
     }
-    
     setShowCamera(false);
   };
 
@@ -235,142 +172,86 @@ const EntregasOptimized = () => {
 
   return (
     <div className="p-4 space-y-6">
-      {/* Alerta de Permissões iOS */}
       <IOSPermissionsAlert showOnlyWhenNeeded compact />
       
-      {/* Card do Lote */}
-      {dataLoading.lotes ? (
-        <LoteSkeletonLoader />
-      ) : (
-        <LoteCard />
-      )}
+      {dataLoading.lotes ? <LoteSkeletonLoader /> : <LoteCard />}
       
-      {/* Formulário de Nova Entrega */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Scale className="h-5 w-5" />
-            Nova Entrega
-          </CardTitle>
+          <CardTitle className="flex items-center gap-2"><Scale className="h-5 w-5" />Nova Entrega</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {isFormDisabled && !dataLoading.initial && (
-            <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-              <div className="flex items-center gap-2 text-orange-800">
-                <AlertTriangle className="h-4 w-4" />
-                <span className="text-sm font-medium">
-                  ⚠️ É necessário ter um lote ativo para registrar entregas. Inicie um novo lote na seção acima.
-                </span>
-              </div>
+            <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg flex items-center gap-2 text-orange-800">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="text-sm font-medium">É necessário ter um lote ativo para registrar entregas.</span>
             </div>
           )}
           
           <div>
             <Label htmlFor="voluntario">Selecionar Voluntário</Label>
-            {dataLoading.voluntarios ? (
-              <VoluntarioSkeletonLoader />
-            ) : (
-              <Select 
-                value={selectedVoluntario} 
-                onValueChange={setSelectedVoluntario}
-                disabled={isFormDisabled}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Escolha um voluntário" />
-                </SelectTrigger>
+            {dataLoading.voluntarios ? <VoluntarioSkeletonLoader /> : (
+              <Select value={selectedVoluntario} onValueChange={setSelectedVoluntario} disabled={isFormDisabled}>
+                <SelectTrigger><SelectValue placeholder="Escolha um voluntário" /></SelectTrigger>
                 <SelectContent>
-                  {availableVoluntarios.map((voluntario) => (
-                    <SelectItem key={voluntario.id} value={voluntario.id}>
-                      {voluntario.nome} {voluntario.numero_balde && `(Balde ${voluntario.numero_balde})`}
-                    </SelectItem>
-                  ))}
+                  {availableVoluntarios.map((v) => <SelectItem key={v.id} value={v.id}>{v.nome} {v.numero_balde && `(Balde ${v.numero_balde})`}</SelectItem>)}
                 </SelectContent>
               </Select>
             )}
             {voluntarios.length > availableVoluntarios.length && (
-              <p className="text-sm text-muted-foreground mt-1">
-                {voluntarios.length - availableVoluntarios.length} voluntário(s) já fizeram entrega neste lote
-              </p>
+              <p className="text-sm text-muted-foreground mt-1">{voluntarios.length - availableVoluntarios.length} voluntário(s) já fizeram entrega neste lote</p>
             )}
           </div>
 
           <div>
             <Label htmlFor="peso">Peso (kg)</Label>
-            <Input
-              id="peso"
-              type="number"
-              step="0.001"
-              value={peso}
-              onChange={(e) => setPeso(e.target.value)}
-              placeholder="Ex: 10.432"
-              disabled={isFormDisabled}
-            />
+            <Input id="peso" type="number" step="0.001" value={peso} onChange={(e) => setPeso(e.target.value)} placeholder="Ex: 10.432" disabled={isFormDisabled} />
           </div>
 
           <div>
             <Label>Qualidade do Resíduo</Label>
-            <StarRating
-              value={qualidadeResiduo}
-              onChange={setQualidadeResiduo}
-              disabled={isFormDisabled}
-            />
+            <StarRating value={qualidadeResiduo} onChange={setQualidadeResiduo} disabled={isFormDisabled} />
           </div>
 
-          <Button 
-            onClick={handleFazerFotos}
-            disabled={isFormDisabled || !selectedVoluntario || !peso || qualidadeResiduo === 0 || loading}
-            className="w-full"
-          >
-            <Camera className="h-4 w-4 mr-2" />
-            {loading ? 'Preparando...' : 'Fazer Fotos'}
+          <Button onClick={handleFazerFotos} disabled={isFormDisabled || !selectedVoluntario || !peso || qualidadeResiduo === 0 || loading} className="w-full">
+            <Camera className="h-4 w-4 mr-2" />{loading ? 'Preparando...' : 'Fazer Fotos'}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Histórico de Entregas */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Entregas Recentes
-          </CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" />Entregas Recentes</CardTitle></CardHeader>
         <CardContent>
           {dataLoading.entregas ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <EntregaSkeletonLoader key={i} />
-              ))}
-            </div>
+            <div className="space-y-4">{[...Array(3)].map((_, i) => <EntregaSkeletonLoader key={i} />)}</div>
           ) : entregas.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">
-              Nenhuma entrega registrada ainda.
-            </p>
+            <p className="text-muted-foreground text-center py-4">Nenhuma entrega registrada ainda.</p>
           ) : (
             <div className="space-y-4">
-              {entregas.slice(0, 5).map((entrega) => {
+              {entregas.slice(0, 10).map((entrega) => {
                 const voluntario = voluntarios.find(v => v.id === entrega.voluntario_id);
                 
                 return (
                   <Card key={entrega.id} className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-green-100 p-2 rounded-full">
+                    {/* --- CÓDIGO CORRIGIDO ABAIXO --- */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="flex-grow flex items-center gap-3">
+                        <div className="bg-green-100 p-2 rounded-full flex-shrink-0">
                           <Scale className="h-4 w-4 text-green-600" />
                         </div>
-                        <div>
-                          <p className="font-medium">{voluntario?.nome || 'Voluntário não encontrado'}</p>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span>{Number(entrega.peso).toFixed(1)} kg</span>
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{voluntario?.nome || 'Voluntário não encontrado'}</p>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
+                            <Badge variant="secondary">{formatPesoDisplay(Number(entrega.peso))}</Badge>
                             {entrega.qualidade_residuo && (
                               <div className="flex items-center gap-1">
                                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                <span>{entrega.qualidade_residuo}/5</span>
+                                <span>{entrega.qualidade_residuo}/3</span>
                               </div>
                             )}
-                            <span>{new Date(entrega.created_at).toLocaleString()}</span>
+                            <span>{new Date(entrega.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span>
                             {entrega.latitude && entrega.longitude && (
-                              <Badge variant="secondary" className="flex items-center gap-1">
+                              <Badge variant={entrega.geolocalizacao_validada ? 'default' : 'outline'} className="flex items-center gap-1">
                                 <MapPin className="h-3 w-3" />
                                 {entrega.geolocalizacao_validada ? 'Validada' : 'Pendente'}
                               </Badge>
@@ -378,26 +259,13 @@ const EntregasOptimized = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <EntregaFotosGaleria 
-                          entregaId={entrega.id} 
-                          numeroBalde={voluntario?.numero_balde || 0}
-                        >
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-3 w-3 mr-1" />
-                            Ver Fotos
-                          </Button>
+                      
+                      <div className="flex-shrink-0 flex items-center gap-2 w-full sm:w-auto">
+                        <EntregaFotosGaleria entregaId={entrega.id} numeroBalde={voluntario?.numero_balde || 0}>
+                          <Button variant="outline" size="sm" className="w-full sm:w-auto"><Eye className="h-3 w-3 mr-1" />Ver Fotos</Button>
                         </EntregaFotosGaleria>
                         {isSuperAdmin && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditEntrega(entrega)}
-                            className="flex items-center gap-1"
-                          >
-                            <Edit className="h-3 w-3" />
-                            Editar
-                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleEditEntrega(entrega)} className="w-full sm:w-auto"><Edit className="h-3 w-3 mr-1" />Editar</Button>
                         )}
                       </div>
                     </div>
@@ -409,14 +277,8 @@ const EntregasOptimized = () => {
         </CardContent>
       </Card>
 
-      {/* Modal de Edição */}
       {editingEntrega && (
-        <EditEntregaModal
-          entrega={editingEntrega}
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          onSuccess={handleEditSuccess}
-        />
+        <EditEntregaModal entrega={editingEntrega} isOpen={showEditModal} onClose={() => setShowEditModal(false)} onSuccess={handleEditSuccess} />
       )}
     </div>
   );
