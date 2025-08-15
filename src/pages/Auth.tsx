@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, KeyRound } from 'lucide-react';
-// A linha 'import logo...' foi removida para corrigir o erro.
+import logo from '/logo-512.png';
 
 const Auth = () => {
   const [loading, setLoading] = useState(false);
@@ -31,16 +31,18 @@ const Auth = () => {
         title: "Login bem-sucedido!",
         description: "Você será redirecionado em breve.",
       });
+      // A navegação será tratada pelo listener de auth do Supabase no useAuth
     }
     setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+      {/* --- INÍCIO DA ALTERAÇÃO --- */}
+      {/* Adicionado um wrapper para mover o conteúdo para cima */}
       <div className="relative" style={{ bottom: '15px' }}> 
         <div className="text-center mb-8">
-          {/* O caminho da imagem foi corrigido para o padrão público */}
-          <img src="/logo-512.png" alt="Compostroca Logo" className="w-32 h-32 mx-auto" />
+          <img src={logo} alt="Compostroca Logo" className="w-32 h-32 mx-auto" />
           <h1 className="text-3xl font-bold text-gray-800 mt-4">Compostroca</h1>
           <p className="text-gray-500">Acesso ao sistema</p>
         </div>
@@ -87,6 +89,7 @@ const Auth = () => {
           </CardContent>
         </Card>
       </div>
+      {/* --- FIM DA ALTERAÇÃO --- */}
       
       <div className="absolute bottom-4 text-center text-xs text-gray-400">
         Powered by <a href="https://bion.global" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline">Bion</a>
