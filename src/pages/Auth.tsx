@@ -60,10 +60,10 @@ const Auth = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      {/* --- INÍCIO DA ÚNICA ALTERAÇÃO --- */}
-      <div className="w-full max-w-md relative" style={{ bottom: '20px' }}>
-      {/* --- FIM DA ÚNICA ALTERAÇÃO --- */}
+    /* --- INÍCIO DA ÚNICA ALTERAÇÃO --- */
+    <div className="min-h-screen flex items-center justify-center px-4 py-2"> {/* Alterado de p-4 para px-4 py-2 */}
+    {/* --- FIM DA ÚNICA ALTERAÇÃO --- */}
+      <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-6">
           <div className="p-2 rounded-full mb-4">
             <img src="/lovable-uploads/compostroca-app-logo.png" alt="Compostroca App Logo" className="h-12 w-12" />
