@@ -220,4 +220,73 @@ const EntregasOptimized = () => {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="
+        <CardHeader><CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" />Entregas Recentes</CardTitle></CardHeader>
+        <CardContent>
+          {dataLoading.entregas ? (
+            <div className="space-y-4">{[...Array(3)].map((_, i) => <EntregaSkeletonLoader key={i} />)}</div>
+          ) : entregas.length === 0 ? (
+            <p className="text-muted-foreground text-center py-4">Nenhuma entrega registrada ainda.</p>
+          ) : (
+            <div className="space-y-4">
+              {/* --- ALTERAÇÃO: LISTA AGORA MOSTRA 20 ITENS --- */}
+              {entregas.slice(0, 20).map((entrega) => {
+                const voluntario = voluntarios.find(v => v.id === entrega.voluntario_id);
+                
+                return (
+                  <Card key={entrega.id} className="p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="flex-grow flex items-center gap-3">
+                        {/* --- ALTERAÇÃO: ÍCONE SUBSTITUÍDO POR AVATAR --- */}
+                        <Avatar className="h-10 w-10 border flex-shrink-0">
+                          <AvatarImage src={voluntario?.foto_url || undefined} />
+                          <AvatarFallback>
+                            {voluntario?.nome?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'V'}
+                          </AvatarFallback>
+                        </Avatar>
+
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{voluntario?.nome || 'Voluntário não encontrado'}</p>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
+                            <Badge variant="secondary">{formatPesoDisplay(Number(entrega.peso))}</Badge>
+                            {entrega.qualidade_residuo && (
+                              <div className="flex items-center gap-1">
+                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                <span>{entrega.qualidade_residuo}/3</span>
+                              </div>
+                            )}
+                            <span>{new Date(entrega.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                            {entrega.latitude && entrega.longitude && (
+                              <Badge variant={entrega.geolocalizacao_validada ? 'default' : 'outline'} className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {entrega.geolocalizacao_validada ? 'Validada' : 'Pendente'}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex-shrink-0 flex items-center gap-2 w-full sm:w-auto">
+                        <EntregaFotosGaleria entregaId={entrega.id} numeroBalde={voluntario?.numero_balde || 0}>
+                          <Button variant="outline" size="sm" className="w-full sm:w-auto"><Eye className="h-3 w-3 mr-1" />Ver Fotos</Button>
+                        </EntregaFotosGaleria>
+                        {isSuperAdmin && (
+                          <Button variant="outline" size="sm" onClick={() => handleEditEntrega(entrega)} className="w-full sm:w-auto"><Edit className="h-3 w-3 mr-1" />Editar</Button>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {editingEntrega && (
+        <EditEntregaModal entrega={editingEntrega} isOpen={showEditModal} onClose={() => setShowEditModal(false)} onSuccess={handleEditSuccess} />
+      )}
+    </div>
+  );
+};
+
+export default EntregasOptimized;
