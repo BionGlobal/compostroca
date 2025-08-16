@@ -103,10 +103,12 @@ export const IOSPermissionsAlert: React.FC<IOSPermissionsAlertProps> = ({
             <div>
               <p><strong>Navegador:</strong> {deviceInfo.isSafari ? 'Safari' : 'Outro'}</p>
               <p><strong>PWA:</strong> {deviceInfo.isPWA ? 'Sim' : 'Não'}</p>
+              <p><strong>Modelo:</strong> {deviceInfo.deviceModel || 'N/A'}</p>
             </div>
             <div>
               <p><strong>HTTPS:</strong> {deviceInfo.isHTTPS ? 'Sim' : 'Não'}</p>
               <p><strong>In-App:</strong> {deviceInfo.isInAppBrowser ? 'Sim' : 'Não'}</p>
+              <p><strong>APIs:</strong> {deviceInfo.supportsMediaDevices ? '✅' : '❌'}</p>
             </div>
           </div>
 
@@ -131,6 +133,16 @@ export const IOSPermissionsAlert: React.FC<IOSPermissionsAlertProps> = ({
               <AlertTriangle className="h-4 w-4 text-orange-600" />
               <AlertDescription className="text-orange-700">
                 <strong>Contexto Inseguro:</strong> HTTPS é necessário para acessar câmera e localização no iOS.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Alerta para navegadores in-app */}
+          {deviceInfo.isInAppBrowser && (
+            <Alert className="border-red-200 bg-red-50">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-700">
+                <strong>Navegador In-App:</strong> Para melhor funcionamento, abra este site no Safari.
               </AlertDescription>
             </Alert>
           )}

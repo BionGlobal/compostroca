@@ -66,9 +66,22 @@ export const ManejoCamera: React.FC<ManejoCameraProps> = ({
           videoRef.current.onloadedmetadata = () => {
             console.log('📹 Vídeo carregado com sucesso');
           };
+          
+          // Configurações específicas para iOS
+          if (deviceInfo?.isIOS) {
+            videoRef.current.setAttribute('playsinline', 'true');
+            videoRef.current.setAttribute('webkit-playsinline', 'true');
+          }
         }
       } else {
-        setCameraError('Não foi possível acessar a câmera. Você pode fazer upload de uma foto.');
+        // Erro específico baseado no contexto
+        if (deviceInfo?.isInAppBrowser) {
+          setCameraError('Para usar a câmera, abra este site no Safari.');
+        } else if (!deviceInfo?.isHTTPS) {
+          setCameraError('HTTPS é necessário para acessar a câmera.');
+        } else {
+          setCameraError('Não foi possível acessar a câmera. Você pode fazer upload de uma foto.');
+        }
         
         // Mostrar instruções específicas para iOS
         if (deviceInfo?.isIOS) {
@@ -166,7 +179,9 @@ export const ManejoCamera: React.FC<ManejoCameraProps> = ({
         ) : (
           <div className="bg-muted rounded-lg p-8 text-center">
             <div className="flex flex-col items-center">
-              {deviceInfo?.isIOS && permissions.camera === 'denied' ? (
+              {deviceInfo?.isInAppBrowser ? (
+                <AlertTriangle className="h-12 w-12 mx-auto mb-2 text-red-500" />
+              ) : deviceInfo?.isIOS && permissions.camera === 'denied' ? (
                 <AlertTriangle className="h-12 w-12 mx-auto mb-2 text-orange-500" />
               ) : (
                 <Upload className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
@@ -176,7 +191,19 @@ export const ManejoCamera: React.FC<ManejoCameraProps> = ({
                 {cameraError}
               </p>
               
-              {deviceInfo?.isIOS && permissions.camera === 'denied' && (
+              {deviceInfo?.isInAppBrowser && (
+                <div className="text-xs text-muted-foreground space-y-2 max-w-sm bg-red-50 border border-red-200 p-3 rounded">
+                  <p className="font-medium text-red-800">Navegador In-App Detectado</p>
+                  <p className="text-red-700">Para usar a câmera:</p>
+                  <div className="text-left text-red-700">
+                    <p>1. Toque no botão "..." ou compartilhar</p>
+                    <p>2. Selecione <strong>"Abrir no Safari"</strong></p>
+                    <p>3. Permita o acesso à câmera</p>
+                  </div>
+                </div>
+              )}
+              
+              {deviceInfo?.isIOS && !deviceInfo.isInAppBrowser && permissions.camera === 'denied' && (
                 <div className="text-xs text-muted-foreground space-y-2 max-w-sm">
                   <p className="font-medium">Para habilitar a câmera no iOS:</p>
                   <div className="text-left">
@@ -184,6 +211,7 @@ export const ManejoCamera: React.FC<ManejoCameraProps> = ({
                     <p>2. Vá em <strong>Safari</strong></p>
                     <p>3. Toque em <strong>Câmera</strong></p>
                     <p>4. Selecione <strong>Permitir</strong></p>
+                    <p>5. Recarregue esta página</p>
                   </div>
                 </div>
               )}

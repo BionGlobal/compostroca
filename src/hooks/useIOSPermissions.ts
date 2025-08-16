@@ -9,6 +9,11 @@ interface DeviceInfo {
   isHTTPS: boolean;
   userAgent: string;
   version?: string;
+  deviceModel?: string;
+  isStandalone: boolean;
+  supportsMediaDevices: boolean;
+  supportsGeolocation: boolean;
+  supportsPermissionsAPI: boolean;
 }
 
 interface PermissionState {
@@ -25,22 +30,40 @@ export const useIOSPermissions = () => {
   const [isCheckingPermissions, setIsCheckingPermissions] = useState(false);
   const { toast } = useToast();
 
-  // Detectar informações do dispositivo e navegador
+  // Detectar informações do dispositivo e navegador com mais detalhes
   const detectDevice = useCallback((): DeviceInfo => {
     const userAgent = navigator.userAgent;
     const isIOS = /iPad|iPhone|iPod/.test(userAgent);
-    const isSafari = /Safari/.test(userAgent) && !/Chrome|CriOS|FxiOS/.test(userAgent);
-    const isInAppBrowser = /FBAN|FBAV|Instagram|Twitter|Line|WhatsApp/.test(userAgent);
-    const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
-                  (window.navigator as any).standalone === true;
-    const isHTTPS = location.protocol === 'https:';
+    const isSafari = /Safari/.test(userAgent) && !/Chrome|CriOS|FxiOS|EdgiOS/.test(userAgent);
     
-    // Detectar versão do iOS
+    // Detectar navegadores in-app mais comuns
+    const inAppBrowsers = [
+      'FBAN', 'FBAV', 'Instagram', 'Twitter', 'Line', 'WhatsApp', 
+      'TikTok', 'LinkedIn', 'Snapchat', 'Pinterest', 'Messenger'
+    ];
+    const isInAppBrowser = inAppBrowsers.some(browser => userAgent.includes(browser));
+    
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+    const isStandalone = (window.navigator as any).standalone === true;
+    const isHTTPS = location.protocol === 'https:' || location.hostname === 'localhost';
+    
+    // Detectar modelo do dispositivo iOS
+    let deviceModel;
     let version;
     if (isIOS) {
-      const match = userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
-      if (match) {
-        version = `${match[1]}.${match[2]}${match[3] ? '.' + match[3] : ''}`;
+      // Versão do iOS
+      const versionMatch = userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
+      if (versionMatch) {
+        version = `${versionMatch[1]}.${versionMatch[2]}${versionMatch[3] ? '.' + versionMatch[3] : ''}`;
+      }
+      
+      // Modelo do dispositivo
+      if (userAgent.includes('iPhone')) {
+        deviceModel = 'iPhone';
+      } else if (userAgent.includes('iPad')) {
+        deviceModel = 'iPad';
+      } else if (userAgent.includes('iPod')) {
+        deviceModel = 'iPod';
       }
     }
 
@@ -48,10 +71,15 @@ export const useIOSPermissions = () => {
       isIOS,
       isInAppBrowser,
       isSafari,
-      isPWA,
+      isPWA: isPWA || isStandalone,
+      isStandalone,
       isHTTPS,
       userAgent,
-      version
+      version,
+      deviceModel,
+      supportsMediaDevices: !!navigator.mediaDevices,
+      supportsGeolocation: !!navigator.geolocation,
+      supportsPermissionsAPI: !!navigator.permissions
     };
   }, []);
 
@@ -95,26 +123,50 @@ export const useIOSPermissions = () => {
     }
   }, []);
 
-  // Tentar acessar câmera com retry e fallbacks
-  const requestCameraAccess = useCallback(async (retryCount = 0): Promise<MediaStream | null> => {
+  // Tentar acessar câmera com retry inteligente e fallbacks progressivos
+  const requestCameraAccess = useCallback(async (retryCount = 0, useFrontCamera = false): Promise<MediaStream | null> => {
     const maxRetries = 3;
     
     try {
-      console.log(`📱 Tentativa ${retryCount + 1} de acesso à câmera`);
+      console.log(`📱 Tentativa ${retryCount + 1} de acesso à câmera${useFrontCamera ? ' (frontal)' : ''}`);
       
-      // Configurações específicas para iOS
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 },
-          frameRate: { ideal: 30, max: 60 }
-        }
-      };
+      // Verificar se MediaDevices está disponível
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('MediaDevices API não suportada');
+      }
+      
+      // Configurações progressivas baseadas na tentativa
+      let constraints: MediaStreamConstraints;
+      
+      if (retryCount === 0) {
+        // Primeira tentativa: configurações ideais
+        constraints = {
+          video: {
+            facingMode: useFrontCamera ? 'user' : 'environment',
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            frameRate: { ideal: 30, max: 60 }
+          }
+        };
+      } else if (retryCount === 1) {
+        // Segunda tentativa: configurações médias
+        constraints = {
+          video: {
+            facingMode: useFrontCamera ? 'user' : 'environment',
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          }
+        };
+      } else {
+        // Última tentativa: configurações mínimas
+        constraints = {
+          video: useFrontCamera ? { facingMode: 'user' } : { facingMode: 'environment' }
+        };
+      }
 
-      // Para iOS < 14.3, usar configurações mais simples
-      if (deviceInfo?.isIOS && deviceInfo?.version && parseFloat(deviceInfo.version) < 14.3) {
-        constraints.video = { facingMode: 'environment' };
+      // Para iOS in-app browsers, usar configurações mais simples
+      if (deviceInfo?.isIOS && deviceInfo?.isInAppBrowser) {
+        constraints.video = { facingMode: useFrontCamera ? 'user' : 'environment' };
       }
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -127,33 +179,58 @@ export const useIOSPermissions = () => {
     } catch (error: any) {
       console.error(`❌ Erro na tentativa ${retryCount + 1}:`, error);
       
-      // Log detalhado do erro
       if (error.name === 'NotAllowedError') {
         setPermissions(prev => ({ ...prev, camera: 'denied' }));
         console.log('📱 Permissão de câmera negada pelo usuário');
         
         if (deviceInfo?.isIOS) {
-          toast({
-            title: "Câmera Bloqueada",
-            description: "Para usar a câmera, vá em Configurações > Safari > Câmera e permita o acesso.",
-            variant: "destructive"
-          });
+          if (deviceInfo.isInAppBrowser) {
+            toast({
+              title: "Navegador In-App Detectado",
+              description: "Para usar a câmera, abra este site no Safari.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Câmera Bloqueada",
+              description: "Vá em Configurações > Safari > Câmera > Permitir",
+              variant: "destructive"
+            });
+          }
         }
       } else if (error.name === 'NotFoundError') {
-        console.log('📱 Câmera não encontrada no dispositivo');
+        console.log('📱 Câmera não encontrada');
+        
+        // Tentar câmera frontal se estava tentando a traseira
+        if (!useFrontCamera && retryCount === 0) {
+          console.log('📱 Tentando câmera frontal...');
+          return requestCameraAccess(0, true);
+        }
+        
         toast({
           title: "Câmera Não Encontrada",
           description: "Nenhuma câmera foi encontrada neste dispositivo.",
           variant: "destructive"
         });
-      } else if (error.name === 'NotReadableError') {
-        console.log('📱 Câmera está sendo usada por outro aplicativo');
+      } else if (error.name === 'NotReadableError' || error.name === 'AbortError') {
+        console.log('📱 Câmera em uso ou erro de hardware');
         
-        // Retry para este erro específico
         if (retryCount < maxRetries) {
-          console.log(`📱 Tentando novamente em 2 segundos...`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          return requestCameraAccess(retryCount + 1);
+          console.log(`📱 Tentando novamente em ${(retryCount + 1) * 2} segundos...`);
+          await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 2000));
+          return requestCameraAccess(retryCount + 1, useFrontCamera);
+        }
+        
+        toast({
+          title: "Câmera Indisponível",
+          description: "A câmera pode estar sendo usada por outro aplicativo.",
+          variant: "destructive"
+        });
+      } else if (error.name === 'OverconstrainedError') {
+        console.log('📱 Configurações não suportadas');
+        
+        if (retryCount < maxRetries) {
+          return requestCameraAccess(retryCount + 1, useFrontCamera);
         }
       }
       
