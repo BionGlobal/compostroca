@@ -67,6 +67,7 @@ export const DeviceTestModalEnhanced = ({ open, onOpenChange }: DeviceTestModalE
   };
 
   const handleRealCameraTest = async () => {
+    console.log('🎥 Iniciando teste real da câmera...');
     setIsTestingCamera(true);
     setCameraTestResult('idle');
     setTestProgress(0);
@@ -74,6 +75,7 @@ export const DeviceTestModalEnhanced = ({ open, onOpenChange }: DeviceTestModalE
     
     try {
       setTestProgress(25);
+      console.log('🎥 Solicitando acesso à câmera...');
       
       // Solicitar acesso à câmera
       const stream = await requestCameraAccess();
@@ -82,21 +84,29 @@ export const DeviceTestModalEnhanced = ({ open, onOpenChange }: DeviceTestModalE
         throw new Error('Não foi possível acessar a câmera');
       }
       
+      console.log('🎥 Câmera acessada, configurando preview...');
       setTestProgress(50);
       
       // Configurar vídeo
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await new Promise((resolve) => {
+        videoRef.current.style.display = 'block'; // Mostrar o preview
+        
+        await new Promise((resolve, reject) => {
           if (videoRef.current) {
-            videoRef.current.onloadedmetadata = resolve;
+            videoRef.current.onloadedmetadata = () => {
+              console.log('🎥 Preview carregado, dimensões:', videoRef.current?.videoWidth, 'x', videoRef.current?.videoHeight);
+              resolve(true);
+            };
+            videoRef.current.onerror = () => reject(new Error('Erro ao carregar video'));
           }
         });
         
         setTestProgress(75);
         
-        // Capturar foto de teste
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Aguardar estabilizar
+        // Aguardar estabilizar e mostrar preview por 2 segundos
+        console.log('🎥 Aguardando estabilização...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         if (canvasRef.current) {
           const video = videoRef.current;
@@ -104,6 +114,7 @@ export const DeviceTestModalEnhanced = ({ open, onOpenChange }: DeviceTestModalE
           const context = canvas.getContext('2d');
           
           if (context && video.videoWidth && video.videoHeight) {
+            console.log('🎥 Capturando foto de teste...');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0);
@@ -113,21 +124,38 @@ export const DeviceTestModalEnhanced = ({ open, onOpenChange }: DeviceTestModalE
             setTestProgress(100);
             setCameraTestResult('success');
             
+            console.log('🎥 Foto capturada com sucesso!');
             toast({
               title: "✅ Teste de Câmera Bem-sucedido",
               description: "Foto de teste capturada com sucesso!",
             });
+          } else {
+            throw new Error('Não foi possível obter contexto do canvas ou dimensões do vídeo');
           }
         }
       }
       
-      // Parar o stream
+      // Parar o stream e ocultar preview
       stream.getTracks().forEach(track => track.stop());
+      if (videoRef.current) {
+        videoRef.current.style.display = 'none';
+        videoRef.current.srcObject = null;
+      }
       
     } catch (error) {
-      console.error('Erro no teste de câmera:', error);
+      console.error('❌ Erro no teste de câmera:', error);
       setCameraTestResult('error');
       setTestProgress(0);
+      
+      // Limpar preview em caso de erro
+      if (videoRef.current) {
+        videoRef.current.style.display = 'none';
+        if (videoRef.current.srcObject) {
+          const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+          tracks.forEach(track => track.stop());
+        }
+        videoRef.current.srcObject = null;
+      }
       
       toast({
         title: "❌ Erro no Teste de Câmera",
@@ -231,7 +259,7 @@ export const DeviceTestModalEnhanced = ({ open, onOpenChange }: DeviceTestModalE
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Sistema:</span>
                     <Badge variant="outline">
-                      {deviceInfo?.isIOS ? `iOS ${deviceInfo.version}` : 'Outro'}
+                      {deviceInfo?.platform} {deviceInfo?.version || ''}
                     </Badge>
                   </div>
                   
@@ -242,8 +270,8 @@ export const DeviceTestModalEnhanced = ({ open, onOpenChange }: DeviceTestModalE
                   
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Navegador:</span>
-                    <Badge variant={deviceInfo?.isSafari ? 'default' : 'secondary'}>
-                      {deviceInfo?.isSafari ? 'Safari' : 'Outro'}
+                    <Badge variant={deviceInfo?.isSafari || deviceInfo?.isChrome ? 'default' : 'secondary'}>
+                      {deviceInfo?.isSafari ? 'Safari' : deviceInfo?.isChrome ? 'Chrome' : 'Outro'}
                     </Badge>
                   </div>
                 </div>
@@ -279,19 +307,23 @@ export const DeviceTestModalEnhanced = ({ open, onOpenChange }: DeviceTestModalE
                     <AlertTriangle className="h-3 w-3 text-orange-600 mt-0.5" />
                     <div>
                       <p className="font-medium text-orange-800">Navegador In-App Detectado</p>
-                      <p className="text-orange-700">Para melhor funcionamento, abra no Safari.</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-1 h-6 text-xs"
-                        onClick={() => {
-                          const currentUrl = window.location.href;
-                          window.open(`x-safari-${currentUrl}`, '_system');
-                        }}
-                      >
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        Abrir no Safari
-                      </Button>
+                      <p className="text-orange-700">
+                        Para melhor funcionamento, abra no {deviceInfo.isIOS ? 'Safari' : 'Chrome'}.
+                      </p>
+                      {deviceInfo.isIOS && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-1 h-6 text-xs"
+                          onClick={() => {
+                            const currentUrl = window.location.href;
+                            window.open(`x-safari-${currentUrl}`, '_system');
+                          }}
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          Abrir no Safari
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -347,9 +379,20 @@ export const DeviceTestModalEnhanced = ({ open, onOpenChange }: DeviceTestModalE
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-32 bg-black rounded-lg object-cover hidden"
+                  className="w-full h-32 bg-black rounded-lg object-cover"
+                  style={{ display: 'none' }}
                 />
                 <canvas ref={canvasRef} className="hidden" />
+                
+                {/* Placeholder quando não há teste */}
+                {!testImage && !isTestingCamera && (
+                  <div className="w-full h-32 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                    <div className="text-center text-gray-500">
+                      <Camera className="h-8 w-8 mx-auto mb-2" />
+                      <p className="text-xs">Clique em "Teste Real" para testar a câmera</p>
+                    </div>
+                  </div>
+                )}
                 
                 {testImage && (
                   <div className="space-y-2">
@@ -490,14 +533,14 @@ export const DeviceTestModalEnhanced = ({ open, onOpenChange }: DeviceTestModalE
               Atualizar Status
             </Button>
 
-            {deviceInfo?.isIOS && (permissions.camera === 'denied' || permissions.geolocation === 'denied') && (
+            {deviceInfo?.isMobile && (permissions.camera === 'denied' || permissions.geolocation === 'denied') && (
               <Button
                 variant="secondary"
                 onClick={showIOSInstructions}
                 className="w-full"
               >
                 <Globe className="h-4 w-4 mr-2" />
-                Instruções para iOS
+                Instruções para {deviceInfo.platform}
               </Button>
             )}
 
@@ -531,6 +574,19 @@ export const DeviceTestModalEnhanced = ({ open, onOpenChange }: DeviceTestModalE
                           <p>• Configurações → Privacidade → Serviços de Localização → Safari → Permitir</p>
                         )}
                         <p>• Recarregue a página após alterar</p>
+                      </div>
+                    )}
+                    
+                    {deviceInfo?.isAndroid && (
+                      <div className="space-y-1 text-xs">
+                        <p className="font-medium">Para corrigir no Android:</p>
+                        {permissions.camera === 'denied' && (
+                          <p>• Permita acesso à câmera quando solicitado</p>
+                        )}
+                        {permissions.geolocation === 'denied' && (
+                          <p>• Permita acesso à localização quando solicitado</p>
+                        )}
+                        <p>• Ou vá nas configurações do navegador</p>
                       </div>
                     )}
                   </div>

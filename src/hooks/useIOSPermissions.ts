@@ -3,8 +3,11 @@ import { useToast } from '@/hooks/use-toast';
 
 interface DeviceInfo {
   isIOS: boolean;
+  isAndroid: boolean;
+  isMobile: boolean;
   isInAppBrowser: boolean;
   isSafari: boolean;
+  isChrome: boolean;
   isPWA: boolean;
   isHTTPS: boolean;
   userAgent: string;
@@ -14,6 +17,7 @@ interface DeviceInfo {
   supportsMediaDevices: boolean;
   supportsGeolocation: boolean;
   supportsPermissionsAPI: boolean;
+  platform: string;
 }
 
 interface PermissionState {
@@ -34,7 +38,10 @@ export const useIOSPermissions = () => {
   const detectDevice = useCallback((): DeviceInfo => {
     const userAgent = navigator.userAgent;
     const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+    const isAndroid = /Android/.test(userAgent);
+    const isMobile = isIOS || isAndroid || /Mobile|Tablet/.test(userAgent);
     const isSafari = /Safari/.test(userAgent) && !/Chrome|CriOS|FxiOS|EdgiOS/.test(userAgent);
+    const isChrome = /Chrome/.test(userAgent) && !/Edge/.test(userAgent);
     
     // Detectar navegadores in-app mais comuns
     const inAppBrowsers = [
@@ -47,10 +54,13 @@ export const useIOSPermissions = () => {
     const isStandalone = (window.navigator as any).standalone === true;
     const isHTTPS = location.protocol === 'https:' || location.hostname === 'localhost';
     
-    // Detectar modelo do dispositivo iOS
+    // Detectar modelo do dispositivo e versão
     let deviceModel;
     let version;
+    let platform = 'Unknown';
+    
     if (isIOS) {
+      platform = 'iOS';
       // Versão do iOS
       const versionMatch = userAgent.match(/OS (\d+)_(\d+)_?(\d+)?/);
       if (versionMatch) {
@@ -65,18 +75,44 @@ export const useIOSPermissions = () => {
       } else if (userAgent.includes('iPod')) {
         deviceModel = 'iPod';
       }
+    } else if (isAndroid) {
+      platform = 'Android';
+      // Versão do Android
+      const versionMatch = userAgent.match(/Android (\d+(?:\.\d+)*)/);
+      if (versionMatch) {
+        version = versionMatch[1];
+      }
+      
+      // Modelo do dispositivo Android (mais genérico)
+      if (userAgent.includes('Mobile')) {
+        deviceModel = 'Android Phone';
+      } else if (userAgent.includes('Tablet')) {
+        deviceModel = 'Android Tablet';
+      } else {
+        deviceModel = 'Android Device';
+      }
+    } else if (isMobile) {
+      platform = 'Mobile';
+      deviceModel = 'Mobile Device';
+    } else {
+      platform = 'Desktop';
+      deviceModel = 'Desktop';
     }
 
     return {
       isIOS,
+      isAndroid,
+      isMobile,
       isInAppBrowser,
       isSafari,
+      isChrome,
       isPWA: isPWA || isStandalone,
       isStandalone,
       isHTTPS,
       userAgent,
       version,
       deviceModel,
+      platform,
       supportsMediaDevices: !!navigator.mediaDevices,
       supportsGeolocation: !!navigator.geolocation,
       supportsPermissionsAPI: !!navigator.permissions
@@ -164,9 +200,9 @@ export const useIOSPermissions = () => {
         };
       }
 
-      // Para iOS in-app browsers, usar configurações mais simples
-      if (deviceInfo?.isIOS && deviceInfo?.isInAppBrowser) {
-        constraints.video = { facingMode: useFrontCamera ? 'user' : 'environment' };
+      // Para navegadores in-app ou dispositivos móveis, usar configurações mais simples
+      if (deviceInfo?.isInAppBrowser || (deviceInfo?.isMobile && retryCount > 0)) {
+        constraints.video = useFrontCamera ? { facingMode: 'user' } : true;
       }
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -183,20 +219,32 @@ export const useIOSPermissions = () => {
         setPermissions(prev => ({ ...prev, camera: 'denied' }));
         console.log('📱 Permissão de câmera negada pelo usuário');
         
-        if (deviceInfo?.isIOS) {
-          if (deviceInfo.isInAppBrowser) {
-            toast({
-              title: "Navegador In-App Detectado",
-              description: "Para usar a câmera, abra este site no Safari.",
-              variant: "destructive"
-            });
-          } else {
-            toast({
-              title: "Câmera Bloqueada",
-              description: "Vá em Configurações > Safari > Câmera > Permitir",
-              variant: "destructive"
-            });
-          }
+        if (deviceInfo?.isInAppBrowser) {
+          toast({
+            title: "Navegador In-App Detectado",
+            description: deviceInfo.isIOS 
+              ? "Para usar a câmera, abra este site no Safari."
+              : "Para usar a câmera, abra este site no navegador principal.",
+            variant: "destructive"
+          });
+        } else if (deviceInfo?.isIOS) {
+          toast({
+            title: "Câmera Bloqueada",
+            description: "Vá em Configurações > Safari > Câmera > Permitir",
+            variant: "destructive"
+          });
+        } else if (deviceInfo?.isAndroid) {
+          toast({
+            title: "Câmera Bloqueada",
+            description: "Permita o acesso à câmera quando solicitado ou nas configurações do navegador.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Câmera Bloqueada",
+            description: "Permita o acesso à câmera nas configurações do navegador.",
+            variant: "destructive"
+          });
         }
       } else if (error.name === 'NotFoundError') {
         console.log('📱 Câmera não encontrada');
@@ -281,6 +329,18 @@ export const useIOSPermissions = () => {
                 description: "Para usar a localização, vá em Configurações > Privacidade > Serviços de Localização e permita o acesso para Safari.",
                 variant: "destructive"
               });
+            } else if (deviceInfo?.isAndroid) {
+              toast({
+                title: "Localização Bloqueada",
+                description: "Permita o acesso à localização quando solicitado ou nas configurações do navegador.",
+                variant: "destructive"
+              });
+            } else {
+              toast({
+                title: "Localização Bloqueada",
+                description: "Permita o acesso à localização nas configurações do navegador.",
+                variant: "destructive"
+              });
             }
             break;
             
@@ -354,7 +414,7 @@ export const useIOSPermissions = () => {
     if (!deviceInfo) return;
     
     console.group('📱 Diagnóstico do Dispositivo');
-    console.log('Sistema:', deviceInfo.isIOS ? `iOS ${deviceInfo.version}` : 'Outro');
+    console.log('Sistema:', `${deviceInfo.platform} ${deviceInfo.version || ''}`);
     console.log('Navegador:', deviceInfo.isSafari ? 'Safari' : 'Outro');
     console.log('In-App Browser:', deviceInfo.isInAppBrowser);
     console.log('PWA:', deviceInfo.isPWA);
@@ -372,8 +432,8 @@ export const useIOSPermissions = () => {
     const info = detectDevice();
     setDeviceInfo(info);
     
-    if (info.isIOS) {
-      console.log('📱 Dispositivo iOS detectado, iniciando verificações...');
+    if (info.isMobile) {
+      console.log(`📱 Dispositivo ${info.platform} detectado, iniciando verificações...`);
       checkPermissions();
     }
   }, [detectDevice, checkPermissions]);
