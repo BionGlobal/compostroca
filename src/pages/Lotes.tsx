@@ -209,28 +209,10 @@ const Lotes = () => {
 
         {/* Tab: Histórico */}
         <TabsContent value="historico" className="space-y-6">
-          {lotesFinalizados.length === 0 ? (
-            <Card className="glass-light border-0">
-              <CardContent className="p-8 text-center">
-                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <h3 className="text-lg font-medium mb-2">Nenhum lote finalizado</h3>
-                <p className="text-muted-foreground">
-                  Os lotes finalizados aparecerão aqui
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {lotesFinalizados.map((lote) => (
-                <LoteDetalhesModal key={lote.id} loteId={lote.id} loteCode={lote.codigo}>
-                  <LoteHistoricoCard 
-                    lote={lote as any}
-                    onClick={() => {}}
-                  />
-                </LoteDetalhesModal>
-              ))}
-            </div>
-          )}
+          <div className="text-center text-muted-foreground">
+            <p>Sistema de histórico avançado em desenvolvimento...</p>
+            <p className="text-sm mt-1">Em breve: pesquisa, filtros e relatórios completos</p>
+          </div>
         </TabsContent>
 
         {/* Tab: Análise */}
