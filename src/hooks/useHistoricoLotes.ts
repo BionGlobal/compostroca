@@ -46,16 +46,30 @@ export const useHistoricoLotes = () => {
 
       if (lotesError) throw lotesError;
 
-      // Buscar manejos semanais (manutencao)
+      // Buscar manejos semanais primeiro
       const { data: manejos, error: manejosError } = await supabase
         .from('manejo_semanal')
-        .select(`
-          *,
-          lotes!lote_id(codigo, unidade)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (manejosError) throw manejosError;
+
+      // Buscar dados dos lotes referenciados pelos manejos
+      let lotesMap = new Map();
+      if (manejos && manejos.length > 0) {
+        const loteIds = [...new Set(manejos.map(m => m.lote_id))];
+        const { data: lotesForManejos, error: lotesForManejosError } = await supabase
+          .from('lotes')
+          .select('id, codigo, unidade')
+          .in('id', loteIds);
+
+        if (lotesForManejosError) throw lotesForManejosError;
+
+        // Criar mapa para lookup rápido
+        lotesForManejos?.forEach(lote => {
+          lotesMap.set(lote.id, lote);
+        });
+      }
 
       // Buscar lotes finalizados em caixa 7 (lote_finalizado)
       const { data: lotesFinalizados, error: finalizadosError } = await supabase
@@ -95,11 +109,12 @@ export const useHistoricoLotes = () => {
 
       // Eventos de manutenção
       manejos?.forEach(manejo => {
+        const loteData = lotesMap.get(manejo.lote_id);
         eventos.push({
           id: `manejo_${manejo.id}`,
           tipo: 'manutencao',
           data: manejo.created_at,
-          lote_codigo: (manejo.lotes as any)?.codigo || 'N/A',
+          lote_codigo: loteData?.codigo || 'N/A',
           validador_nome: 'Sistema', // TODO: buscar nome do usuário
           dados_especificos: {
             peso_antes: manejo.peso_antes,
@@ -114,7 +129,7 @@ export const useHistoricoLotes = () => {
             lat: Number(manejo.latitude),
             lng: Number(manejo.longitude)
           } : undefined,
-          unidade: (manejo.lotes as any)?.unidade || 'CWB001'
+          unidade: loteData?.unidade || 'CWB001'
         });
       });
 
