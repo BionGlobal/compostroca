@@ -15,18 +15,26 @@ import {
   AlertTriangle,
   BarChart3,
   Camera,
-  Sprout
+  Sprout,
+  Download,
+  FileText
 } from 'lucide-react';
 
 import { useLotesManager } from '@/hooks/useLotesManager';
+import { useHistoricoLotes } from '@/hooks/useHistoricoLotes';
+import { useAdvancedPDFGenerator } from '@/hooks/useAdvancedPDFGenerator';
+import { useExcelGenerator } from '@/hooks/useExcelGenerator';
 import { ProductionBelt } from '@/components/ProductionBelt';
 import { ManejoCard } from '@/components/ManejoCard';
 import { ManejoSimplificado } from '@/components/ManejoSimplificado';
 import { PerformanceCharts } from '@/components/PerformanceCharts';
 import { FinalizationModal } from '@/components/FinalizationModal';
 import { StatCard } from '@/components/StatCard';
-import { LoteHistoricoCard } from '@/components/LoteHistoricoCard';
-import { LoteDetalhesModal } from '@/components/LoteDetalhesModal';
+import { HistoricoSearch } from '@/components/HistoricoSearch';
+import { NovoLoteCard } from '@/components/NovoLoteCard';
+import { ManutencaoCard } from '@/components/ManutencaoCard';
+import { LoteFinalizadoCard } from '@/components/LoteFinalizadoCard';
+import { FotosGalleryModal } from '@/components/FotosGalleryModal';
 
 const Lotes = () => {
   const {
@@ -39,8 +47,44 @@ const Lotes = () => {
     refetch
   } = useLotesManager();
 
+  // History system hooks
+  const {
+    historico,
+    loading: historicoLoading,
+    filters,
+    setFilters,
+    refetch: refetchHistorico,
+    totalEventos,
+    eventosFiltrados
+  } = useHistoricoLotes();
+
+  const {
+    generateNovoLotePDF,
+    generateManutencaoPDF,
+    generateLoteFinalizadoPDF,
+    generateConsolidatedPDF,
+    loading: pdfLoading
+  } = useAdvancedPDFGenerator();
+
+  const {
+    generateConsolidatedExcel,
+    loading: excelLoading
+  } = useExcelGenerator();
+
+  // State for modals and interactions
   const [selectedLoteForFinalization, setSelectedLoteForFinalization] = useState<string | null>(null);
   const [showManejoSemanal, setShowManejoSemanal] = useState(false);
+  const [fotosModalData, setFotosModalData] = useState<{
+    open: boolean;
+    fotos: string[];
+    title: string;
+    loteCode: string;
+  }>({
+    open: false,
+    fotos: [],
+    title: '',
+    loteCode: ''
+  });
 
   const handleManejoClick = (lote: any) => {
     // Modal já é aberto pelo ManejoCard
@@ -49,6 +93,81 @@ const Lotes = () => {
 
   const handleFinalizarClick = (lote: any) => {
     setSelectedLoteForFinalization(lote.id);
+  };
+
+  // History handlers
+  const handleViewPhotos = (fotos: string[], title: string, loteCode: string) => {
+    setFotosModalData({
+      open: true,
+      fotos,
+      title,
+      loteCode
+    });
+  };
+
+  const handleDownloadPDF = async (evento: any) => {
+    switch (evento.tipo) {
+      case 'novo_lote':
+        await generateNovoLotePDF(evento);
+        break;
+      case 'manutencao':
+        await generateManutencaoPDF(evento);
+        break;
+      case 'lote_finalizado':
+        await generateLoteFinalizadoPDF(evento);
+        break;
+    }
+  };
+
+  const handleDownloadConsolidatedPDF = async () => {
+    await generateConsolidatedPDF(historico);
+  };
+
+  const handleDownloadConsolidatedExcel = async () => {
+    await generateConsolidatedExcel(historico);
+  };
+
+  const renderHistoricoCard = (evento: any) => {
+    const commonProps = {
+      key: evento.id,
+      evento,
+      onDownloadPDF: () => handleDownloadPDF(evento),
+      loading: pdfLoading || excelLoading
+    };
+
+    switch (evento.tipo) {
+      case 'novo_lote':
+        return (
+          <NovoLoteCard
+            {...commonProps}
+            onViewPhotos={() => handleViewPhotos(
+              evento.fotos || [],
+              'Fotos das Entregas',
+              evento.lote_codigo
+            )}
+          />
+        );
+      case 'manutencao':
+        return (
+          <ManutencaoCard
+            {...commonProps}
+            onViewPhotos={evento.fotos?.length > 0 ? () => handleViewPhotos(
+              evento.fotos,
+              'Fotos da Manutenção',
+              evento.lote_codigo
+            ) : undefined}
+          />
+        );
+      case 'lote_finalizado':
+        return (
+          <LoteFinalizadoCard
+            {...commonProps}
+            onDownloadExcel={() => handleDownloadPDF(evento)}
+          />
+        );
+      default:
+        return null;
+    }
   };
 
   const loteToFinalize = lotesAtivos.find(l => l.id === selectedLoteForFinalization);
@@ -209,10 +328,56 @@ const Lotes = () => {
 
         {/* Tab: Histórico */}
         <TabsContent value="historico" className="space-y-6">
-          <div className="text-center text-muted-foreground">
-            <p>Sistema de histórico avançado em desenvolvimento...</p>
-            <p className="text-sm mt-1">Em breve: pesquisa, filtros e relatórios completos</p>
-          </div>
+          {/* Search and Filters */}
+          <HistoricoSearch
+            filters={filters}
+            onFiltersChange={setFilters}
+            onDownloadPDF={handleDownloadConsolidatedPDF}
+            onDownloadExcel={handleDownloadConsolidatedExcel}
+            totalEventos={totalEventos}
+            eventosFiltrados={eventosFiltrados}
+            loading={pdfLoading || excelLoading}
+          />
+
+          {/* History Cards */}
+          {historicoLoading ? (
+            <div className="grid gap-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="glass-light border-0">
+                  <CardContent className="p-6">
+                    <div className="animate-pulse space-y-3">
+                      <div className="h-4 bg-muted rounded w-3/4"></div>
+                      <div className="h-3 bg-muted rounded w-1/2"></div>
+                      <div className="h-3 bg-muted rounded w-5/6"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : historico.length === 0 ? (
+            <Card className="glass-light border-0">
+              <CardContent className="p-12 text-center">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                <h3 className="text-lg font-medium mb-2">Nenhum evento encontrado</h3>
+                <p className="text-muted-foreground">
+                  {filters.query || filters.tipo !== 'all' || filters.dataInicio || filters.dataFim
+                    ? 'Ajuste os filtros para ver mais resultados'
+                    : 'Os eventos de histórico aparecerão aqui conforme ações forem realizadas'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {historico.map(renderHistoricoCard)}
+            </div>
+          )}
+
+          {/* Results summary for mobile */}
+          {historico.length > 0 && (
+            <div className="md:hidden text-center text-sm text-muted-foreground">
+              {eventosFiltrados} de {totalEventos} eventos
+            </div>
+          )}
         </TabsContent>
 
         {/* Tab: Análise */}
@@ -252,6 +417,15 @@ const Lotes = () => {
         lotes={lotesAtivos}
         organizacao="CWB001"
         onManejoCompleto={refetch}
+      />
+
+      {/* Modal de Galeria de Fotos */}
+      <FotosGalleryModal
+        open={fotosModalData.open}
+        onOpenChange={(open) => setFotosModalData(prev => ({ ...prev, open }))}
+        fotos={fotosModalData.fotos}
+        title={fotosModalData.title}
+        loteCode={fotosModalData.loteCode}
       />
     </div>
   );
