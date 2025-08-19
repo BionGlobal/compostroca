@@ -31,9 +31,9 @@ import { PerformanceCharts } from '@/components/PerformanceCharts';
 import { FinalizationModal } from '@/components/FinalizationModal';
 import { StatCard } from '@/components/StatCard';
 import { HistoricoSearch } from '@/components/HistoricoSearch';
-import { NovoLoteCard } from '@/components/NovoLoteCard';
-import { ManutencaoCard } from '@/components/ManutencaoCard';
-import { LoteFinalizadoCard } from '@/components/LoteFinalizadoCard';
+import { NovoLoteCardFlip } from '@/components/NovoLoteCardFlip';
+import { ManutencaoCardFlip } from '@/components/ManutencaoCardFlip';
+import { LoteProntoCard } from '@/components/LoteProntoCard';
 import { FotosGalleryModal } from '@/components/FotosGalleryModal';
 
 const Lotes = () => {
@@ -138,7 +138,7 @@ const Lotes = () => {
     switch (evento.tipo) {
       case 'novo_lote':
         return (
-          <NovoLoteCard
+          <NovoLoteCardFlip
             {...commonProps}
             onViewPhotos={() => handleViewPhotos(
               evento.fotos || [],
@@ -149,7 +149,7 @@ const Lotes = () => {
         );
       case 'manutencao':
         return (
-          <ManutencaoCard
+          <ManutencaoCardFlip
             {...commonProps}
             onViewPhotos={evento.fotos?.length > 0 ? () => handleViewPhotos(
               evento.fotos,
@@ -160,9 +160,13 @@ const Lotes = () => {
         );
       case 'lote_finalizado':
         return (
-          <LoteFinalizadoCard
+          <LoteProntoCard
             {...commonProps}
-            onDownloadExcel={() => handleDownloadPDF(evento)}
+            onViewPhotos={() => handleViewPhotos(
+              evento.fotos || [],
+              'Fotos do Lote Finalizado',
+              evento.lote_codigo
+            )}
           />
         );
       default:
@@ -367,8 +371,14 @@ const Lotes = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4">
-              {historico.map(renderHistoricoCard)}
+            <div className="space-y-4">
+              {/* Info sobre limitação dos últimos 10 eventos */}
+              <div className="text-center text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg">
+                Mostrando os últimos 10 eventos. Use os filtros para refinar sua busca.
+              </div>
+              <div className="grid gap-4 sm:gap-6">
+                {historico.map(renderHistoricoCard)}
+              </div>
             </div>
           )}
 

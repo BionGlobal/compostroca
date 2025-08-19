@@ -37,20 +37,22 @@ export const useHistoricoLotes = () => {
     try {
       setLoading(true);
       
-      // Buscar lotes finalizados (novo_lote)
+      // Buscar lotes finalizados (novo_lote) - limitar aos últimos 10
       const { data: lotes, error: lotesError } = await supabase
         .from('lotes')
         .select('*')
         .eq('status', 'encerrado')
-        .order('data_encerramento', { ascending: false });
+        .order('data_encerramento', { ascending: false })
+        .limit(10);
 
       if (lotesError) throw lotesError;
 
-      // Buscar manejos semanais primeiro
+      // Buscar manejos semanais - limitar aos últimos 10
       const { data: manejos, error: manejosError } = await supabase
         .from('manejo_semanal')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10);
 
       if (manejosError) throw manejosError;
 
@@ -71,12 +73,13 @@ export const useHistoricoLotes = () => {
         });
       }
 
-      // Buscar lotes finalizados em caixa 7 (lote_finalizado)
+      // Buscar lotes finalizados em caixa 7 (lote_finalizado) - limitar aos últimos 10
       const { data: lotesFinalizados, error: finalizadosError } = await supabase
         .from('lotes')
         .select('*')
         .eq('status', 'distribuido')
-        .order('data_encerramento', { ascending: false });
+        .order('data_encerramento', { ascending: false })
+        .limit(10);
 
       if (finalizadosError) throw finalizadosError;
 
@@ -159,10 +162,11 @@ export const useHistoricoLotes = () => {
         });
       });
 
-      // Ordenar por data (mais recente primeiro)
+      // Ordenar por data (mais recente primeiro) e limitar aos últimos 10
       eventos.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+      const eventosLimitados = eventos.slice(0, 10);
       
-      setHistorico(eventos);
+      setHistorico(eventosLimitados);
     } catch (error) {
       console.error('Erro ao buscar histórico:', error);
       toast({
