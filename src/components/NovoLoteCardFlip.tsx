@@ -31,7 +31,7 @@ export const NovoLoteCardFlip = ({ evento, onViewPhotos, onDownloadPDF, loading 
             {evento.lote_codigo}
           </h3>
           <Badge variant="outline" className="bg-amber-500/20 text-white border-amber-300/50 text-xs font-semibold px-3 py-1 backdrop-blur-sm">
-            🌱 Novo Lote
+            🌱 Novo
           </Badge>
         </div>
         <div className="text-right">
@@ -46,22 +46,22 @@ export const NovoLoteCardFlip = ({ evento, onViewPhotos, onDownloadPDF, loading 
       <div className="space-y-3 flex-1">
         <div className="flex items-center gap-2 text-sm text-white/90">
           <Calendar className="w-4 h-4" />
-          <span>Iniciado: {new Date(dados.data_inicio).toLocaleDateString('pt-BR')}</span>
+          <span>Data/Hora: {new Date(evento.data).toLocaleDateString('pt-BR')} às {new Date(evento.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
         
         <div className="flex items-center gap-2 text-sm text-white/90">
-          <Clock className="w-4 h-4" />
-          <span>Previsão: {dataPrevista.toLocaleDateString('pt-BR')}</span>
+          <Scale className="w-4 h-4" />
+          <span>Peso inicial: {dados.peso_inicial ? formatWeight(dados.peso_inicial) : 'Não informado'}</span>
         </div>
 
         <div className="flex items-center gap-2 text-sm text-white/90">
-          <Scale className="w-4 h-4" />
-          <span>{formatWeight(dados.peso_inicial)} inicial</span>
+          <Users className="w-4 h-4" />
+          <span>Voluntários: {dados.num_voluntarios || 'Não informado'}</span>
         </div>
 
         <div className="flex items-center gap-2 text-sm text-white/90">
           <Leaf className="w-4 h-4" />
-          <span className="font-semibold">{co2Evitado} kg CO2e será evitado</span>
+          <span>Validador: {evento.validador_nome || 'Não informado'}</span>
         </div>
       </div>
 
@@ -92,29 +92,22 @@ export const NovoLoteCardFlip = ({ evento, onViewPhotos, onDownloadPDF, loading 
           </div>
         )}
 
-        <div className="flex items-center gap-2 text-white/90">
-          <Users className="w-4 h-4" />
-          <span className="text-xs">Voluntários: {dados.num_voluntarios || 'N/A'}</span>
-        </div>
-
-        <div className="flex items-center gap-2 text-white/90">
-          <Star className="w-4 h-4" />
-          <span className="text-xs">Qualidade média: {dados.qualidade_media || 'N/A'}/5</span>
+        <div className="text-white/90">
+          <p className="text-xs mb-1">Peso inicial: {dados.peso_inicial ? formatWeight(dados.peso_inicial) : 'Não informado'}</p>
+          <p className="text-xs mb-1">Peso após entregas: {dados.peso_total_entregas ? formatWeight(dados.peso_total_entregas) : 'Não informado'}</p>
+          <p className="text-xs mb-1">Validador: {evento.validador_nome || 'Não informado'}</p>
         </div>
 
         <div className="text-white/90">
-          <p className="text-xs mb-1">Validador: {evento.validador_nome}</p>
-          <p className="text-xs">Linha: {dados.linha_producao}</p>
-          <p className="text-xs">Semana atual: {dados.semana_atual}</p>
+          <p className="text-xs mb-1">Voluntários participantes: {dados.num_voluntarios || 'Não informado'}</p>
+          <p className="text-xs mb-1">Qualidade média: {dados.qualidade_media ? `${dados.qualidade_media}/5` : 'Não informado'}</p>
+          <p className="text-xs mb-1">Linha de produção: {dados.linha_producao || 'Não informado'}</p>
         </div>
 
-        {dados.dados_iot && (
-          <div className="text-white/90">
-            <p className="text-xs font-medium mb-1">Dados IoT:</p>
-            <p className="text-xs">Temperatura: {dados.dados_iot.temperatura || 'N/A'}°C</p>
-            <p className="text-xs">Umidade: {dados.dados_iot.umidade || 'N/A'}%</p>
-          </div>
-        )}
+        <div className="text-white/90">
+          <p className="text-xs mb-1">Semana atual: {dados.semana_atual || 'Não informado'}</p>
+          <p className="text-xs">Data de início: {dados.data_inicio ? new Date(dados.data_inicio).toLocaleDateString('pt-BR') : 'Não informado'}</p>
+        </div>
       </div>
 
       {/* Botões de ação */}

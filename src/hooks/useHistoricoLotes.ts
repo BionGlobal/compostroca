@@ -37,33 +37,35 @@ export const useHistoricoLotes = () => {
     try {
       setLoading(true);
       
-      // Buscar NOVOS LOTES (recém-criados na caixa 1) - limitar aos últimos 5
+      // Buscar LOTES PRONTOS (finalizados/encerrados) - últimos 4
+      const { data: lotesProntos, error: lotesProntosError } = await supabase
+        .from('lotes')
+        .select('*')
+        .eq('status', 'encerrado')
+        .order('data_encerramento', { ascending: false })
+        .limit(4);
+
+      if (lotesProntosError) throw lotesProntosError;
+
+      // Buscar manejos semanais - últimos 4
+      const { data: manejos, error: manejosError } = await supabase
+        .from('manejo_semanal')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(4);
+
+      if (manejosError) throw manejosError;
+
+      // Buscar NOVOS LOTES (recém-criados na caixa 1) - últimos 4
       const { data: novosLotes, error: novosLotesError } = await supabase
         .from('lotes')
         .select('*')
         .eq('status', 'em_processamento')
         .eq('caixa_atual', 1)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(4);
 
       if (novosLotesError) throw novosLotesError;
-
-      // Buscar LOTES PRONTOS (finalizados/encerrados) - limitar aos últimos 5  
-      const { data: lotesProntos, error: lotesProntosError } = await supabase
-        .from('lotes')
-        .select('*')
-        .eq('status', 'encerrado')
-        .order('data_encerramento', { ascending: false })
-        .limit(5);
-
-      if (lotesProntosError) throw lotesProntosError;
-
-      // Buscar manejos semanais - limitar aos últimos 5
-      const { data: manejos, error: manejosError } = await supabase
-        .from('manejo_semanal')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(5);
 
       if (manejosError) throw manejosError;
 
@@ -160,10 +162,7 @@ export const useHistoricoLotes = () => {
             num_voluntarios: entregasData.numVoluntarios,
             qualidade_media: entregasData.qualidadeMedia,
             peso_total_entregas: entregasData.pesoTotal,
-            dados_iot: {
-              temperatura: Math.floor(Math.random() * 10) + 45, // Simulado
-              umidade: Math.floor(Math.random() * 20) + 60 // Simulado
-            }
+            dados_iot: null // Removido dados simulados
           },
           fotos: entregasData.fotosUrls,
           geoloc: lote.latitude && lote.longitude ? {
@@ -195,11 +194,7 @@ export const useHistoricoLotes = () => {
             reducao_peso: ((Number(lote.peso_inicial) - Number(lote.peso_atual)) / Number(lote.peso_inicial) * 100),
             num_voluntarios: entregasData.numVoluntarios,
             qualidade_media: entregasData.qualidadeMedia,
-            dados_iot: {
-              npk: `${Math.floor(Math.random() * 3) + 2}-${Math.floor(Math.random() * 2) + 1}-${Math.floor(Math.random() * 3) + 2}`, // Simulado
-              umidade: Math.floor(Math.random() * 15) + 55, // Simulado
-              condutividade: (Math.random() * 2 + 1.5).toFixed(2) + ' mS/cm' // Simulado
-            }
+            dados_iot: null // Removido dados simulados
           },
           fotos: entregasData.fotosUrls,
           geoloc: lote.latitude && lote.longitude ? {
@@ -211,25 +206,38 @@ export const useHistoricoLotes = () => {
       }
 
       // Eventos de MANUTENÇÃO REALIZADA
-      manejos?.forEach(manejo => {
+      for (const manejo of manejos || []) {
         const loteData = lotesMap.get(manejo.lote_id);
-        const userName = usersMap.get(manejo.user_id) || 'Sistema';
+        const userName = usersMap.get(manejo.user_id) || 'Não informado';
+        
+        // Buscar todos os 7 lotes que estavam na esteira no momento da manutenção
+        const { data: lotesNaEsteira } = await supabase
+          .from('lotes')
+          .select('codigo')
+          .eq('linha_producao', loteData?.linha_producao || 'A')
+          .eq('unidade', loteData?.unidade || 'CWB001')
+          .gte('caixa_atual', 1)
+          .lte('caixa_atual', 7)
+          .order('caixa_atual', { ascending: true });
+
+        const codigosLotes = lotesNaEsteira?.map(l => l.codigo) || [loteData?.codigo || 'Não informado'];
         
         eventos.push({
           id: `manutencao_${manejo.id}`,
           tipo: 'manutencao',
           data: manejo.created_at,
-          lote_codigo: loteData?.codigo || 'N/A',
+          lote_codigo: codigosLotes.join(', '),
           validador_nome: userName,
           dados_especificos: {
-            peso_antes: manejo.peso_antes,
-            peso_depois: manejo.peso_depois,
-            caixa_origem: manejo.caixa_origem,
-            caixa_destino: manejo.caixa_destino,
-            observacoes: manejo.observacoes,
-            foto_url: manejo.foto_url,
-            linha_producao: loteData?.linha_producao || 'A',
-            peso_total: Number(manejo.peso_depois) || Number(manejo.peso_antes)
+            peso_antes: manejo.peso_antes || 'Não informado',
+            peso_depois: manejo.peso_depois || 'Não informado',
+            caixa_origem: manejo.caixa_origem || 'Não informado',
+            caixa_destino: manejo.caixa_destino || 'Não informado',
+            observacoes: manejo.observacoes || 'Não informado',
+            foto_url: manejo.foto_url || null,
+            linha_producao: loteData?.linha_producao || 'Não informado',
+            lotes_na_esteira: codigosLotes,
+            total_lotes_esteira: codigosLotes.length
           },
           fotos: manejo.foto_url ? [manejo.foto_url] : [],
           geoloc: manejo.latitude && manejo.longitude ? {
@@ -238,11 +246,11 @@ export const useHistoricoLotes = () => {
           } : undefined,
           unidade: loteData?.unidade || 'CWB001'
         });
-      });
+      }
 
-      // Ordenar por data (mais recente primeiro) e limitar aos últimos 10
+      // Ordenar por data (mais recente primeiro) e limitar aos últimos 12
       eventos.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-      const eventosLimitados = eventos.slice(0, 10);
+      const eventosLimitados = eventos.slice(0, 12);
       
       setHistorico(eventosLimitados);
     } catch (error) {

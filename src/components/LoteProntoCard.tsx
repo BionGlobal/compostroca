@@ -15,8 +15,9 @@ interface LoteProntoCardProps {
 
 export const LoteProntoCard = ({ evento, onViewPhotos, onDownloadPDF, loading }: LoteProntoCardProps) => {
   const dados = evento.dados_especificos;
-  const co2Evitado = (dados.peso_inicial * 0.766).toFixed(2);
-  const reducaoPercentual = calculateWeightReduction(dados.peso_inicial, dados.peso_final);
+  const co2Evitado = dados.peso_inicial ? (Number(dados.peso_inicial) * 0.766).toFixed(2) : 'Não informado';
+  const reducaoPercentual = dados.peso_inicial && dados.peso_final ? 
+    calculateWeightReduction(dados.peso_inicial, dados.peso_final) : 0;
 
   const frontContent = (
     <div className="flex flex-col h-full">
@@ -27,7 +28,7 @@ export const LoteProntoCard = ({ evento, onViewPhotos, onDownloadPDF, loading }:
             {evento.lote_codigo}
           </h3>
           <Badge variant="outline" className="bg-emerald-500/20 text-white border-emerald-300/50 text-xs font-semibold px-3 py-1 backdrop-blur-sm">
-            ✅ Lote Pronto
+            ✅ Finalizado
           </Badge>
         </div>
         <div className="text-right">
@@ -42,22 +43,22 @@ export const LoteProntoCard = ({ evento, onViewPhotos, onDownloadPDF, loading }:
       <div className="space-y-3 flex-1">
         <div className="flex items-center gap-2 text-sm text-white/90">
           <Calendar className="w-4 h-4" />
-          <span>Finalizado: {new Date(dados.data_encerramento).toLocaleDateString('pt-BR')}</span>
+          <span>Início: {dados.data_inicio ? new Date(dados.data_inicio).toLocaleDateString('pt-BR') : 'Não informado'}</span>
+        </div>
+        
+        <div className="flex items-center gap-2 text-sm text-white/90">
+          <Calendar className="w-4 h-4" />
+          <span>Finalizado: {dados.data_encerramento ? new Date(dados.data_encerramento).toLocaleDateString('pt-BR') : 'Não informado'}</span>
         </div>
         
         <div className="flex items-center gap-2 text-sm text-white/90">
           <Scale className="w-4 h-4" />
-          <span>{formatWeight(dados.peso_inicial)} → {formatWeight(dados.peso_final)}</span>
+          <span>Peso final: {dados.peso_final ? formatWeight(dados.peso_final) : 'Não informado'}</span>
         </div>
 
         <div className="flex items-center gap-2 text-sm text-white/90">
-          <TrendingDown className="w-4 h-4 text-white" />
-          <span className="font-semibold">-{reducaoPercentual.toFixed(1)}% redução</span>
-        </div>
-
-        <div className="flex items-center gap-2 text-sm text-white/90">
-          <Leaf className="w-4 h-4" />
-          <span className="font-semibold">{co2Evitado} kg CO2e evitado</span>
+          <Users className="w-4 h-4" />
+          <span>Voluntários: {dados.num_voluntarios || 'Não informado'}</span>
         </div>
       </div>
 
@@ -88,28 +89,24 @@ export const LoteProntoCard = ({ evento, onViewPhotos, onDownloadPDF, loading }:
           </div>
         )}
 
-        <div className="flex items-center gap-2 text-white/90">
-          <Users className="w-4 h-4" />
-          <span className="text-xs">Voluntários: {dados.num_voluntarios || 'N/A'}</span>
-        </div>
-
-        <div className="flex items-center gap-2 text-white/90">
-          <Star className="w-4 h-4" />
-          <span className="text-xs">Qualidade média: {dados.qualidade_media || 'N/A'}/5</span>
+        <div className="text-white/90">
+          <p className="text-xs mb-1">Peso inicial: {dados.peso_inicial ? formatWeight(dados.peso_inicial) : 'Não informado'}</p>
+          <p className="text-xs mb-1">Peso final: {dados.peso_final ? formatWeight(dados.peso_final) : 'Não informado'}</p>
+          {dados.peso_inicial && dados.peso_final && (
+            <p className="text-xs mb-1">Redução: {reducaoPercentual.toFixed(1)}%</p>
+          )}
         </div>
 
         <div className="text-white/90">
-          <p className="text-xs mb-1">Validador: {evento.validador_nome}</p>
+          <p className="text-xs mb-1">Validador responsável: {evento.validador_nome || 'Não informado'}</p>
+          <p className="text-xs mb-1">Voluntários participantes: {dados.num_voluntarios || 'Não informado'}</p>
+          <p className="text-xs mb-1">Qualidade média: {dados.qualidade_media ? `${dados.qualidade_media}/5` : 'Não informado'}</p>
         </div>
 
-        {dados.dados_iot && (
-          <div className="text-white/90">
-            <p className="text-xs font-medium mb-1">Dados IoT:</p>
-            <p className="text-xs">NPK: {dados.dados_iot.npk || 'N/A'}</p>
-            <p className="text-xs">Umidade: {dados.dados_iot.umidade || 'N/A'}%</p>
-            <p className="text-xs">Condutividade: {dados.dados_iot.condutividade || 'N/A'}</p>
-          </div>
-        )}
+        <div className="text-white/90">
+          <p className="text-xs mb-1">CO2e evitado: {co2Evitado} kg</p>
+          <p className="text-xs">Tempo total: {dados.tempo_total ? `${dados.tempo_total} semanas` : 'Não informado'}</p>
+        </div>
       </div>
 
       {/* Botões de ação */}

@@ -26,7 +26,7 @@ export const ManutencaoCardFlip = ({ evento, onViewPhotos, onDownloadPDF, loadin
             {evento.lote_codigo}
           </h3>
           <Badge variant="outline" className="bg-slate-500/20 text-slate-700 border-slate-400/50 text-xs font-semibold px-3 py-1 backdrop-blur-sm">
-            🔧 Manutenção Realizada
+            🔧 Manutenção
           </Badge>
         </div>
         <div className="text-right">
@@ -51,12 +51,12 @@ export const ManutencaoCardFlip = ({ evento, onViewPhotos, onDownloadPDF, loadin
 
         <div className="flex items-center gap-2 text-sm text-slate-700">
           <ArrowRight className="w-4 h-4" />
-          <span>Caixa <span className="font-bold text-amber-600">{dados.caixa_origem}</span> → <span className="font-bold text-emerald-600">{dados.caixa_destino || 'N/A'}</span></span>
+          <span>Lotes na esteira: <span className="font-bold text-blue-600">{dados.total_lotes_esteira || 'Não informado'}</span></span>
         </div>
 
         <div className="flex items-center gap-2 text-sm text-slate-700">
           <User className="w-4 h-4" />
-          <span className="font-medium">{evento.validador_nome}</span>
+          <span>Validador: {evento.validador_nome}</span>
         </div>
       </div>
 
@@ -88,24 +88,31 @@ export const ManutencaoCardFlip = ({ evento, onViewPhotos, onDownloadPDF, loadin
         )}
 
         <div className="text-slate-700">
-          <p className="text-xs mb-1">Peso antes: <span className="font-semibold">{formatWeight(dados.peso_antes)}</span></p>
-          <p className="text-xs mb-1">Peso depois: <span className="font-semibold">{formatWeight(dados.peso_depois)}</span></p>
-          <p className="text-xs mb-1">Responsável: <span className="font-medium">{evento.validador_nome}</span></p>
+          <p className="text-xs mb-1">Peso antes: {dados.peso_antes !== 'Não informado' ? formatWeight(dados.peso_antes) : 'Não informado'}</p>
+          <p className="text-xs mb-1">Peso depois: {dados.peso_depois !== 'Não informado' ? formatWeight(dados.peso_depois) : 'Não informado'}</p>
+          <p className="text-xs mb-1">Responsável: {evento.validador_nome}</p>
+          <p className="text-xs mb-1">Movimento: Caixa {dados.caixa_origem} → {dados.caixa_destino}</p>
         </div>
 
-        {dados.observacoes && (
+        <div className="text-slate-700">
+          <p className="text-xs font-medium mb-1">Lotes na esteira ({dados.total_lotes_esteira}):</p>
+          <div className="text-xs bg-slate-100/60 p-2 rounded-lg border border-slate-200/50 max-h-16 overflow-y-auto">
+            {dados.lotes_na_esteira?.map((codigo: string, index: number) => (
+              <span key={index} className="inline-block mr-2 mb-1">
+                {codigo}
+              </span>
+            )) || 'Não informado'}
+          </div>
+        </div>
+
+        {dados.observacoes && dados.observacoes !== 'Não informado' && (
           <div className="text-slate-700">
             <p className="text-xs font-medium mb-1">Observações:</p>
-            <p className="text-xs bg-slate-100/60 p-3 rounded-lg text-wrap break-words border border-slate-200/50">
+            <p className="text-xs bg-slate-100/60 p-3 rounded-lg text-wrap break-words border border-slate-200/50 max-h-20 overflow-y-auto">
               {dados.observacoes}
             </p>
           </div>
         )}
-
-        <div className="text-slate-700">
-          <p className="text-xs font-medium mb-1">Lotes envolvidos:</p>
-          <p className="text-xs">7 lotes da linha <span className="font-bold text-amber-600">{dados.linha_producao || 'A'}</span></p>
-        </div>
       </div>
 
       {/* Botões de ação */}
