@@ -23,16 +23,18 @@ export const LoteProntoCard = ({ evento, onViewPhotos, onDownloadPDF, loading }:
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h3 className="text-lg sm:text-xl font-bold text-white mb-1">
+          <h3 className="text-lg sm:text-xl font-bold text-white mb-2 tracking-wide">
             {evento.lote_codigo}
           </h3>
-          <Badge variant="outline" className="bg-white/20 text-white border-white/30 text-xs">
-            ✓ Lote Pronto
+          <Badge variant="outline" className="bg-emerald-500/20 text-white border-emerald-300/50 text-xs font-semibold px-3 py-1 backdrop-blur-sm">
+            ✅ Lote Pronto
           </Badge>
         </div>
         <div className="text-right">
-          <Leaf className="w-6 h-6 text-white mb-1" />
-          <p className="text-xs text-white/80">Distribuído</p>
+          <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-2">
+            <Leaf className="w-7 h-7 text-white" />
+          </div>
+          <p className="text-xs text-white/90 font-medium">Distribuído</p>
         </div>
       </div>
 
@@ -143,8 +145,8 @@ export const LoteProntoCard = ({ evento, onViewPhotos, onDownloadPDF, loading }:
     <FlippableCard
       frontContent={frontContent}
       backContent={backContent}
-      gradientClass="bg-gradient-to-br from-success to-success/80"
-      className="hover:scale-[1.02] transition-transform duration-200"
+      gradientClass="bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600"
+      className="transition-all duration-300 hover:shadow-2xl hover:shadow-emerald-500/25"
     />
   );
 };

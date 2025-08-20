@@ -22,45 +22,47 @@ export const ManutencaoCardFlip = ({ evento, onViewPhotos, onDownloadPDF, loadin
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h3 className="text-lg sm:text-xl font-bold text-foreground mb-1">
+          <h3 className="text-lg sm:text-xl font-bold text-slate-800 mb-2 tracking-wide">
             {evento.lote_codigo}
           </h3>
-          <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-muted text-xs">
-            🔧 Manutenção
+          <Badge variant="outline" className="bg-slate-500/20 text-slate-700 border-slate-400/50 text-xs font-semibold px-3 py-1 backdrop-blur-sm">
+            🔧 Manutenção Realizada
           </Badge>
         </div>
         <div className="text-right">
-          <Clock className="w-6 h-6 text-muted-foreground mb-1" />
-          <p className="text-xs text-muted-foreground">Executada</p>
+          <div className="w-12 h-12 rounded-full bg-slate-200/50 backdrop-blur-sm flex items-center justify-center mb-2">
+            <Clock className="w-7 h-7 text-slate-600" />
+          </div>
+          <p className="text-xs text-slate-700 font-medium">Executada</p>
         </div>
       </div>
 
       {/* Métricas principais */}
       <div className="space-y-3 flex-1">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-slate-700">
           <Calendar className="w-4 h-4" />
-          <span>{new Date(evento.data).toLocaleDateString('pt-BR')}</span>
+          <span className="font-medium">{new Date(evento.data).toLocaleDateString('pt-BR')}</span>
         </div>
         
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-slate-700">
           <Scale className="w-4 h-4" />
-          <span>Peso total: {formatWeight(pesoTotal)}</span>
+          <span>Peso total: <span className="font-semibold">{formatWeight(pesoTotal)}</span></span>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-slate-700">
           <ArrowRight className="w-4 h-4" />
-          <span>Caixa {dados.caixa_origem} → {dados.caixa_destino || 'N/A'}</span>
+          <span>Caixa <span className="font-bold text-amber-600">{dados.caixa_origem}</span> → <span className="font-bold text-emerald-600">{dados.caixa_destino || 'N/A'}</span></span>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-slate-700">
           <User className="w-4 h-4" />
-          <span>{evento.validador_nome}</span>
+          <span className="font-medium">{evento.validador_nome}</span>
         </div>
       </div>
 
       {/* Footer info */}
-      <div className="pt-3 border-t border-border/20">
-        <p className="text-xs text-muted-foreground">
+      <div className="pt-3 border-t border-slate-300/30">
+        <p className="text-xs text-slate-600">
           Toque para ver observações
         </p>
       </div>
@@ -85,35 +87,35 @@ export const ManutencaoCardFlip = ({ evento, onViewPhotos, onDownloadPDF, loadin
           </div>
         )}
 
-        <div className="text-muted-foreground">
-          <p className="text-xs mb-1">Peso antes: {formatWeight(dados.peso_antes)}</p>
-          <p className="text-xs mb-1">Peso depois: {formatWeight(dados.peso_depois)}</p>
-          <p className="text-xs mb-1">Responsável: {evento.validador_nome}</p>
+        <div className="text-slate-700">
+          <p className="text-xs mb-1">Peso antes: <span className="font-semibold">{formatWeight(dados.peso_antes)}</span></p>
+          <p className="text-xs mb-1">Peso depois: <span className="font-semibold">{formatWeight(dados.peso_depois)}</span></p>
+          <p className="text-xs mb-1">Responsável: <span className="font-medium">{evento.validador_nome}</span></p>
         </div>
 
         {dados.observacoes && (
-          <div className="text-muted-foreground">
+          <div className="text-slate-700">
             <p className="text-xs font-medium mb-1">Observações:</p>
-            <p className="text-xs bg-muted/30 p-2 rounded text-wrap break-words">
+            <p className="text-xs bg-slate-100/60 p-3 rounded-lg text-wrap break-words border border-slate-200/50">
               {dados.observacoes}
             </p>
           </div>
         )}
 
-        <div className="text-muted-foreground">
+        <div className="text-slate-700">
           <p className="text-xs font-medium mb-1">Lotes envolvidos:</p>
-          <p className="text-xs">7 lotes da linha {dados.linha_producao || 'A'}</p>
+          <p className="text-xs">7 lotes da linha <span className="font-bold text-amber-600">{dados.linha_producao || 'A'}</span></p>
         </div>
       </div>
 
       {/* Botões de ação */}
-      <div className="flex flex-col gap-2 pt-3 border-t border-border/20">
+      <div className="flex flex-col gap-2 pt-3 border-t border-slate-300/30">
         {onViewPhotos && dados.foto_url && (
           <Button 
             variant="outline" 
             size="sm" 
             onClick={(e) => { e.stopPropagation(); onViewPhotos(); }}
-            className="text-xs h-8"
+            className="text-xs h-8 border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-800"
           >
             <Camera className="w-3 h-3 mr-1" />
             Ver Fotos
@@ -125,7 +127,7 @@ export const ManutencaoCardFlip = ({ evento, onViewPhotos, onDownloadPDF, loadin
             size="sm" 
             onClick={(e) => { e.stopPropagation(); onDownloadPDF(); }}
             disabled={loading}
-            className="text-xs h-8"
+            className="text-xs h-8 border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-800"
           >
             <Download className="w-3 h-3 mr-1" />
             {loading ? 'Gerando...' : 'PDF'}
@@ -139,8 +141,8 @@ export const ManutencaoCardFlip = ({ evento, onViewPhotos, onDownloadPDF, loadin
     <FlippableCard
       frontContent={frontContent}
       backContent={backContent}
-      gradientClass="bg-gradient-to-br from-muted to-accent"
-      className="hover:scale-[1.02] transition-transform duration-200"
+      gradientClass="bg-gradient-to-br from-slate-100 via-gray-50 to-zinc-100"
+      className="transition-all duration-300 hover:shadow-2xl hover:shadow-slate-400/20"
     />
   );
 };

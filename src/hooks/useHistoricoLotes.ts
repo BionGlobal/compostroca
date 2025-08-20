@@ -37,109 +37,149 @@ export const useHistoricoLotes = () => {
     try {
       setLoading(true);
       
-      // Buscar lotes finalizados (novo_lote) - limitar aos últimos 10
-      const { data: lotes, error: lotesError } = await supabase
+      // Buscar NOVOS LOTES (recém-criados na caixa 1) - limitar aos últimos 5
+      const { data: novosLotes, error: novosLotesError } = await supabase
+        .from('lotes')
+        .select('*')
+        .eq('status', 'em_processamento')
+        .eq('caixa_atual', 1)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (novosLotesError) throw novosLotesError;
+
+      // Buscar LOTES PRONTOS (finalizados/encerrados) - limitar aos últimos 5  
+      const { data: lotesProntos, error: lotesProntosError } = await supabase
         .from('lotes')
         .select('*')
         .eq('status', 'encerrado')
         .order('data_encerramento', { ascending: false })
-        .limit(10);
+        .limit(5);
 
-      if (lotesError) throw lotesError;
+      if (lotesProntosError) throw lotesProntosError;
 
-      // Buscar manejos semanais - limitar aos últimos 10
+      // Buscar manejos semanais - limitar aos últimos 5
       const { data: manejos, error: manejosError } = await supabase
         .from('manejo_semanal')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(5);
 
       if (manejosError) throw manejosError;
 
-      // Buscar dados dos lotes referenciados pelos manejos
+      // Buscar dados dos lotes e usuários para os manejos
       let lotesMap = new Map();
+      let usersMap = new Map();
+      
       if (manejos && manejos.length > 0) {
         const loteIds = [...new Set(manejos.map(m => m.lote_id))];
+        const userIds = [...new Set(manejos.map(m => m.user_id))];
+        
+        // Buscar dados dos lotes
         const { data: lotesForManejos, error: lotesForManejosError } = await supabase
           .from('lotes')
-          .select('id, codigo, unidade')
+          .select('id, codigo, unidade, linha_producao')
           .in('id', loteIds);
 
         if (lotesForManejosError) throw lotesForManejosError;
 
-        // Criar mapa para lookup rápido
+        // Buscar nomes dos usuários responsáveis
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', userIds);
+
+        if (profilesError) throw profilesError;
+
         lotesForManejos?.forEach(lote => {
           lotesMap.set(lote.id, lote);
         });
+
+        profiles?.forEach(profile => {
+          usersMap.set(profile.user_id, profile.full_name || 'Usuário');
+        });
       }
 
-      // Buscar lotes finalizados em caixa 7 (lote_finalizado) - limitar aos últimos 10
-      const { data: lotesFinalizados, error: finalizadosError } = await supabase
-        .from('lotes')
-        .select('*')
-        .eq('status', 'distribuido')
-        .order('data_encerramento', { ascending: false })
-        .limit(10);
+      // Função para buscar dados enriquecidos de entregas para um lote
+      const getEntregasData = async (loteId: string, loteCodigo: string) => {
+        const { data: entregas, error } = await supabase
+          .from('entregas')
+          .select(`
+            id, peso, qualidade_residuo, voluntario_id,
+            voluntarios!inner(id, nome)
+          `)
+          .eq('lote_codigo', loteCodigo);
 
-      if (finalizadosError) throw finalizadosError;
+        if (error) return { numVoluntarios: 0, qualidadeMedia: 0, pesoTotal: 0, fotosUrls: [] };
+
+        const voluntarios = new Set(entregas?.map(e => e.voluntario_id) || []);
+        const qualidades = entregas?.filter(e => e.qualidade_residuo).map(e => e.qualidade_residuo) || [];
+        const qualidadeMedia = qualidades.length > 0 ? qualidades.reduce((a, b) => a + b, 0) / qualidades.length : 0;
+        const pesoTotal = entregas?.reduce((sum, e) => sum + Number(e.peso), 0) || 0;
+
+        // Buscar fotos das entregas
+        const entregaIds = entregas?.map(e => e.id) || [];
+        let fotosUrls: string[] = [];
+        
+        if (entregaIds.length > 0) {
+          const { data: fotos } = await supabase
+            .from('entrega_fotos')
+            .select('foto_url')
+            .in('entrega_id', entregaIds);
+          
+          fotosUrls = fotos?.map(f => f.foto_url) || [];
+        }
+
+        return {
+          numVoluntarios: voluntarios.size,
+          qualidadeMedia: Number(qualidadeMedia.toFixed(1)),
+          pesoTotal,
+          fotosUrls
+        };
+      };
 
       // Montar eventos do histórico
       const eventos: HistoricoEvent[] = [];
 
-      // Eventos de novo lote (lotes encerrados da caixa 1)
-      lotes?.forEach(lote => {
+      // Eventos de NOVO LOTE (recém-criados na caixa 1)
+      for (const lote of novosLotes || []) {
+        const entregasData = await getEntregasData(lote.id, lote.codigo);
+        
         eventos.push({
-          id: `lote_${lote.id}`,
+          id: `novo_lote_${lote.id}`,
           tipo: 'novo_lote',
-          data: lote.data_encerramento || lote.created_at,
+          data: lote.created_at,
           lote_codigo: lote.codigo,
           validador_nome: lote.criado_por_nome,
           dados_especificos: {
             peso_inicial: lote.peso_inicial,
             peso_atual: lote.peso_atual,
             data_inicio: lote.data_inicio,
-            data_encerramento: lote.data_encerramento,
             linha_producao: lote.linha_producao,
-            semana_atual: lote.semana_atual
+            semana_atual: lote.semana_atual,
+            num_voluntarios: entregasData.numVoluntarios,
+            qualidade_media: entregasData.qualidadeMedia,
+            peso_total_entregas: entregasData.pesoTotal,
+            dados_iot: {
+              temperatura: Math.floor(Math.random() * 10) + 45, // Simulado
+              umidade: Math.floor(Math.random() * 20) + 60 // Simulado
+            }
           },
+          fotos: entregasData.fotosUrls,
           geoloc: lote.latitude && lote.longitude ? {
             lat: Number(lote.latitude),
             lng: Number(lote.longitude)
           } : undefined,
           unidade: lote.unidade
         });
-      });
+      }
 
-      // Eventos de manutenção
-      manejos?.forEach(manejo => {
-        const loteData = lotesMap.get(manejo.lote_id);
+      // Eventos de LOTE PRONTO (finalizados)
+      for (const lote of lotesProntos || []) {
+        const entregasData = await getEntregasData(lote.id, lote.codigo);
+        
         eventos.push({
-          id: `manejo_${manejo.id}`,
-          tipo: 'manutencao',
-          data: manejo.created_at,
-          lote_codigo: loteData?.codigo || 'N/A',
-          validador_nome: 'Sistema', // TODO: buscar nome do usuário
-          dados_especificos: {
-            peso_antes: manejo.peso_antes,
-            peso_depois: manejo.peso_depois,
-            caixa_origem: manejo.caixa_origem,
-            caixa_destino: manejo.caixa_destino,
-            observacoes: manejo.observacoes,
-            foto_url: manejo.foto_url
-          },
-          fotos: manejo.foto_url ? [manejo.foto_url] : [],
-          geoloc: manejo.latitude && manejo.longitude ? {
-            lat: Number(manejo.latitude),
-            lng: Number(manejo.longitude)
-          } : undefined,
-          unidade: loteData?.unidade || 'CWB001'
-        });
-      });
-
-      // Eventos de lote finalizado (distribuído)
-      lotesFinalizados?.forEach(lote => {
-        eventos.push({
-          id: `finalizado_${lote.id}`,
+          id: `lote_pronto_${lote.id}`,
           tipo: 'lote_finalizado',
           data: lote.data_encerramento || lote.updated_at,
           lote_codigo: lote.codigo,
@@ -152,13 +192,51 @@ export const useHistoricoLotes = () => {
             tempo_total: lote.data_encerramento ? 
               Math.ceil((new Date(lote.data_encerramento).getTime() - new Date(lote.data_inicio).getTime()) / (1000 * 60 * 60 * 24 * 7)) 
               : null,
-            reducao_peso: ((lote.peso_inicial - lote.peso_atual) / lote.peso_inicial * 100)
+            reducao_peso: ((Number(lote.peso_inicial) - Number(lote.peso_atual)) / Number(lote.peso_inicial) * 100),
+            num_voluntarios: entregasData.numVoluntarios,
+            qualidade_media: entregasData.qualidadeMedia,
+            dados_iot: {
+              npk: `${Math.floor(Math.random() * 3) + 2}-${Math.floor(Math.random() * 2) + 1}-${Math.floor(Math.random() * 3) + 2}`, // Simulado
+              umidade: Math.floor(Math.random() * 15) + 55, // Simulado
+              condutividade: (Math.random() * 2 + 1.5).toFixed(2) + ' mS/cm' // Simulado
+            }
           },
+          fotos: entregasData.fotosUrls,
           geoloc: lote.latitude && lote.longitude ? {
             lat: Number(lote.latitude),
             lng: Number(lote.longitude)
           } : undefined,
           unidade: lote.unidade
+        });
+      }
+
+      // Eventos de MANUTENÇÃO REALIZADA
+      manejos?.forEach(manejo => {
+        const loteData = lotesMap.get(manejo.lote_id);
+        const userName = usersMap.get(manejo.user_id) || 'Sistema';
+        
+        eventos.push({
+          id: `manutencao_${manejo.id}`,
+          tipo: 'manutencao',
+          data: manejo.created_at,
+          lote_codigo: loteData?.codigo || 'N/A',
+          validador_nome: userName,
+          dados_especificos: {
+            peso_antes: manejo.peso_antes,
+            peso_depois: manejo.peso_depois,
+            caixa_origem: manejo.caixa_origem,
+            caixa_destino: manejo.caixa_destino,
+            observacoes: manejo.observacoes,
+            foto_url: manejo.foto_url,
+            linha_producao: loteData?.linha_producao || 'A',
+            peso_total: Number(manejo.peso_depois) || Number(manejo.peso_antes)
+          },
+          fotos: manejo.foto_url ? [manejo.foto_url] : [],
+          geoloc: manejo.latitude && manejo.longitude ? {
+            lat: Number(manejo.latitude),
+            lng: Number(manejo.longitude)
+          } : undefined,
+          unidade: loteData?.unidade || 'CWB001'
         });
       });
 
