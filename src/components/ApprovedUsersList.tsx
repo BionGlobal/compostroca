@@ -13,14 +13,16 @@ interface ApprovedUsersListProps {
   onRefresh: () => void;
   onViewActivities: (userId: string) => void;
   onDeleteUser?: (userId: string) => Promise<boolean>;
+  onRoleUpdate?: (userId: string, newRole: 'super_admin' | 'local_admin' | 'auditor') => Promise<boolean>;
 }
 
 export const ApprovedUsersList = ({ 
   users, 
   loading, 
   onRefresh, 
-  onViewActivities,
-  onDeleteUser
+  onViewActivities, 
+  onDeleteUser,
+  onRoleUpdate 
 }: ApprovedUsersListProps) => {
   const [selectedUser, setSelectedUser] = useState<ApprovedUser | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -218,6 +220,7 @@ export const ApprovedUsersList = ({
         user={selectedUser}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+        onRoleUpdate={onRoleUpdate}
       />
     </div>
   );

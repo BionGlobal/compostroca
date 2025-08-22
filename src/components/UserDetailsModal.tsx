@@ -1,16 +1,24 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ApprovedUser } from '@/hooks/useUserManagement';
+import { UserRoleEditor } from '@/components/UserRoleEditor';
+import { useAuth } from '@/hooks/useAuth';
 import { Shield, Settings, Eye, Users, Calendar, MapPin } from 'lucide-react';
 
 interface UserDetailsModalProps {
   user: ApprovedUser | null;
   isOpen: boolean;
   onClose: () => void;
+  onRoleUpdate?: (userId: string, newRole: 'super_admin' | 'local_admin' | 'auditor') => Promise<boolean>;
 }
 
-export const UserDetailsModal = ({ user, isOpen, onClose }: UserDetailsModalProps) => {
+export const UserDetailsModal = ({ user, isOpen, onClose, onRoleUpdate }: UserDetailsModalProps) => {
+  const { profile } = useAuth();
+  
   if (!user) return null;
+
+  const isSuperAdmin = profile?.user_role === 'super_admin';
+  const isOwnProfile = profile?.user_id === user.user_id;
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -53,7 +61,7 @@ export const UserDetailsModal = ({ user, isOpen, onClose }: UserDetailsModalProp
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
@@ -122,6 +130,14 @@ export const UserDetailsModal = ({ user, isOpen, onClose }: UserDetailsModalProp
               )) || <span className="text-sm text-muted-foreground">Nenhuma unidade autorizada</span>}
             </div>
           </div>
+
+          {/* Gerenciamento de Papel (apenas para Super Admins) */}
+          {isSuperAdmin && !isOwnProfile && onRoleUpdate && (
+            <UserRoleEditor 
+              user={user} 
+              onRoleUpdate={onRoleUpdate}
+            />
+          )}
 
           {/* Datas Importantes */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">

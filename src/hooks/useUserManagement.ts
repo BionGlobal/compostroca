@@ -178,6 +178,47 @@ export const useUserManagement = () => {
     }
   };
 
+  const updateUserRole = async (
+    userId: string, 
+    newRole: 'super_admin' | 'local_admin' | 'auditor'
+  ) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          user_role: newRole,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      // Log da atividade
+      await supabase.rpc('log_user_activity', {
+        p_user_id: userId,
+        p_action_type: 'role_change',
+        p_action_description: `Papel alterado para ${newRole}`,
+        p_table_affected: 'profiles'
+      });
+
+      toast({
+        title: "Papel atualizado",
+        description: "Papel do usuário foi atualizado com sucesso!",
+      });
+
+      await fetchApprovedUsers();
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar papel do usuário:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar papel do usuário",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const deleteUser = async (userId: string) => {
     try {
       const { error } = await supabase
@@ -221,6 +262,7 @@ export const useUserManagement = () => {
     activitiesLoading,
     approveUser,
     rejectUser,
+    updateUserRole,
     deleteUser,
     fetchUserActivities,
     refreshPendingUsers: fetchPendingUsers,
