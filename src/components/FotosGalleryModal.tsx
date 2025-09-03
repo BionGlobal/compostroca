@@ -91,11 +91,15 @@ export const FotosGalleryModal = ({
         <div className="relative flex-1 bg-black/5">
           {/* Imagem principal */}
           <div className="relative h-[60vh] flex items-center justify-center bg-black/10">
-            <img
-              src={fotos[selectedIndex]}
-              alt={`Foto ${selectedIndex + 1} do lote ${loteCode}`}
-              className="max-h-full max-w-full object-contain rounded"
-            />
+             <img
+               src={fotos[selectedIndex]}
+               alt={`Foto ${selectedIndex + 1} do lote ${loteCode}`}
+               className="max-h-full max-w-full object-contain rounded"
+               onError={(e) => {
+                 console.error(`Erro ao carregar foto principal ${selectedIndex}:`, fotos[selectedIndex]);
+                 e.currentTarget.style.display = 'none';
+               }}
+             />
             
             {/* Controles de navegação */}
             {fotos.length > 1 && (
@@ -153,11 +157,15 @@ export const FotosGalleryModal = ({
                         : 'border-border hover:border-primary/50'
                     }`}
                   >
-                    <img
-                      src={foto}
-                      alt={`Miniatura ${index + 1}`}
-                      className="w-16 h-16 object-cover"
-                    />
+                     <img
+                       src={foto}
+                       alt={`Miniatura ${index + 1}`}
+                       className="w-16 h-16 object-cover"
+                       onError={(e) => {
+                         console.warn(`Erro ao carregar miniatura ${index}:`, foto);
+                         e.currentTarget.style.display = 'none';
+                       }}
+                     />
                     {index === selectedIndex && (
                       <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                         <ZoomIn className="h-4 w-4 text-primary" />

@@ -27,6 +27,8 @@ interface FotoUpload {
   preview: string;
   uploading: boolean;
   url?: string;
+  error?: string;
+  uploadProgress?: number;
 }
 
 export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
@@ -206,37 +208,94 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
         const foto = fotos[i];
         
         if (foto.url) {
-          urlsFotos.push(foto.url);
-          continue;
+          // Verificar se a URL ainda é válida
+          try {
+            const response = await fetch(foto.url, { method: 'HEAD' });
+            if (response.ok) {
+              urlsFotos.push(foto.url);
+              continue;
+            }
+          } catch (error) {
+            console.warn(`URL inválida para foto ${i}, reupload necessário:`, error);
+          }
         }
 
         // Marcar como fazendo upload
         setFotos(prev => {
           const novasFotos = [...prev];
-          novasFotos[i] = { ...novasFotos[i], uploading: true };
+          novasFotos[i] = { 
+            ...novasFotos[i], 
+            uploading: true, 
+            error: undefined,
+            uploadProgress: 0 
+          };
           return novasFotos;
         });
 
         const fileName = `${user.id}/manejo-${Date.now()}-${i}.jpg`;
+        
+        console.log(`Iniciando upload da foto ${i + 1}/${fotos.length}:`, fileName);
         
         const { error: uploadError } = await supabase.storage
           .from('manejo-fotos')
           .upload(fileName, foto.file);
 
         if (uploadError) {
-          throw uploadError;
+          console.error(`Erro no upload da foto ${i}:`, uploadError);
+          
+          // Marcar erro
+          setFotos(prev => {
+            const novasFotos = [...prev];
+            novasFotos[i] = { 
+              ...novasFotos[i], 
+              uploading: false, 
+              error: uploadError.message 
+            };
+            return novasFotos;
+          });
+          
+          throw new Error(`Falha no upload da foto ${i + 1}: ${uploadError.message}`);
         }
 
         const { data } = supabase.storage
           .from('manejo-fotos')
           .getPublicUrl(fileName);
 
+        // Verificar se a URL é válida
+        try {
+          const response = await fetch(data.publicUrl, { method: 'HEAD' });
+          if (!response.ok) {
+            throw new Error(`URL gerada inválida: ${response.status}`);
+          }
+        } catch (error) {
+          console.error(`Erro ao validar URL da foto ${i}:`, error);
+          
+          // Marcar erro
+          setFotos(prev => {
+            const novasFotos = [...prev];
+            novasFotos[i] = { 
+              ...novasFotos[i], 
+              uploading: false, 
+              error: 'URL inválida gerada' 
+            };
+            return novasFotos;
+          });
+          
+          throw new Error(`URL inválida para foto ${i + 1}`);
+        }
+
         urlsFotos.push(data.publicUrl);
+        console.log(`Upload da foto ${i + 1} concluído:`, data.publicUrl);
 
         // Marcar como concluído
         setFotos(prev => {
           const novasFotos = [...prev];
-          novasFotos[i] = { ...novasFotos[i], uploading: false, url: data.publicUrl };
+          novasFotos[i] = { 
+            ...novasFotos[i], 
+            uploading: false, 
+            url: data.publicUrl,
+            error: undefined 
+          };
           return novasFotos;
         });
       }
@@ -245,6 +304,7 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
       throw error;
     }
 
+    console.log(`Todas as ${urlsFotos.length} fotos foram enviadas com sucesso`);
     return urlsFotos;
   };
 
@@ -331,6 +391,74 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
     }
   };
 
+  const retryUpload = async (index: number) => {
+    if (!user || index >= fotos.length) return;
+    
+    const foto = fotos[index];
+    
+    // Resetar estado de erro
+    setFotos(prev => {
+      const novasFotos = [...prev];
+      novasFotos[index] = { 
+        ...novasFotos[index], 
+        error: undefined, 
+        uploading: true 
+      };
+      return novasFotos;
+    });
+
+    try {
+      const fileName = `${user.id}/manejo-retry-${Date.now()}-${index}.jpg`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('manejo-fotos')
+        .upload(fileName, foto.file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage
+        .from('manejo-fotos')
+        .getPublicUrl(fileName);
+
+      // Atualizar com sucesso
+      setFotos(prev => {
+        const novasFotos = [...prev];
+        novasFotos[index] = { 
+          ...novasFotos[index], 
+          uploading: false, 
+          url: data.publicUrl,
+          error: undefined 
+        };
+        return novasFotos;
+      });
+
+      toast({
+        title: "Upload recuperado",
+        description: `Foto ${index + 1} enviada com sucesso`,
+      });
+    } catch (error) {
+      console.error(`Erro no retry da foto ${index}:`, error);
+      
+      setFotos(prev => {
+        const novasFotos = [...prev];
+        novasFotos[index] = { 
+          ...novasFotos[index], 
+          uploading: false, 
+          error: error instanceof Error ? error.message : 'Erro desconhecido' 
+        };
+        return novasFotos;
+      });
+
+      toast({
+        title: "Falha no retry",
+        description: `Não foi possível reenviar a foto ${index + 1}`,
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleConfirmar = async () => {
     if (fotos.length === 0) {
       toast({
@@ -341,16 +469,32 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
       return;
     }
 
+    // Verificar se há fotos com erro
+    const fotosComErro = fotos.filter(f => f.error);
+    if (fotosComErro.length > 0) {
+      toast({
+        title: "Fotos com erro",
+        description: `${fotosComErro.length} foto(s) falharam no upload. Corrija ou remova-as antes de continuar.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
     try {
+      console.log('Iniciando processo de manejo...');
+      
       // Upload das fotos
       const fotoUrls = await uploadFotos();
+      console.log('Upload concluído, processando esteira...');
       
       // Processar esteira (atualizar lotes)
       await processarEsteira();
+      console.log('Esteira processada, registrando manejo...');
       
       // Registrar operações de manejo
       await registrarManejo(fotoUrls);
+      console.log('Manejo registrado com sucesso!');
 
       toast({
         title: "Manejo concluído!",
@@ -363,7 +507,7 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
       console.error('Erro ao processar manejo:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível processar o manejo",
+        description: error instanceof Error ? error.message : "Não foi possível processar o manejo",
         variant: "destructive"
       });
     } finally {
@@ -430,15 +574,48 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
                     {fotos.map((foto, index) => (
                       <div key={index} className="relative group">
                         <img
-                          src={foto.preview}
+                          src={foto.url || foto.preview}
                           alt={`Foto ${index + 1}`}
                           className="w-full h-24 object-cover rounded-lg border border-border"
+                          onError={(e) => {
+                            console.warn(`Erro ao carregar foto ${index}:`, foto.url || foto.preview);
+                            // Fallback para preview se URL falhar
+                            if (foto.url && e.currentTarget.src !== foto.preview) {
+                              e.currentTarget.src = foto.preview;
+                            }
+                          }}
                         />
+                        
                         {foto.uploading && (
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center rounded-lg">
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mb-1" />
+                            <span className="text-xs text-white">Upload...</span>
                           </div>
                         )}
+                        
+                        {foto.error && (
+                          <div className="absolute inset-0 bg-red-500/80 flex flex-col items-center justify-center rounded-lg">
+                            <X className="h-4 w-4 text-white mb-1" />
+                            <span className="text-xs text-white text-center px-1" title={foto.error}>
+                              Erro
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="mt-1 h-5 px-2 text-xs"
+                              onClick={() => retryUpload(index)}
+                            >
+                              Tentar novamente
+                            </Button>
+                          </div>
+                        )}
+                        
+                        {foto.url && !foto.uploading && !foto.error && (
+                          <div className="absolute top-1 left-1">
+                            <CheckCheck className="h-3 w-3 text-green-500 bg-white rounded-full p-0.5" />
+                          </div>
+                        )}
+                        
                         <Button
                           size="sm"
                           variant="destructive"
