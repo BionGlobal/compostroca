@@ -15,14 +15,18 @@ export interface Lote {
   data_inicio: string;
   data_encerramento?: string;
   data_proxima_transferencia?: string;
+  data_finalizacao?: string;
   latitude?: number;
   longitude?: number;
   peso_inicial: number;
   peso_atual: number;
+  peso_final?: number;
+  iot_data?: any;
   criado_por: string;
   criado_por_nome: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string;
 }
 
 export const useLotes = () => {
@@ -76,6 +80,7 @@ export const useLotes = () => {
         .eq('unidade', profile.organization_code)
         .eq('caixa_atual', 1)
         .eq('status', 'ativo')
+        .is('deleted_at', null)
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -239,7 +244,8 @@ export const useLotes = () => {
       const { data: entregas, error: entregasError } = await supabase
         .from('entregas')
         .select('peso')
-        .eq('lote_codigo', loteAtivoCaixa01?.codigo);
+        .eq('lote_codigo', loteAtivoCaixa01?.codigo)
+        .is('deleted_at', null);
 
       if (entregasError) throw entregasError;
 

@@ -15,6 +15,7 @@ export interface Entrega {
   qualidade_residuo?: number;
   created_at: string;
   updated_at: string;
+  deleted_at?: string;
 }
 
 export const useEntregas = (voluntarioId?: string) => {
@@ -29,6 +30,7 @@ export const useEntregas = (voluntarioId?: string) => {
       let query = supabase
         .from('entregas')
         .select('*')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (voluntarioId) {

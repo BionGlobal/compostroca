@@ -16,6 +16,7 @@ export interface Voluntario {
   ativo: boolean;
   created_at: string;
   updated_at: string;
+  deleted_at?: string;
 }
 
 export const useVoluntarios = () => {
@@ -33,6 +34,7 @@ export const useVoluntarios = () => {
         .from('voluntarios')
         .select('*')
         .eq('ativo', true)
+        .is('deleted_at', null)
         .order('nome');
 
       if (error) {
@@ -122,9 +124,13 @@ export const useVoluntarios = () => {
 
   const deleteVoluntario = async (id: string) => {
     try {
+      // Implementar soft delete
       const { error } = await supabase
         .from('voluntarios')
-        .update({ ativo: false })
+        .update({ 
+          ativo: false,
+          deleted_at: new Date().toISOString()
+        })
         .eq('id', id);
 
       if (error) throw error;
