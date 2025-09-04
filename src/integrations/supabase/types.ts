@@ -17,6 +17,7 @@ export type Database = {
       entrega_fotos: {
         Row: {
           created_at: string
+          deleted_at: string | null
           entrega_id: string
           foto_url: string
           id: string
@@ -25,6 +26,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           entrega_id: string
           foto_url: string
           id?: string
@@ -33,6 +35,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           entrega_id?: string
           foto_url?: string
           id?: string
@@ -44,6 +47,7 @@ export type Database = {
       entregas: {
         Row: {
           created_at: string
+          deleted_at: string | null
           geolocalizacao_validada: boolean | null
           id: string
           latitude: number | null
@@ -58,6 +62,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           geolocalizacao_validada?: boolean | null
           id?: string
           latitude?: number | null
@@ -72,6 +77,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           geolocalizacao_validada?: boolean | null
           id?: string
           latitude?: number | null
@@ -94,6 +100,67 @@ export type Database = {
           },
         ]
       }
+      lote_fotos: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          entrega_id: string | null
+          foto_url: string
+          id: string
+          lote_id: string
+          manejo_id: string | null
+          ordem_foto: number | null
+          tipo_foto: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          entrega_id?: string | null
+          foto_url: string
+          id?: string
+          lote_id: string
+          manejo_id?: string | null
+          ordem_foto?: number | null
+          tipo_foto: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          entrega_id?: string | null
+          foto_url?: string
+          id?: string
+          lote_id?: string
+          manejo_id?: string | null
+          ordem_foto?: number | null
+          tipo_foto?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lote_fotos_entrega_id_fkey"
+            columns: ["entrega_id"]
+            isOneToOne: false
+            referencedRelation: "entregas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lote_fotos_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lote_fotos_manejo_id_fkey"
+            columns: ["manejo_id"]
+            isOneToOne: false
+            referencedRelation: "manejo_semanal"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lotes: {
         Row: {
           caixa_atual: number
@@ -102,14 +169,18 @@ export type Database = {
           criado_por: string
           criado_por_nome: string
           data_encerramento: string | null
+          data_finalizacao: string | null
           data_inicio: string
           data_proxima_transferencia: string | null
+          deleted_at: string | null
           hash_integridade: string | null
           id: string
+          iot_data: Json | null
           latitude: number | null
           linha_producao: string
           longitude: number | null
           peso_atual: number | null
+          peso_final: number | null
           peso_inicial: number | null
           semana_atual: number
           status: string
@@ -123,14 +194,18 @@ export type Database = {
           criado_por: string
           criado_por_nome: string
           data_encerramento?: string | null
+          data_finalizacao?: string | null
           data_inicio?: string
           data_proxima_transferencia?: string | null
+          deleted_at?: string | null
           hash_integridade?: string | null
           id?: string
+          iot_data?: Json | null
           latitude?: number | null
           linha_producao?: string
           longitude?: number | null
           peso_atual?: number | null
+          peso_final?: number | null
           peso_inicial?: number | null
           semana_atual?: number
           status?: string
@@ -144,14 +219,18 @@ export type Database = {
           criado_por?: string
           criado_por_nome?: string
           data_encerramento?: string | null
+          data_finalizacao?: string | null
           data_inicio?: string
           data_proxima_transferencia?: string | null
+          deleted_at?: string | null
           hash_integridade?: string | null
           id?: string
+          iot_data?: Json | null
           latitude?: number | null
           linha_producao?: string
           longitude?: number | null
           peso_atual?: number | null
+          peso_final?: number | null
           peso_inicial?: number | null
           semana_atual?: number
           status?: string
@@ -165,6 +244,7 @@ export type Database = {
           caixa_destino: number | null
           caixa_origem: number
           created_at: string
+          deleted_at: string | null
           foto_url: string | null
           id: string
           latitude: number | null
@@ -180,6 +260,7 @@ export type Database = {
           caixa_destino?: number | null
           caixa_origem: number
           created_at?: string
+          deleted_at?: string | null
           foto_url?: string | null
           id?: string
           latitude?: number | null
@@ -195,6 +276,7 @@ export type Database = {
           caixa_destino?: number | null
           caixa_origem?: number
           created_at?: string
+          deleted_at?: string | null
           foto_url?: string | null
           id?: string
           latitude?: number | null
@@ -214,6 +296,7 @@ export type Database = {
           approved_by: string | null
           authorized_units: string[] | null
           created_at: string
+          deleted_at: string | null
           full_name: string | null
           id: string
           organization_code: string
@@ -228,6 +311,7 @@ export type Database = {
           approved_by?: string | null
           authorized_units?: string[] | null
           created_at?: string
+          deleted_at?: string | null
           full_name?: string | null
           id?: string
           organization_code?: string
@@ -242,6 +326,7 @@ export type Database = {
           approved_by?: string | null
           authorized_units?: string[] | null
           created_at?: string
+          deleted_at?: string | null
           full_name?: string | null
           id?: string
           organization_code?: string
