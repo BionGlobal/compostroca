@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, X, Calendar, Camera, AlertCircle, FileImage, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Calendar, Camera, AlertCircle, FileImage, Download, Archive } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useLoteFotos, LoteFoto } from '@/hooks/useLoteFotos';
+import { useZipDownload } from '@/hooks/useZipDownload';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FotosGalleryModalProps {
   isOpen: boolean;
@@ -36,6 +38,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
   const [isLoading, setIsLoading] = useState(true);
 
   const { fotos, loading } = useLoteFotos(loteId);
+  const { downloadPhotosAsZip, loading: zipLoading } = useZipDownload();
   
   // Filtrar fotos baseado nos parâmetros
   const filteredFotos = fotos.filter(foto => {
@@ -95,6 +98,25 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
     }
   };
 
+  const handleDownloadZip = async () => {
+    if (!filteredFotos.length) return;
+    
+    // Buscar código do lote via Supabase
+    try {
+      const { data: loteData } = await supabase
+        .from('lotes')
+        .select('codigo')
+        .eq('id', loteId)
+        .single();
+      
+      const loteCode = loteData?.codigo || loteId;
+      await downloadPhotosAsZip(filteredFotos, loteCode);
+    } catch (error) {
+      console.error('Erro ao buscar código do lote:', error);
+      await downloadPhotosAsZip(filteredFotos, loteId);
+    }
+  };
+
   if (!isOpen || loading) return null;
   
   if (filteredFotos.length === 0) {
@@ -132,6 +154,17 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                 <Download className="h-3 w-3 mr-1" />
                 Baixar
               </Button>
+              {filteredFotos.length > 1 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleDownloadZip}
+                  disabled={zipLoading}
+                >
+                  <Archive className="h-3 w-3 mr-1" />
+                  {zipLoading ? 'Gerando...' : 'Baixar ZIP'}
+                </Button>
+              )}
               <DialogClose asChild>
                 <Button variant="ghost" size="sm">
                   <X className="h-4 w-4" />

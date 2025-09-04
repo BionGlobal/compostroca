@@ -54,7 +54,7 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
   const co2eEvitado = isNovoLote ? 0 : (pesoInicial * 0.766); // Apenas para lotes prontos
   const taxaReducao = pesoInicial > 0 ? ((pesoInicial - pesoFinal) / pesoInicial) * 100 : 0;
   
-  // Determinar peso para exibição - usar peso_atual para lotes prontos
+  // Determinar peso para exibição - corrigir divisão incorreta
   const pesoExibicao = isNovoLote ? pesoInicial : (Number(lote.peso_atual) || 0);
   
   return (
@@ -115,7 +115,7 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
               {isLoteProng ? 'Peso Final' : 'Peso Inicial'}
             </div>
             <p className="text-2xl font-bold text-foreground">
-              {(pesoExibicao / 1000).toFixed(1)} kg
+              {(pesoExibicao).toFixed(1)} kg
             </p>
           </div>
 

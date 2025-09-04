@@ -28,7 +28,7 @@ export const useAdvancedPDFGenerator = () => {
       // Informações do lote
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Dados do Novo Lote:', 20, yPosition);
+      pdf.text('Dados do Lote Iniciado:', 20, yPosition);
       yPosition += 10;
 
       pdf.setFontSize(10);
@@ -62,22 +62,28 @@ export const useAdvancedPDFGenerator = () => {
       yPosition += 8;
 
       try {
-        // Buscar dados das entregas com voluntários
+        // Buscar dados das entregas por data de início
+        const dataInicio = new Date(lote.data_inicio).toISOString().split('T')[0];
         const { data: entregasData } = await supabase
           .from('entregas')
           .select(`
             peso, voluntario_id,
             voluntarios!inner(nome, numero_balde)
           `)
-          .eq('lote_codigo', lote.codigo);
+          .gte('created_at', `${dataInicio}T00:00:00.000Z`)
+          .lt('created_at', `${dataInicio}T23:59:59.999Z`);
 
         if (entregasData && entregasData.length > 0) {
+          const pesoTotalEntregas = entregasData.reduce((sum, e) => sum + Number(e.peso), 0);
+          const cepilhoCalculado = pesoTotalEntregas * 0.35;
+          const totalComCepilho = pesoTotalEntregas + cepilhoCalculado;
+          
           pdf.setFont('helvetica', 'normal');
-          pdf.text(`Peso das Entregas: ${formatWeight(pesoEntregas)}`, 25, yPosition);
+          pdf.text(`Peso das Entregas: ${formatWeight(pesoTotalEntregas)}`, 25, yPosition);
           yPosition += 5;
-          pdf.text(`Peso do Cepilho (35%): ${formatWeight(cepilho)}`, 25, yPosition);
+          pdf.text(`Peso do Cepilho (35%): ${formatWeight(cepilhoCalculado)}`, 25, yPosition);
           yPosition += 5;
-          pdf.text(`Total: ${formatWeight(pesoInicial)}`, 25, yPosition);
+          pdf.text(`Total Inicial: ${formatWeight(totalComCepilho)}`, 25, yPosition);
           yPosition += 8;
 
           pdf.setFont('helvetica', 'bold');
@@ -89,6 +95,12 @@ export const useAdvancedPDFGenerator = () => {
             const iniciais = entrega.voluntarios?.nome?.split(' ').map(n => n[0]).join('').toUpperCase() || 'N/A';
             pdf.text(`${index + 1}. ${iniciais} - Balde #${entrega.voluntarios?.numero_balde || 'N/A'} - ${formatWeight(Number(entrega.peso))}`, 30, yPosition);
             yPosition += 4;
+            
+            // Quebra de página se necessário
+            if (yPosition > 260) {
+              pdf.addPage();
+              yPosition = 20;
+            }
           });
         }
       } catch (error) {
@@ -271,20 +283,25 @@ export const useAdvancedPDFGenerator = () => {
       yPosition += 8;
 
       try {
-        // Buscar dados das entregas com voluntários
+        // Buscar dados das entregas por data de início 
+        const dataInicio = new Date(lote.data_inicio).toISOString().split('T')[0];
         const { data: entregasData } = await supabase
           .from('entregas')
           .select(`
             peso, voluntario_id,
             voluntarios!inner(nome, numero_balde)
           `)
-          .eq('lote_codigo', lote.codigo);
+          .gte('created_at', `${dataInicio}T00:00:00.000Z`)
+          .lt('created_at', `${dataInicio}T23:59:59.999Z`);
 
         if (entregasData && entregasData.length > 0) {
+          const pesoTotalEntregas = entregasData.reduce((sum, e) => sum + Number(e.peso), 0);
+          const cepilhoCalculado = pesoTotalEntregas * 0.35;
+          
           pdf.setFont('helvetica', 'normal');
-          pdf.text(`Peso das Entregas: ${formatWeight(pesoEntregas)}`, 25, yPosition);
+          pdf.text(`Peso das Entregas: ${formatWeight(pesoTotalEntregas)}`, 25, yPosition);
           yPosition += 5;
-          pdf.text(`Peso do Cepilho (35%): ${formatWeight(cepilho)}`, 25, yPosition);
+          pdf.text(`Peso do Cepilho (35%): ${formatWeight(cepilhoCalculado)}`, 25, yPosition);
           yPosition += 5;
           pdf.text(`Total Inicial: ${formatWeight(pesoInicial)}`, 25, yPosition);
           yPosition += 8;
@@ -298,6 +315,12 @@ export const useAdvancedPDFGenerator = () => {
             const iniciais = entrega.voluntarios?.nome?.split(' ').map(n => n[0]).join('').toUpperCase() || 'N/A';
             pdf.text(`${index + 1}. ${iniciais} - Balde #${entrega.voluntarios?.numero_balde || 'N/A'} - ${formatWeight(Number(entrega.peso))}`, 30, yPosition);
             yPosition += 4;
+            
+            // Quebra de página se necessário
+            if (yPosition > 250) {
+              pdf.addPage();
+              yPosition = 20;
+            }
           });
         }
       } catch (error) {
