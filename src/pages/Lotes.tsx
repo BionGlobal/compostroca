@@ -76,14 +76,16 @@ const Lotes = () => {
   const [showManejoSemanal, setShowManejoSemanal] = useState(false);
   const [fotosModalData, setFotosModalData] = useState<{
     open: boolean;
-    fotos: string[];
+    loteId: string;
     title: string;
-    loteCode: string;
+    entregaId?: string;
+    manejoId?: string;
   }>({
     open: false,
-    fotos: [],
+    loteId: '',
     title: '',
-    loteCode: ''
+    entregaId: undefined,
+    manejoId: undefined
   });
 
   const handleManejoClick = (lote: any) => {
@@ -96,12 +98,13 @@ const Lotes = () => {
   };
 
   // History handlers
-  const handleViewPhotos = (fotos: string[], title: string, loteCode: string) => {
+  const handleViewPhotos = (loteId: string, title: string, entregaId?: string, manejoId?: string) => {
     setFotosModalData({
       open: true,
-      fotos,
+      loteId,
       title,
-      loteCode
+      entregaId,
+      manejoId
     });
   };
 
@@ -141,9 +144,9 @@ const Lotes = () => {
           <NovoLoteCardFlip
             {...commonProps}
             onViewPhotos={() => handleViewPhotos(
-              evento.fotos || [],
+              evento.lote_id,
               'Fotos das Entregas',
-              evento.lote_codigo
+              evento.entrega_id
             )}
           />
         );
@@ -151,10 +154,11 @@ const Lotes = () => {
         return (
           <ManutencaoCardFlip
             {...commonProps}
-            onViewPhotos={evento.fotos?.length > 0 ? () => handleViewPhotos(
-              evento.fotos,
+            onViewPhotos={evento.manejo_id ? () => handleViewPhotos(
+              evento.lote_id,
               'Fotos da Manutenção',
-              evento.lote_codigo
+              undefined,
+              evento.manejo_id
             ) : undefined}
           />
         );
@@ -163,9 +167,8 @@ const Lotes = () => {
           <LoteProntoCard
             {...commonProps}
             onViewPhotos={() => handleViewPhotos(
-              evento.fotos || [],
-              'Fotos do Lote Finalizado',
-              evento.lote_codigo
+              evento.lote_id,
+              'Fotos do Lote Finalizado'
             )}
           />
         );
@@ -431,11 +434,12 @@ const Lotes = () => {
 
       {/* Modal de Galeria de Fotos */}
       <FotosGalleryModal
-        open={fotosModalData.open}
-        onOpenChange={(open) => setFotosModalData(prev => ({ ...prev, open }))}
-        fotos={fotosModalData.fotos}
+        isOpen={fotosModalData.open}
+        onClose={() => setFotosModalData(prev => ({ ...prev, open: false }))}
+        loteId={fotosModalData.loteId}
         title={fotosModalData.title}
-        loteCode={fotosModalData.loteCode}
+        entregaId={fotosModalData.entregaId}
+        manejoId={fotosModalData.manejoId}
       />
     </div>
   );
