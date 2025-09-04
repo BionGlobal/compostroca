@@ -2,11 +2,12 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Camera, RotateCcw, Check, X, AlertTriangle } from 'lucide-react';
-import { useEntregaFotos } from '@/hooks/useEntregaFotos';
+import { useLoteFotos } from '@/hooks/useLoteFotos';
 import { useIOSPermissions } from '@/hooks/useIOSPermissions';
 
 interface EntregaFotosCaptureProps {
   entregaId: string;
+  loteId: string;
   onComplete: () => void;
   onCancel: () => void;
 }
@@ -28,6 +29,7 @@ const FOTO_INSTRUCTIONS = {
 
 export const EntregaFotosCapture: React.FC<EntregaFotosCaptureProps> = ({
   entregaId,
+  loteId,
   onComplete,
   onCancel
 }) => {
@@ -39,7 +41,7 @@ export const EntregaFotosCapture: React.FC<EntregaFotosCaptureProps> = ({
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
-  const { uploadFoto, uploading, validateAllPhotos } = useEntregaFotos(entregaId);
+  const { uploadFoto, uploading } = useLoteFotos();
   const { 
     deviceInfo, 
     permissions, 
@@ -125,9 +127,12 @@ export const EntregaFotosCapture: React.FC<EntregaFotosCaptureProps> = ({
     const blob = await response.blob();
     const file = new File([blob], `${currentStep}_${Date.now()}.jpg`, { type: 'image/jpeg' });
 
-    const success = await uploadFoto(file, currentStep, entregaId);
+    // Mapear tipo da foto para o novo formato
+    const tipoFoto = `entrega_${currentStep}` as 'entrega_conteudo' | 'entrega_pesagem' | 'entrega_destino';
     
-    if (success) {
+    const result = await uploadFoto(file, tipoFoto, loteId, entregaId);
+    
+    if (result) {
       setCapturedImage(null);
       
       // Avançar para próxima foto ou finalizar
