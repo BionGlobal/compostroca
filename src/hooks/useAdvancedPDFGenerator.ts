@@ -28,15 +28,12 @@ export const useAdvancedPDFGenerator = () => {
       // Informações do lote
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Dados do Lote Iniciado:', 20, yPosition);
+      pdf.text('Dados do Novo Lote:', 20, yPosition);
       yPosition += 10;
 
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
       const pesoInicial = Number(lote.peso_inicial) || 0;
-      const pesoAtual = Number(lote.peso_atual) || 0;
-      const cepilho = pesoInicial * 0.35; // 35% do peso total
-      const pesoEntregas = pesoInicial - cepilho;
       
       const info = [
         `Código: ${lote.codigo}`,
@@ -45,33 +42,11 @@ export const useAdvancedPDFGenerator = () => {
         `Data de Início: ${new Date(lote.data_inicio).toLocaleDateString('pt-BR')}`,
         `Validador: ${lote.criado_por_nome}`,
         `Peso Inicial Total: ${formatWeight(pesoInicial)}`,
-        `Peso Final: N/A`,
-        `Redução Total: N/A`,
         `Voluntários Envolvidos: ${lote.num_voluntarios}`,
         `Qualidade Média: ${lote.qualidade_media.toFixed(1)}/3`
       ];
 
       info.forEach(line => {
-        pdf.text(line, 20, yPosition);
-        yPosition += 6;
-      });
-
-      yPosition += 10;
-
-      // Impacto ambiental
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Impacto Ambiental:', 20, yPosition);
-      yPosition += 8;
-
-      pdf.setFont('helvetica', 'normal');
-      const impacto = [
-        `CO2e Evitado: N/A`,
-        `Resíduos Desviados: ${formatWeight(pesoInicial)}`,
-        `Composto Produzido: N/A`,
-        `Taxa de Redução: N/A`
-      ];
-
-      impacto.forEach(line => {
         pdf.text(line, 20, yPosition);
         yPosition += 6;
       });
@@ -119,11 +94,103 @@ export const useAdvancedPDFGenerator = () => {
             yPosition += 4;
             
             // Quebra de página se necessário
-            if (yPosition > 260) {
+            if (yPosition > 200) {
               pdf.addPage();
               yPosition = 20;
             }
           });
+
+          yPosition += 15;
+
+          // Adicionar grid de fotos das entregas
+          try {
+            const dataInicio = new Date(lote.data_inicio).toISOString().split('T')[0];
+            const { data: fotosData } = await supabase
+              .from('entrega_fotos')
+              .select(`
+                foto_url, tipo_foto,
+                entregas!inner(
+                  created_at,
+                  voluntarios!inner(numero_balde)
+                )
+              `)
+              .gte('entregas.created_at', `${dataInicio}T00:00:00.000Z`)
+              .lt('entregas.created_at', `${dataInicio}T23:59:59.999Z`)
+              .order('entregas.created_at');
+
+            if (fotosData && fotosData.length > 0) {
+              pdf.setFont('helvetica', 'bold');
+              pdf.text('Fotos das Entregas:', 25, yPosition);
+              yPosition += 10;
+
+              // Grid de 5 colunas
+              const fotosPerRow = 5;
+              const fotoWidth = 30;
+              const fotoHeight = 30;
+              const margin = 5;
+              const startX = 20;
+              
+              for (let i = 0; i < fotosData.length; i++) {
+                const row = Math.floor(i / fotosPerRow);
+                const col = i % fotosPerRow;
+                const x = startX + col * (fotoWidth + margin);
+                const y = yPosition + row * (fotoHeight + margin);
+
+                // Verificar se precisa de nova página
+                if (y + fotoHeight > 280) {
+                  pdf.addPage();
+                  yPosition = 20;
+                  // Recalcular posição após quebra de página
+                  const newRow = Math.floor((i % (fotosPerRow * 8)) / fotosPerRow); // 8 linhas por página
+                  const newY = yPosition + newRow * (fotoHeight + margin);
+                  
+                  try {
+                    // Tentar carregar e adicionar a imagem
+                    const response = await fetch(fotosData[i].foto_url);
+                    if (response.ok) {
+                      const blob = await response.blob();
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        try {
+                          pdf.addImage(reader.result as string, 'JPEG', x, newY, fotoWidth, fotoHeight);
+                        } catch (imgError) {
+                          console.warn(`Erro ao adicionar imagem ${i}:`, imgError);
+                        }
+                      };
+                      reader.readAsDataURL(blob);
+                    }
+                  } catch (imgError) {
+                    console.warn(`Erro ao carregar foto ${i}:`, imgError);
+                  }
+                } else {
+                  try {
+                    // Tentar carregar e adicionar a imagem
+                    const response = await fetch(fotosData[i].foto_url);
+                    if (response.ok) {
+                      const blob = await response.blob();
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        try {
+                          pdf.addImage(reader.result as string, 'JPEG', x, y, fotoWidth, fotoHeight);
+                        } catch (imgError) {
+                          console.warn(`Erro ao adicionar imagem ${i}:`, imgError);
+                        }
+                      };
+                      reader.readAsDataURL(blob);
+                    }
+                  } catch (imgError) {
+                    console.warn(`Erro ao carregar foto ${i}:`, imgError);
+                  }
+                }
+              }
+              
+              // Ajustar yPosition final
+              const totalRows = Math.ceil(fotosData.length / fotosPerRow);
+              yPosition += totalRows * (fotoHeight + margin) + 10;
+            }
+          } catch (error) {
+            console.error('Erro ao buscar fotos das entregas:', error);
+          }
         }
       } catch (error) {
         console.error('Erro ao buscar dados de entregas:', error);

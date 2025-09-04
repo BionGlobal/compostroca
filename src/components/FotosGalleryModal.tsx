@@ -183,9 +183,6 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
               >
                 {viewMode === 'grid' ? <Eye className="h-3 w-3" /> : <Grid className="h-3 w-3" />}
               </Button>
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </DialogHeader>
