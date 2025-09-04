@@ -46,6 +46,7 @@ export const useLoteFotos = (loteId?: string) => {
     
     try {
       setLoading(true);
+      console.log('🔍 Buscando fotos para lote:', loteId);
 
       // Buscar dados do lote
       const { data: loteData } = await supabase
@@ -70,12 +71,6 @@ export const useLoteFotos = (loteId?: string) => {
           qualidade_residuo,
           created_at,
           lote_codigo,
-          entrega_fotos!inner(
-            id,
-            foto_url,
-            tipo_foto,
-            created_at
-          ),
           voluntarios:voluntario_id(
             id,
             nome,
@@ -83,8 +78,46 @@ export const useLoteFotos = (loteId?: string) => {
           )
         `)
         .gte('created_at', `${dataInicio}T00:00:00.000Z`)
-        .lt('created_at', `${dataInicio}T23:59:59.999Z`)
-        .is('entrega_fotos.deleted_at', null);
+        .lt('created_at', `${dataInicio}T23:59:59.999Z`);
+      
+      console.log('📅 Data do lote:', dataInicio, 'Entregas encontradas:', entregasPorData?.length || 0);
+
+      // Buscar todas as fotos das entregas encontradas
+      let fotosEntregas: LoteFoto[] = [];
+      if (entregasPorData && entregasPorData.length > 0) {
+        const entregaIds = entregasPorData.map(e => e.id);
+        
+        const { data: fotosEntregasData } = await supabase
+          .from('entrega_fotos')
+          .select('*')
+          .in('entrega_id', entregaIds)
+          .is('deleted_at', null);
+
+        console.log('📸 Fotos de entregas encontradas:', fotosEntregasData?.length || 0);
+
+        if (fotosEntregasData) {
+          fotosEntregas = fotosEntregasData.map((foto: any) => {
+            const entrega = entregasPorData.find(e => e.id === foto.entrega_id);
+            return {
+              id: foto.id,
+              lote_id: loteId,
+              foto_url: foto.foto_url,
+              tipo_foto: foto.tipo_foto,
+              created_at: foto.created_at,
+              entrega_id: foto.entrega_id,
+              manejo_id: null,
+              ordem_foto: null,
+              entregas: entrega ? {
+                id: entrega.id,
+                peso: entrega.peso,
+                qualidade_residuo: entrega.qualidade_residuo,
+                voluntarios: entrega.voluntarios
+              } : null,
+              manejo_semanal: null
+            };
+          });
+        }
+      }
 
       // Buscar fotos de manejo semanal do lote
       const { data: fotosManejo } = await supabase
@@ -110,32 +143,6 @@ export const useLoteFotos = (loteId?: string) => {
         .is('deleted_at', null)
         .order('created_at', { ascending: true });
 
-      // Processar fotos das entregas
-      let fotosEntregas: LoteFoto[] = [];
-      if (entregasPorData && Array.isArray(entregasPorData)) {
-        fotosEntregas = entregasPorData.flatMap(entrega => {
-          if (!entrega.entrega_fotos || !Array.isArray(entrega.entrega_fotos)) {
-            return [];
-          }
-          return entrega.entrega_fotos.map((foto: any) => ({
-            id: foto.id,
-            lote_id: loteId,
-            foto_url: foto.foto_url,
-            tipo_foto: foto.tipo_foto,
-            created_at: foto.created_at,
-            entrega_id: entrega.id,
-            manejo_id: null,
-            ordem_foto: null,
-            entregas: {
-              id: entrega.id,
-              peso: entrega.peso,
-              qualidade_residuo: entrega.qualidade_residuo,
-              voluntarios: entrega.voluntarios
-            },
-            manejo_semanal: null
-          }));
-        });
-      }
 
       // Processar fotos de manejo e garantir tipo correto
       const fotosManejoProcesadas: LoteFoto[] = (fotosManejo || []).map(foto => ({
@@ -153,6 +160,8 @@ export const useLoteFotos = (loteId?: string) => {
 
       // Combinar fotos de entregas e manejo
       const todasFotos = [...fotosEntregas, ...fotosManejoProcesadas];
+      
+      console.log('✅ Total de fotos encontradas:', todasFotos.length, 'Entregas:', fotosEntregas.length, 'Manejo:', fotosManejoProcesadas.length);
 
       setFotos(todasFotos);
     } catch (error) {

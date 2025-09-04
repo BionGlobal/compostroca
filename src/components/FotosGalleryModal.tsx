@@ -136,11 +136,6 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
-            <DialogClose asChild>
-              <Button variant="ghost" size="sm" className="absolute right-2 top-2">
-                <X className="h-4 w-4" />
-              </Button>
-            </DialogClose>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <FileImage className="h-12 w-12 text-muted-foreground mb-4" />
