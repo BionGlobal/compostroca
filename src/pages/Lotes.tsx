@@ -36,6 +36,7 @@ import { NovoLoteCardFlip } from '@/components/NovoLoteCardFlip';
 import { ManutencaoCardFlip } from '@/components/ManutencaoCardFlip';
 import { LoteProntoCard } from '@/components/LoteProntoCard';
 import { FotosGalleryModal } from '@/components/FotosGalleryModal';
+import { FotosLoteProntoModal } from '@/components/FotosLoteProntoModal';
 
 const Lotes = () => {
   const {
@@ -87,6 +88,12 @@ const Lotes = () => {
     manejoId: undefined
   });
 
+  const [fotosLoteProntoModal, setFotosLoteProntoModal] = useState({
+    open: false,
+    loteId: '',
+    title: ''
+  });
+
   const handleManejoClick = (lote: any) => {
     // Modal já é aberto pelo ManejoCard
     console.log('Manejo para lote:', lote.codigo);
@@ -104,6 +111,14 @@ const Lotes = () => {
       title,
       entregaId,
       manejoId
+    });
+  };
+
+  const handleViewLoteProntoPhotos = (loteId: string, title: string) => {
+    setFotosLoteProntoModal({
+      open: true,
+      loteId,
+      title
     });
   };
 
@@ -386,6 +401,14 @@ const Lotes = () => {
         title={fotosModalData.title}
         entregaId={fotosModalData.entregaId}
         manejoId={fotosModalData.manejoId}
+      />
+
+      {/* Modal de Fotos do Lote Pronto */}
+      <FotosLoteProntoModal
+        isOpen={fotosLoteProntoModal.open}
+        onClose={() => setFotosLoteProntoModal(prev => ({ ...prev, open: false }))}
+        loteId={fotosLoteProntoModal.loteId}
+        title={fotosLoteProntoModal.title}
       />
     </div>
   );

@@ -8,7 +8,7 @@ import { HistoricoEvent } from '@/hooks/useHistoricoLotes';
 
 interface LoteProntoCardProps {
   evento: HistoricoEvent;
-  onViewPhotos?: () => void;
+  onViewPhotos?: (loteId: string, title: string) => void;
   onDownloadPDF?: () => void;
   loading?: boolean;
 }
@@ -115,7 +115,11 @@ export const LoteProntoCard = ({ evento, onViewPhotos, onDownloadPDF, loading }:
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={(e) => { e.stopPropagation(); onViewPhotos(); }}
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              // Para lotes prontos, mostrar fotos das entregas da data de início e fotos da última manutenção (caixa 7)
+              onViewPhotos?.(evento.dados_especificos.id, `Fotos do Lote Finalizado ${evento.lote_codigo}`);
+            }}
             className="bg-white/20 border-white/30 text-white hover:bg-white/30 text-xs h-8"
           >
             <Camera className="w-3 h-3 mr-1" />
