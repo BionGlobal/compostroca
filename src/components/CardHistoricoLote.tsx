@@ -51,11 +51,11 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
   // Calcular métricas
   const pesoInicial = Number(lote.peso_inicial) || 0;
   const pesoFinal = Number(lote.peso_final || lote.peso_atual) || 0;
-  const co2eEvitado = pesoInicial * 0.766; // Formula especificada
+  const co2eEvitado = isNovoLote ? 0 : (pesoInicial * 0.766); // Apenas para lotes prontos
   const taxaReducao = pesoInicial > 0 ? ((pesoInicial - pesoFinal) / pesoInicial) * 100 : 0;
   
   // Determinar peso para exibição
-  const pesoExibicao = isLoteProng ? pesoFinal : (lote.peso_atual || pesoInicial);
+  const pesoExibicao = isNovoLote ? pesoInicial : pesoFinal;
   
   return (
     <Card className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg ${
@@ -112,7 +112,7 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Weight className="h-4 w-4" />
-              {isLoteProng ? 'Peso Final' : 'Peso Atual'}
+              {isLoteProng ? 'Peso Final' : 'Peso Inicial'}
             </div>
             <p className="text-2xl font-bold text-foreground">
               {(pesoExibicao / 1000).toFixed(1)} kg
@@ -125,7 +125,7 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
               CO2e Evitado
             </div>
             <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-              {co2eEvitado.toFixed(1)} kg
+              {isNovoLote ? '-' : `${co2eEvitado.toFixed(1)} kg`}
             </p>
           </div>
         </div>
@@ -138,7 +138,7 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
               <span>{lote.num_voluntarios} voluntário{lote.num_voluntarios !== 1 ? 's' : ''}</span>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Qualidade: {lote.qualidade_media.toFixed(1)}/5</span>
+              <span>Qualidade: {lote.qualidade_media.toFixed(1)}/3</span>
             </div>
           </div>
 
@@ -171,8 +171,8 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
           </div>
         )}
 
-        {/* Ações */}
-        <div className="flex flex-col sm:flex-row gap-2 pt-4">
+        {/* Ações - Mobile First */}
+        <div className="flex flex-col gap-2 pt-4">
           <Button
             variant="outline"
             size="sm"

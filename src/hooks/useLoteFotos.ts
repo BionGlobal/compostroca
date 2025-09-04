@@ -14,6 +14,21 @@ export interface LoteFoto {
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
+  // Dados enriched
+  entregas?: {
+    id: string;
+    voluntario_id: string;
+    voluntarios: {
+      id: string;
+      nome: string;
+      numero_balde: number;
+    };
+  } | null;
+  manejo_semanal?: {
+    id: string;
+    caixa_origem: number;
+    caixa_destino: number;
+  } | null;
 }
 
 export const useLoteFotos = (loteId?: string) => {
@@ -31,9 +46,19 @@ export const useLoteFotos = (loteId?: string) => {
 
     try {
       setLoading(true);
+      // Buscar fotos do lote com dados enriched de entregas/voluntários
       const { data, error } = await supabase
         .from('lote_fotos')
-        .select('*')
+        .select(`
+          *,
+          entregas!left(
+            id, voluntario_id,
+            voluntarios!inner(id, nome, numero_balde)
+          ),
+          manejo_semanal!left(
+            id, caixa_origem, caixa_destino
+          )
+        `)
         .eq('lote_id', loteId)
         .is('deleted_at', null)
         .order('created_at', { ascending: true });

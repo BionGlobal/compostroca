@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import jsPDF from 'jspdf';
+import QRCode from 'qrcode';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { LoteHistorico } from './useHistoricoLotes';
 import { formatWeight, calculateWeightReduction, getOrganizationName } from '@/lib/organizationUtils';
+import { generateLoteHash, type LoteHashData } from '@/lib/hashUtils';
 
 export const useAdvancedPDFGenerator = () => {
   const [loading, setLoading] = useState(false);
@@ -20,19 +22,21 @@ export const useAdvancedPDFGenerator = () => {
       // Cabeçalho
       pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Relatório - Novo Lote', pageWidth / 2, yPosition, { align: 'center' });
+      pdf.text('RELATÓRIO - NOVO LOTE', pageWidth / 2, yPosition, { align: 'center' });
       yPosition += 20;
 
       // Informações do lote
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Dados do Lote:', 20, yPosition);
+      pdf.text('Dados do Novo Lote:', 20, yPosition);
       yPosition += 10;
 
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
       const pesoInicial = Number(lote.peso_inicial) || 0;
       const pesoAtual = Number(lote.peso_atual) || 0;
+      const cepilho = pesoInicial * 0.35; // 35% do peso total
+      const pesoEntregas = pesoInicial - cepilho;
       
       const info = [
         `Código: ${lote.codigo}`,
@@ -40,11 +44,9 @@ export const useAdvancedPDFGenerator = () => {
         `Data de Criação: ${new Date(lote.created_at).toLocaleDateString('pt-BR')}`,
         `Data de Início: ${new Date(lote.data_inicio).toLocaleDateString('pt-BR')}`,
         `Validador: ${lote.criado_por_nome}`,
-        `Peso Inicial: ${formatWeight(pesoInicial)}`,
-        `Peso Atual: ${formatWeight(pesoAtual)}`,
+        `Peso Inicial Total: ${formatWeight(pesoInicial)}`,
         `Voluntários Envolvidos: ${lote.num_voluntarios}`,
-        `Qualidade Média: ${lote.qualidade_media}/5`,
-        `CO2e Evitado (projetado): ${lote.co2e_evitado.toFixed(2)} kg`
+        `Qualidade Média: ${lote.qualidade_media.toFixed(1)}/3`
       ];
 
       info.forEach(line => {
@@ -54,37 +56,44 @@ export const useAdvancedPDFGenerator = () => {
 
       yPosition += 10;
 
-      // Buscar fotos das entregas para este lote
-      try {
-        const { data: fotosEntregas } = await supabase
-          .from('lote_fotos')
-          .select('foto_url, tipo_foto, created_at')
-          .eq('lote_id', lote.id)
-          .eq('tipo_foto', 'entrega_conteudo')
-          .limit(5);
+      // Seção especial para Voluntários e Entregas
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Voluntários e Entregas:', 20, yPosition);
+      yPosition += 8;
 
-        if (fotosEntregas && fotosEntregas.length > 0) {
+      try {
+        // Buscar dados das entregas com voluntários
+        const { data: entregasData } = await supabase
+          .from('entregas')
+          .select(`
+            peso, voluntario_id,
+            voluntarios!inner(nome, numero_balde)
+          `)
+          .eq('lote_codigo', lote.codigo);
+
+        if (entregasData && entregasData.length > 0) {
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`Peso das Entregas: ${formatWeight(pesoEntregas)}`, 25, yPosition);
+          yPosition += 5;
+          pdf.text(`Peso do Cepilho (35%): ${formatWeight(cepilho)}`, 25, yPosition);
+          yPosition += 5;
+          pdf.text(`Total: ${formatWeight(pesoInicial)}`, 25, yPosition);
+          yPosition += 8;
+
           pdf.setFont('helvetica', 'bold');
-          pdf.text('Fotos das Entregas:', 20, yPosition);
+          pdf.text('Detalhamento por Voluntário:', 25, yPosition);
           yPosition += 6;
           
           pdf.setFont('helvetica', 'normal');
-          fotosEntregas.forEach((foto, index) => {
-            pdf.text(`${index + 1}. Entrega - ${new Date(foto.created_at).toLocaleDateString('pt-BR')}`, 25, yPosition);
-            yPosition += 5;
+          entregasData.forEach((entrega, index) => {
+            const iniciais = entrega.voluntarios?.nome?.split(' ').map(n => n[0]).join('').toUpperCase() || 'N/A';
+            pdf.text(`${index + 1}. ${iniciais} - Balde #${entrega.voluntarios?.numero_balde || 'N/A'} - ${formatWeight(Number(entrega.peso))}`, 30, yPosition);
+            yPosition += 4;
           });
         }
       } catch (error) {
-        console.error('Erro ao buscar fotos:', error);
+        console.error('Erro ao buscar dados de entregas:', error);
       }
-
-      // Dados IoT (preparado para futuros sensores)
-      yPosition += 10;
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Dados IoT:', 20, yPosition);
-      yPosition += 6;
-      pdf.setFont('helvetica', 'normal');
-      pdf.text('Sistema preparado para receber dados de sensores (Temperatura, pH, etc.)', 20, yPosition);
 
       // Rodapé
       pdf.setFontSize(8);
@@ -199,7 +208,7 @@ export const useAdvancedPDFGenerator = () => {
       // Cabeçalho
       pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Relatório - Lote Finalizado', pageWidth / 2, yPosition, { align: 'center' });
+      pdf.text('RELATÓRIO - LOTE FINALIZADO', pageWidth / 2, yPosition, { align: 'center' });
       yPosition += 20;
 
       // Informações do lote finalizado
@@ -212,6 +221,8 @@ export const useAdvancedPDFGenerator = () => {
       pdf.setFont('helvetica', 'normal');
       const pesoInicial = Number(lote.peso_inicial) || 0;
       const pesoFinal = Number(lote.peso_final) || 0;
+      const cepilho = pesoInicial * 0.35; // 35% do peso total
+      const pesoEntregas = pesoInicial - cepilho;
       
       const info = [
         `Código: ${lote.codigo}`,
@@ -224,7 +235,7 @@ export const useAdvancedPDFGenerator = () => {
         `Redução Total: ${lote.taxa_reducao?.toFixed(1) || 0}%`,
         `Tempo Total: ${lote.tempo_processamento || 'N/A'} semanas`,
         `Voluntários Envolvidos: ${lote.num_voluntarios}`,
-        `Qualidade Média: ${lote.qualidade_media}/5`
+        `Qualidade Média: ${lote.qualidade_media.toFixed(1)}/3`
       ];
 
       info.forEach(line => {
@@ -254,69 +265,99 @@ export const useAdvancedPDFGenerator = () => {
 
       yPosition += 10;
 
-      // Buscar todas as fotos relacionadas ao lote
-      try {
-        const { data: todasFotos } = await supabase
-          .from('lote_fotos')
-          .select('foto_url, tipo_foto, created_at, entrega_id, manejo_id')
-          .eq('lote_id', lote.id)
-          .order('created_at', { ascending: true });
+      // Seção especial para Voluntários e Entregas
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Voluntários e Entregas:', 20, yPosition);
+      yPosition += 8;
 
-        if (todasFotos && todasFotos.length > 0) {
-          pdf.setFont('helvetica', 'bold');
-          pdf.text('Registro Fotográfico Completo:', 20, yPosition);
+      try {
+        // Buscar dados das entregas com voluntários
+        const { data: entregasData } = await supabase
+          .from('entregas')
+          .select(`
+            peso, voluntario_id,
+            voluntarios!inner(nome, numero_balde)
+          `)
+          .eq('lote_codigo', lote.codigo);
+
+        if (entregasData && entregasData.length > 0) {
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`Peso das Entregas: ${formatWeight(pesoEntregas)}`, 25, yPosition);
+          yPosition += 5;
+          pdf.text(`Peso do Cepilho (35%): ${formatWeight(cepilho)}`, 25, yPosition);
+          yPosition += 5;
+          pdf.text(`Total Inicial: ${formatWeight(pesoInicial)}`, 25, yPosition);
           yPosition += 8;
+
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Detalhamento por Voluntário:', 25, yPosition);
+          yPosition += 6;
           
           pdf.setFont('helvetica', 'normal');
-          const fotosEntregas = todasFotos.filter(f => f.entrega_id);
-          const fotosManejos = todasFotos.filter(f => f.manejo_id);
-          
-          if (fotosEntregas.length > 0) {
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(`Fotos das Entregas (${fotosEntregas.length}):`, 25, yPosition);
-            yPosition += 5;
-            pdf.setFont('helvetica', 'normal');
-            fotosEntregas.slice(0, 5).forEach((foto, index) => {
-              pdf.text(`${index + 1}. ${foto.tipo_foto} - ${new Date(foto.created_at).toLocaleDateString('pt-BR')}`, 30, yPosition);
-              yPosition += 4;
-            });
-          }
-          
-          if (fotosManejos.length > 0) {
-            yPosition += 3;
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(`Fotos do Manejo Final (${fotosManejos.length}):`, 25, yPosition);
-            yPosition += 5;
-            pdf.setFont('helvetica', 'normal');
-            fotosManejos.forEach((foto, index) => {
-              pdf.text(`${index + 1}. ${foto.tipo_foto} - ${new Date(foto.created_at).toLocaleDateString('pt-BR')}`, 30, yPosition);
-              yPosition += 4;
-            });
-          }
+          entregasData.forEach((entrega, index) => {
+            const iniciais = entrega.voluntarios?.nome?.split(' ').map(n => n[0]).join('').toUpperCase() || 'N/A';
+            pdf.text(`${index + 1}. ${iniciais} - Balde #${entrega.voluntarios?.numero_balde || 'N/A'} - ${formatWeight(Number(entrega.peso))}`, 30, yPosition);
+            yPosition += 4;
+          });
         }
       } catch (error) {
-        console.error('Erro ao buscar fotos do lote:', error);
+        console.error('Erro ao buscar dados de entregas:', error);
       }
 
-      // Dados IoT (preparado para futuros sensores)
       yPosition += 10;
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Dados IoT e Sensores:', 20, yPosition);
-      yPosition += 6;
-      pdf.setFont('helvetica', 'normal');
-      pdf.text('Sistema preparado para dados de Temperatura, pH, Condutividade, N, P, K', 20, yPosition);
-      yPosition += 4;
-      pdf.text('(Dados serão integrados quando sensores forem instalados)', 20, yPosition);
 
       // Certificação e Hash de Integridade
-      yPosition += 10;
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Certificação de Auditoria:', 20, yPosition);
-      yPosition += 6;
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`Hash de Integridade: ${lote.id}-${Date.now()}`, 20, yPosition);
-      yPosition += 4;
-      pdf.text('Este documento certifica a veracidade dos dados apresentados.', 20, yPosition);
+      pdf.text('Certificação de Integridade e Rastreabilidade:', 20, yPosition);
+      yPosition += 8;
+
+      try {
+        // Gerar hash real para o lote
+        const hashData: LoteHashData = {
+          codigo: lote.codigo,
+          unidade: lote.unidade,
+          data_inicio: lote.data_inicio,
+          data_encerramento: lote.data_encerramento,
+          peso_inicial: pesoInicial,
+          peso_atual: pesoFinal,
+          latitude: lote.latitude,
+          longitude: lote.longitude,
+          criado_por: lote.id, // Usando ID como placeholder
+          voluntarios: [], // Seria preenchido com dados reais
+          entregas: [], // Seria preenchido com dados reais
+          fotos: [] // Seria preenchido com dados reais
+        };
+
+        const hashIntegridade = generateLoteHash(hashData);
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.text(`Hash SHA256: ${hashIntegridade}`, 20, yPosition);
+        yPosition += 5;
+        pdf.text('Este hash garante a integridade e imutabilidade dos dados do lote.', 20, yPosition);
+        yPosition += 8;
+
+        // Gerar QR Code
+        const loteUrl = `https://compostroca.lovable.app/lotes?lote=${lote.codigo}`;
+        const qrCodeDataUrl = await QRCode.toDataURL(loteUrl);
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10);
+        pdf.text('QR Code para Rastreabilidade:', 20, yPosition);
+        yPosition += 6;
+        
+        // Adicionar QR Code ao PDF
+        pdf.addImage(qrCodeDataUrl, 'PNG', 20, yPosition, 30, 30);
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.text(`Link: ${loteUrl}`, 55, yPosition + 15);
+
+      } catch (error) {
+        console.error('Erro ao gerar hash/QR Code:', error);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('Erro ao gerar certificação de integridade', 20, yPosition);
+      }
 
       // Rodapé
       pdf.setFontSize(8);

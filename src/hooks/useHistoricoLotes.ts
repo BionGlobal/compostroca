@@ -83,6 +83,7 @@ export const useHistoricoLotes = () => {
 
         const voluntarios = new Set(entregas?.map(e => e.voluntario_id) || []);
         const qualidades = entregas?.filter(e => e.qualidade_residuo).map(e => e.qualidade_residuo) || [];
+        // Qualidade em escala de 1-3 (não 1-5)
         const qualidadeMedia = qualidades.length > 0 ? qualidades.reduce((a, b) => a + b, 0) / qualidades.length : 0;
         const pesoTotal = entregas?.reduce((sum, e) => sum + Number(e.peso), 0) || 0;
         
@@ -118,6 +119,23 @@ export const useHistoricoLotes = () => {
 
       if (lotesProntosError) throw lotesProntosError;
 
+      // Função para buscar geolocalização do manejo final (caixa 7)
+      const getManejoFinalGeolocalizacao = async (loteId: string) => {
+        const { data: manejoFinal } = await supabase
+          .from('manejo_semanal')
+          .select('latitude, longitude')
+          .eq('lote_id', loteId)
+          .eq('caixa_origem', 7)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        return manejoFinal ? {
+          latitude: manejoFinal.latitude,
+          longitude: manejoFinal.longitude
+        } : { latitude: null, longitude: null };
+      };
+
       // Processar novos lotes
       const novosLotesProcessados: LoteHistorico[] = [];
       for (const lote of novosLotesData || []) {
@@ -151,6 +169,7 @@ export const useHistoricoLotes = () => {
       const lotesProntosProcessados: LoteHistorico[] = [];
       for (const lote of lotesProntosData || []) {
         const entregasData = await getEntregasData(lote.id, lote.codigo);
+        const manejoGeoData = await getManejoFinalGeolocalizacao(lote.id);
         const pesoInicial = Number(lote.peso_inicial) || 0;
         const pesoFinal = Number(lote.peso_atual) || 0;
         const taxaReducao = pesoInicial > 0 ? ((pesoInicial - pesoFinal) / pesoInicial) * 100 : 0;
@@ -178,8 +197,8 @@ export const useHistoricoLotes = () => {
           co2e_evitado: pesoInicial * 0.766, // Formula especificada
           tempo_processamento: tempoProcessamento,
           taxa_reducao: taxaReducao,
-          latitude: entregasData.latitude,
-          longitude: entregasData.longitude
+          latitude: manejoGeoData.latitude || entregasData.latitude,
+          longitude: manejoGeoData.longitude || entregasData.longitude
         });
       }
 

@@ -207,10 +207,24 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
           {/* Informações da foto */}
           <div className="p-4 border-t bg-background">
             <div className="flex items-center justify-between">
-              <Badge variant="outline" className="flex items-center gap-1">
-                <Camera className="h-3 w-3" />
-                {TIPO_FOTO_LABELS[currentFoto.tipo_foto as keyof typeof TIPO_FOTO_LABELS] || currentFoto.tipo_foto}
-              </Badge>
+              <div className="space-y-1">
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Camera className="h-3 w-3" />
+                  {TIPO_FOTO_LABELS[currentFoto.tipo_foto as keyof typeof TIPO_FOTO_LABELS] || currentFoto.tipo_foto}
+                </Badge>
+                {/* Exibir dados do voluntário/balde quando disponível */}
+                {currentFoto.entregas?.voluntarios && (
+                  <p className="text-xs text-muted-foreground">
+                    {currentFoto.entregas.voluntarios.nome} - Balde #{currentFoto.entregas.voluntarios.numero_balde}
+                  </p>
+                )}
+                {/* Exibir dados do manejo quando disponível */}
+                {currentFoto.manejo_semanal && (
+                  <p className="text-xs text-muted-foreground">
+                    Manejo: Caixa {currentFoto.manejo_semanal.caixa_origem} → {currentFoto.manejo_semanal.caixa_destino || 'Final'}
+                  </p>
+                )}
+              </div>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
