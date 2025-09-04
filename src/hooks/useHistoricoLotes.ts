@@ -63,32 +63,50 @@ export const useHistoricoLotes = () => {
     try {
       setLoading(true);
       
-      // Função para buscar dados enriquecidos de entregas para um lote
-      const getEntregasData = async (loteId: string, loteCodigo: string) => {
-        const { data: entregas, error } = await supabase
+      // Função para buscar dados enriquecidos de entregas por data de criação do lote
+      const getEntregasDataByDate = async (loteCodigo: string, dataInicio: string) => {
+        // Primeiro tentar buscar por código do lote
+        let { data: entregas } = await supabase
           .from('entregas')
           .select(`
             id, peso, qualidade_residuo, voluntario_id, latitude, longitude,
-            voluntarios!inner(id, nome)
+            voluntarios!inner(id, nome, numero_balde)
           `)
           .eq('lote_codigo', loteCodigo);
 
-        if (error) return { 
-          numVoluntarios: 0, 
-          qualidadeMedia: 0, 
-          pesoTotal: 0, 
-          latitude: null, 
-          longitude: null 
-        };
+        // Se não encontrou por código, buscar por data de criação
+        if (!entregas || entregas.length === 0) {
+          const dataInicioFormatted = new Date(dataInicio).toISOString().split('T')[0];
+          const { data: entregasPorData } = await supabase
+            .from('entregas')
+            .select(`
+              id, peso, qualidade_residuo, voluntario_id, latitude, longitude, created_at,
+              voluntarios!inner(id, nome, numero_balde)
+            `)
+            .gte('created_at', `${dataInicioFormatted}T00:00:00.000Z`)
+            .lt('created_at', `${dataInicioFormatted}T23:59:59.999Z`);
+          
+          entregas = entregasPorData || [];
+        }
 
-        const voluntarios = new Set(entregas?.map(e => e.voluntario_id) || []);
-        const qualidades = entregas?.filter(e => e.qualidade_residuo).map(e => e.qualidade_residuo) || [];
-        // Qualidade em escala de 1-3 (não 1-5)
+        if (!entregas || entregas.length === 0) {
+          return { 
+            numVoluntarios: 0, 
+            qualidadeMedia: 0, 
+            pesoTotal: 0, 
+            latitude: null, 
+            longitude: null 
+          };
+        }
+
+        const voluntarios = new Set(entregas.map(e => e.voluntario_id));
+        const qualidades = entregas.filter(e => e.qualidade_residuo && e.qualidade_residuo > 0).map(e => e.qualidade_residuo);
+        // Qualidade em escala de 1-3
         const qualidadeMedia = qualidades.length > 0 ? qualidades.reduce((a, b) => a + b, 0) / qualidades.length : 0;
-        const pesoTotal = entregas?.reduce((sum, e) => sum + Number(e.peso), 0) || 0;
+        const pesoTotal = entregas.reduce((sum, e) => sum + Number(e.peso), 0);
         
         // Pegar coordenadas da primeira entrega com localização válida
-        const entregaComLocalizacao = entregas?.find(e => e.latitude && e.longitude);
+        const entregaComLocalizacao = entregas.find(e => e.latitude && e.longitude);
 
         return {
           numVoluntarios: voluntarios.size,
@@ -139,7 +157,7 @@ export const useHistoricoLotes = () => {
       // Processar novos lotes
       const novosLotesProcessados: LoteHistorico[] = [];
       for (const lote of novosLotesData || []) {
-        const entregasData = await getEntregasData(lote.id, lote.codigo);
+        const entregasData = await getEntregasDataByDate(lote.codigo, lote.data_inicio);
         const pesoInicial = Number(lote.peso_inicial) || 0;
         
         novosLotesProcessados.push({
@@ -157,7 +175,7 @@ export const useHistoricoLotes = () => {
           criado_por_nome: lote.criado_por_nome,
           num_voluntarios: entregasData.numVoluntarios,
           qualidade_media: entregasData.qualidadeMedia,
-          co2e_evitado: pesoInicial * 0.766, // Formula especificada
+          co2e_evitado: 0, // CO2e em branco para novos lotes
           tempo_processamento: undefined,
           taxa_reducao: undefined,
           latitude: entregasData.latitude,
@@ -168,16 +186,11 @@ export const useHistoricoLotes = () => {
       // Processar lotes prontos
       const lotesProntosProcessados: LoteHistorico[] = [];
       for (const lote of lotesProntosData || []) {
-        const entregasData = await getEntregasData(lote.id, lote.codigo);
+        const entregasData = await getEntregasDataByDate(lote.codigo, lote.data_inicio);
         const manejoGeoData = await getManejoFinalGeolocalizacao(lote.id);
         const pesoInicial = Number(lote.peso_inicial) || 0;
         const pesoFinal = Number(lote.peso_atual) || 0;
         const taxaReducao = pesoInicial > 0 ? ((pesoInicial - pesoFinal) / pesoInicial) * 100 : 0;
-        
-        // Calcular tempo de processamento em semanas
-        const tempoProcessamento = lote.data_encerramento && lote.data_inicio ? 
-          Math.ceil((new Date(lote.data_encerramento).getTime() - new Date(lote.data_inicio).getTime()) / (1000 * 60 * 60 * 24 * 7)) 
-          : undefined;
         
         lotesProntosProcessados.push({
           id: lote.id,
@@ -195,7 +208,7 @@ export const useHistoricoLotes = () => {
           num_voluntarios: entregasData.numVoluntarios,
           qualidade_media: entregasData.qualidadeMedia,
           co2e_evitado: pesoInicial * 0.766, // Formula especificada
-          tempo_processamento: tempoProcessamento,
+          tempo_processamento: undefined, // Removido tempo de processamento
           taxa_reducao: taxaReducao,
           latitude: manejoGeoData.latitude || entregasData.latitude,
           longitude: manejoGeoData.longitude || entregasData.longitude

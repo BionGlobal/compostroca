@@ -54,8 +54,8 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
   const co2eEvitado = isNovoLote ? 0 : (pesoInicial * 0.766); // Apenas para lotes prontos
   const taxaReducao = pesoInicial > 0 ? ((pesoInicial - pesoFinal) / pesoInicial) * 100 : 0;
   
-  // Determinar peso para exibição
-  const pesoExibicao = isNovoLote ? pesoInicial : pesoFinal;
+  // Determinar peso para exibição - usar peso_atual para lotes prontos
+  const pesoExibicao = isNovoLote ? pesoInicial : (Number(lote.peso_atual) || 0);
   
   return (
     <Card className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg ${
@@ -155,13 +155,6 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
           )}
         </div>
 
-        {/* Informações adicionais para lotes prontos */}
-        {isLoteProng && lote.tempo_processamento && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border/50">
-            <Calendar className="h-4 w-4" />
-            <span>Processamento: {lote.tempo_processamento} semanas</span>
-          </div>
-        )}
 
         {/* Geolocalização quando disponível */}
         {(lote.latitude && lote.longitude) && (

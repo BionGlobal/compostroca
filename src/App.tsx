@@ -14,6 +14,7 @@ import Auth from "./pages/Auth";
 import PendingUsers from "./pages/PendingUsers";
 import NotFound from "./pages/NotFound";
 import { AdminRoute } from "./components/AdminRoute";
+import LotePublico from "./pages/LotePublico";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,7 @@ const App = () => (
               </Layout>
             </ProtectedRoute>
           } />
+          <Route path="/lote-publico" element={<LotePublico />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

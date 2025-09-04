@@ -39,32 +39,103 @@ export const useLoteFotos = (loteId?: string) => {
   const { user } = useAuth();
 
   const fetchFotos = async () => {
-    if (!loteId) {
-      setLoading(false);
-      return;
-    }
-
+    if (!loteId) return;
+    
     try {
       setLoading(true);
-      // Buscar fotos do lote com dados enriched de entregas/voluntários
-      const { data, error } = await supabase
+      
+      // Buscar fotos do lote
+      const { data: loteData } = await supabase
+        .from('lotes')
+        .select('codigo, data_inicio')
+        .eq('id', loteId)
+        .single();
+
+      if (!loteData) {
+        setLoading(false);
+        return;
+      }
+
+      // Buscar fotos de entregas (por código do lote ou por data)
+      const { data: fotosEntregas } = await supabase
         .from('lote_fotos')
         .select(`
           *,
-          entregas!left(
-            id, voluntario_id,
-            voluntarios!inner(id, nome, numero_balde)
-          ),
-          manejo_semanal!left(
-            id, caixa_origem, caixa_destino
+          entregas(
+            id,
+            lote_codigo,
+            created_at,
+            voluntarios(nome, numero_balde)
           )
         `)
         .eq('lote_id', loteId)
+        .not('entrega_id', 'is', null)
         .is('deleted_at', null)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setFotos(data || []);
+      // Buscar fotos de manejo semanal
+      const { data: fotosManejo } = await supabase
+        .from('lote_fotos')
+        .select(`
+          *,
+          manejo_semanal(
+            id,
+            caixa_origem,
+            caixa_destino,
+            created_at
+          )
+        `)
+        .eq('lote_id', loteId)
+        .not('manejo_id', 'is', null)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+
+      // Se não há fotos de entregas por lote_id, buscar por data de criação
+      let fotosEntregasAdicional: any[] = [];
+      if (!fotosEntregas || fotosEntregas.length === 0) {
+        const dataInicio = new Date(loteData.data_inicio).toISOString().split('T')[0];
+        
+        const { data: entregasPorData } = await supabase
+          .from('entregas')
+          .select(`
+            id,
+            entrega_fotos(
+              id,
+              foto_url,
+              tipo_foto,
+              created_at
+            ),
+            voluntarios(nome, numero_balde)
+          `)
+          .gte('created_at', `${dataInicio}T00:00:00.000Z`)
+          .lt('created_at', `${dataInicio}T23:59:59.999Z`);
+        
+        if (entregasPorData && Array.isArray(entregasPorData)) {
+          fotosEntregasAdicional = entregasPorData.flatMap(entrega => {
+            if (!entrega.entrega_fotos || !Array.isArray(entrega.entrega_fotos)) {
+              return [];
+            }
+            return entrega.entrega_fotos.map(foto => ({
+              ...foto,
+              lote_id: loteId,
+              entrega_id: entrega.id,
+              tipo_foto: foto.tipo_foto || 'entrega',
+              entregas: {
+                id: entrega.id,
+                voluntarios: entrega.voluntarios
+              }
+            }));
+          });
+        }
+      }
+
+      const todasFotos = [
+        ...(fotosEntregas || []),
+        ...fotosEntregasAdicional,
+        ...(fotosManejo || [])
+      ];
+
+      setFotos(todasFotos);
     } catch (error) {
       console.error('Erro ao buscar fotos do lote:', error);
       toast({

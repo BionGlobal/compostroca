@@ -337,8 +337,8 @@ export const useAdvancedPDFGenerator = () => {
         pdf.text('Este hash garante a integridade e imutabilidade dos dados do lote.', 20, yPosition);
         yPosition += 8;
 
-        // Gerar QR Code
-        const loteUrl = `https://compostroca.lovable.app/lotes?lote=${lote.codigo}`;
+        // Gerar QR Code para página pública
+        const loteUrl = `https://compostroca.lovable.app/lote-publico?lote=${lote.codigo}`;
         const qrCodeDataUrl = await QRCode.toDataURL(loteUrl);
         
         pdf.setFont('helvetica', 'bold');
