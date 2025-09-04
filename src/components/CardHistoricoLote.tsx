@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StarRating } from '@/components/StarRating';
-import { Camera, Download, Calendar, Users, Leaf, Weight, TrendingDown } from 'lucide-react';
+import { Camera, Download, Calendar, Users, Leaf, Weight, TrendingDown, Sprout, CheckCircle, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -26,6 +26,9 @@ interface LoteData {
   co2e_evitado: number;
   tempo_processamento?: number; // em semanas
   taxa_reducao?: number; // percentual
+  // Dados de geolocalização
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface CardHistoricoLoteProps {
@@ -41,7 +44,8 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
   onDownloadPDF,
   loading = false
 }) => {
-  const isNovoLote = lote.status === 'em_processamento' && lote.caixa_atual === 1;
+  // Ajustado para considerar lotes mais recentes em processamento (qualquer caixa)
+  const isNovoLote = lote.status === 'em_processamento';
   const isLoteProng = lote.status === 'encerrado';
   
   // Calcular métricas
@@ -70,7 +74,19 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
                   : 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300'
               } font-semibold`}
             >
-              {isNovoLote ? '🌱 Novo Lote!' : '✅ Lote Pronto!'}
+              <div className="flex items-center gap-1">
+                {isNovoLote ? (
+                  <>
+                    <Sprout className="h-3 w-3" />
+                    Novo Lote!
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-3 w-3" />
+                    Lote Pronto!
+                  </>
+                )}
+              </div>
             </Badge>
             <h3 className="text-xl font-bold text-foreground">
               {lote.codigo}
@@ -144,6 +160,14 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
           <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border/50">
             <Calendar className="h-4 w-4" />
             <span>Processamento: {lote.tempo_processamento} semanas</span>
+          </div>
+        )}
+
+        {/* Geolocalização quando disponível */}
+        {(lote.latitude && lote.longitude) && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border/50">
+            <MapPin className="h-3 w-3" />
+            <span>Validado em: {lote.latitude.toFixed(6)}, {lote.longitude.toFixed(6)}</span>
           </div>
         )}
 

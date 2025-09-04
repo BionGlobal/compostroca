@@ -35,6 +35,9 @@ export interface LoteHistorico {
   co2e_evitado: number;
   tempo_processamento?: number; // em semanas
   taxa_reducao?: number; // percentual
+  // Dados de geolocalização
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface SearchFilters {
@@ -65,31 +68,41 @@ export const useHistoricoLotes = () => {
         const { data: entregas, error } = await supabase
           .from('entregas')
           .select(`
-            id, peso, qualidade_residuo, voluntario_id,
+            id, peso, qualidade_residuo, voluntario_id, latitude, longitude,
             voluntarios!inner(id, nome)
           `)
           .eq('lote_codigo', loteCodigo);
 
-        if (error) return { numVoluntarios: 0, qualidadeMedia: 0, pesoTotal: 0 };
+        if (error) return { 
+          numVoluntarios: 0, 
+          qualidadeMedia: 0, 
+          pesoTotal: 0, 
+          latitude: null, 
+          longitude: null 
+        };
 
         const voluntarios = new Set(entregas?.map(e => e.voluntario_id) || []);
         const qualidades = entregas?.filter(e => e.qualidade_residuo).map(e => e.qualidade_residuo) || [];
         const qualidadeMedia = qualidades.length > 0 ? qualidades.reduce((a, b) => a + b, 0) / qualidades.length : 0;
         const pesoTotal = entregas?.reduce((sum, e) => sum + Number(e.peso), 0) || 0;
+        
+        // Pegar coordenadas da primeira entrega com localização válida
+        const entregaComLocalizacao = entregas?.find(e => e.latitude && e.longitude);
 
         return {
           numVoluntarios: voluntarios.size,
           qualidadeMedia: Number(qualidadeMedia.toFixed(1)),
-          pesoTotal
+          pesoTotal,
+          latitude: entregaComLocalizacao?.latitude || null,
+          longitude: entregaComLocalizacao?.longitude || null
         };
       };
 
-      // Buscar NOVOS LOTES (recém-criados na caixa 1) - últimos 6
+      // Buscar NOVOS LOTES (mais recentes em processamento) - últimos 6
       const { data: novosLotesData, error: novosLotesError } = await supabase
         .from('lotes')
         .select('*')
         .eq('status', 'em_processamento')
-        .eq('caixa_atual', 1)
         .order('created_at', { ascending: false })
         .limit(6);
 
@@ -128,7 +141,9 @@ export const useHistoricoLotes = () => {
           qualidade_media: entregasData.qualidadeMedia,
           co2e_evitado: pesoInicial * 0.766, // Formula especificada
           tempo_processamento: undefined,
-          taxa_reducao: undefined
+          taxa_reducao: undefined,
+          latitude: entregasData.latitude,
+          longitude: entregasData.longitude
         });
       }
 
@@ -162,7 +177,9 @@ export const useHistoricoLotes = () => {
           qualidade_media: entregasData.qualidadeMedia,
           co2e_evitado: pesoInicial * 0.766, // Formula especificada
           tempo_processamento: tempoProcessamento,
-          taxa_reducao: taxaReducao
+          taxa_reducao: taxaReducao,
+          latitude: entregasData.latitude,
+          longitude: entregasData.longitude
         });
       }
 
