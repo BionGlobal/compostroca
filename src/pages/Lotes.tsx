@@ -109,7 +109,15 @@ const Lotes = () => {
 
   // PDF handlers
   const handleDownloadPDF = (lote: any) => {
-    const isNovoLote = lote.status === 'em_processamento' && lote.caixa_atual === 1;
+    // Verificar se é um novo lote baseado na data de criação e status
+    const dataInicio = new Date(lote.data_inicio);
+    const hoje = new Date();
+    const diasDesdeCriacao = Math.floor((hoje.getTime() - dataInicio.getTime()) / (1000 * 3600 * 24));
+    
+    // Se foi criado nos últimos 2 dias E não foi finalizado, é considerado "novo lote"
+    const isNovoLote = diasDesdeCriacao <= 2 && !lote.data_encerramento;
+    
+    console.log('Lote:', lote.codigo, 'Dias desde criação:', diasDesdeCriacao, 'É novo lote:', isNovoLote);
     
     if (isNovoLote) {
       generateNovoLotePDF(lote);
