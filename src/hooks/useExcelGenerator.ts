@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import type { HistoricoEvent } from './useHistoricoLotes';
+import type { LoteHistorico } from './useHistoricoLotes';
 import { formatWeight, getOrganizationName } from '@/lib/organizationUtils';
 
 export const useExcelGenerator = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const generateConsolidatedExcel = async (eventos: HistoricoEvent[]) => {
+  const generateConsolidatedExcel = async (lotes: LoteHistorico[]) => {
     try {
       setLoading(true);
 
@@ -15,44 +15,41 @@ export const useExcelGenerator = () => {
       const headers = [
         'Tipo',
         'Código do Lote',
-        'Data',
+        'Data de Criação/Finalização',
         'Validador',
         'Unidade',
         'Peso Inicial (kg)',
         'Peso Final (kg)',
         'Redução (%)',
-        'Observações',
-        'Localização'
+        'CO2e Evitado (kg)',
+        'Voluntários',
+        'Qualidade Média',
+        'Status'
       ];
 
-      const rows = eventos.map(evento => {
-        let tipoTexto = '';
-        switch (evento.tipo) {
-          case 'novo_lote': tipoTexto = 'Novo Lote'; break;
-          case 'manutencao': tipoTexto = 'Manutenção'; break;
-          case 'lote_finalizado': tipoTexto = 'Lote Finalizado'; break;
-        }
-
-        const pesoInicial = evento.dados_especificos.peso_inicial || evento.dados_especificos.peso_antes || '';
-        const pesoFinal = evento.dados_especificos.peso_atual || evento.dados_especificos.peso_depois || evento.dados_especificos.peso_final || '';
-        const reducao = pesoInicial && pesoFinal ? 
-          ((pesoInicial - pesoFinal) / pesoInicial * 100).toFixed(1) : '';
+      const rows = lotes.map(lote => {
+        const isNovoLote = lote.status === 'em_processamento' && lote.caixa_atual === 1;
+        const tipoTexto = isNovoLote ? 'Novo Lote' : 'Lote Finalizado';
         
-        const observacoes = evento.dados_especificos.observacoes || '';
-        const localizacao = evento.geoloc ? 
-          `${evento.geoloc.lat.toFixed(6)}, ${evento.geoloc.lng.toFixed(6)}` : '';
+        const pesoInicial = Number(lote.peso_inicial) || 0;
+        const pesoFinal = Number(lote.peso_final || lote.peso_atual) || 0;
+        const reducao = lote.taxa_reducao?.toFixed(1) || '0';
+        
+        const dataReferencia = lote.data_encerramento || lote.created_at;
 
         return [
           tipoTexto,
-          evento.lote_codigo,
-          new Date(evento.data).toLocaleDateString('pt-BR'),
-          evento.validador_nome,
-          getOrganizationName(evento.unidade),
-          pesoInicial.toString(),
-          pesoFinal.toString(),
+          lote.codigo,
+          new Date(dataReferencia).toLocaleDateString('pt-BR'),
+          lote.criado_por_nome,
+          getOrganizationName(lote.unidade),
+          (pesoInicial / 1000).toFixed(1), // Converter para kg
+          (pesoFinal / 1000).toFixed(1),   // Converter para kg
           reducao,
-          observacoes,
-          localizacao
+          lote.co2e_evitado.toFixed(2),
+          lote.num_voluntarios.toString(),
+          lote.qualidade_media.toFixed(1),
+          lote.status
         ];
       });
 

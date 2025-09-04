@@ -115,7 +115,6 @@ export const HistoricoSearch = ({
                         <SelectContent>
                           <SelectItem value="all">Todos os tipos</SelectItem>
                           <SelectItem value="novo_lote">Novo Lote</SelectItem>
-                          <SelectItem value="manutencao">Manutenção</SelectItem>
                           <SelectItem value="lote_finalizado">Lote Finalizado</SelectItem>
                         </SelectContent>
                       </Select>
@@ -196,8 +195,7 @@ export const HistoricoSearch = ({
                 )}
                 {filters.tipo && filters.tipo !== 'all' && (
                   <Badge variant="secondary" className="text-xs">
-                    {filters.tipo === 'novo_lote' ? 'Novo Lote' : 
-                     filters.tipo === 'manutencao' ? 'Manutenção' : 'Lote Finalizado'}
+                    {filters.tipo === 'novo_lote' ? 'Novo Lote' : 'Lote Finalizado'}
                   </Badge>
                 )}
                 {(filters.dataInicio || filters.dataFim) && (
