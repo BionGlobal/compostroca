@@ -24,6 +24,7 @@ import { useLotesManager } from '@/hooks/useLotesManager';
 import { useHistoricoLotes } from '@/hooks/useHistoricoLotes';
 import { useAdvancedPDFGenerator } from '@/hooks/useAdvancedPDFGenerator';
 import { useExcelGenerator } from '@/hooks/useExcelGenerator';
+import { CardHistoricoLote } from '@/components/CardHistoricoLote';
 import { ProductionBelt } from '@/components/ProductionBelt';
 import { ManejoCard } from '@/components/ManejoCard';
 import { ManejoSimplificado } from '@/components/ManejoSimplificado';
@@ -49,20 +50,18 @@ const Lotes = () => {
 
   // History system hooks
   const {
-    historico,
+    lotesFiltrados,
     loading: historicoLoading,
     filters,
     setFilters,
     refetch: refetchHistorico,
-    totalEventos,
-    eventosFiltrados
+    totalLotes,
+    lotesFiltradosCount
   } = useHistoricoLotes();
 
   const {
     generateNovoLotePDF,
-    generateManutencaoPDF,
     generateLoteFinalizadoPDF,
-    generateConsolidatedPDF,
     loading: pdfLoading
   } = useAdvancedPDFGenerator();
 
@@ -108,74 +107,21 @@ const Lotes = () => {
     });
   };
 
-  const handleDownloadPDF = async (evento: any) => {
-    switch (evento.tipo) {
-      case 'novo_lote':
-        await generateNovoLotePDF(evento);
-        break;
-      case 'manutencao':
-        await generateManutencaoPDF(evento);
-        break;
-      case 'lote_finalizado':
-        await generateLoteFinalizadoPDF(evento);
-        break;
+  // PDF handlers
+  const handleDownloadPDF = (lote: any) => {
+    const isNovoLote = lote.status === 'em_processamento' && lote.caixa_atual === 1;
+    
+    if (isNovoLote) {
+      generateNovoLotePDF(lote);
+    } else {
+      generateLoteFinalizadoPDF(lote);
     }
-  };
-
-  const handleDownloadConsolidatedPDF = async () => {
-    await generateConsolidatedPDF(historico);
   };
 
   const handleDownloadConsolidatedExcel = async () => {
-    await generateConsolidatedExcel(historico);
+    await generateConsolidatedExcel(lotesFiltrados);
   };
 
-  const renderHistoricoCard = (evento: any) => {
-    const commonProps = {
-      key: evento.id,
-      evento,
-      onDownloadPDF: () => handleDownloadPDF(evento),
-      loading: pdfLoading || excelLoading
-    };
-
-    switch (evento.tipo) {
-      case 'novo_lote':
-        return (
-          <NovoLoteCardFlip
-            {...commonProps}
-            onViewPhotos={() => handleViewPhotos(
-              evento.lote_id,
-              'Fotos das Entregas',
-              evento.entrega_id
-            )}
-          />
-        );
-      case 'manutencao':
-        return (
-          <ManutencaoCardFlip
-            {...commonProps}
-            onViewPhotos={evento.manejo_id ? () => handleViewPhotos(
-              evento.lote_id,
-              'Fotos da Manutenção',
-              undefined,
-              evento.manejo_id
-            ) : undefined}
-          />
-        );
-      case 'lote_finalizado':
-        return (
-          <LoteProntoCard
-            {...commonProps}
-            onViewPhotos={() => handleViewPhotos(
-              evento.lote_id,
-              'Fotos do Lote Finalizado'
-            )}
-          />
-        );
-      default:
-        return null;
-    }
-  };
 
   const loteToFinalize = lotesAtivos.find(l => l.id === selectedLoteForFinalization);
 
@@ -339,56 +285,48 @@ const Lotes = () => {
           <HistoricoSearch
             filters={filters}
             onFiltersChange={setFilters}
-            onDownloadPDF={handleDownloadConsolidatedPDF}
+            onDownloadPDF={() => {}}
             onDownloadExcel={handleDownloadConsolidatedExcel}
-            totalEventos={totalEventos}
-            eventosFiltrados={eventosFiltrados}
-            loading={pdfLoading || excelLoading}
+            totalEventos={totalLotes}
+            eventosFiltrados={lotesFiltradosCount}
+            loading={excelLoading}
           />
 
           {/* History Cards */}
           {historicoLoading ? (
-            <div className="grid gap-4">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="glass-light border-0">
-                  <CardContent className="p-6">
-                    <div className="animate-pulse space-y-3">
-                      <div className="h-4 bg-muted rounded w-3/4"></div>
-                      <div className="h-3 bg-muted rounded w-1/2"></div>
-                      <div className="h-3 bg-muted rounded w-5/6"></div>
-                    </div>
-                  </CardContent>
-                </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-80 bg-muted animate-pulse rounded-lg" />
               ))}
             </div>
-          ) : historico.length === 0 ? (
+          ) : lotesFiltrados.length === 0 ? (
             <Card className="glass-light border-0">
               <CardContent className="p-12 text-center">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <h3 className="text-lg font-medium mb-2">Nenhum evento encontrado</h3>
+                <h3 className="text-lg font-medium mb-2">Nenhum lote encontrado</h3>
                 <p className="text-muted-foreground">
-                  {filters.query || filters.tipo !== 'all' || filters.dataInicio || filters.dataFim
-                    ? 'Ajuste os filtros para ver mais resultados'
-                    : 'Os eventos de histórico aparecerão aqui conforme ações forem realizadas'}
+                  Os lotes aparecerão aqui conforme forem criados e finalizados
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
-              {/* Info sobre limitação dos últimos 10 eventos */}
-              <div className="text-center text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg">
-                Mostrando os últimos 10 eventos. Use os filtros para refinar sua busca.
-              </div>
-              <div className="grid gap-4 sm:gap-6">
-                {historico.map(renderHistoricoCard)}
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {lotesFiltrados.map((lote) => (
+                <CardHistoricoLote
+                  key={lote.id}
+                  lote={lote}
+                  onViewPhotos={handleViewPhotos}
+                  onDownloadPDF={() => handleDownloadPDF(lote)}
+                  loading={pdfLoading}
+                />
+              ))}
             </div>
           )}
 
           {/* Results summary for mobile */}
-          {historico.length > 0 && (
+          {lotesFiltrados.length > 0 && (
             <div className="md:hidden text-center text-sm text-muted-foreground">
-              {eventosFiltrados} de {totalEventos} eventos
+              {lotesFiltradosCount} de {totalLotes} lotes
             </div>
           )}
         </TabsContent>

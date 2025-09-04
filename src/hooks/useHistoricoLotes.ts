@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
+// Legacy interface for backward compatibility
 export interface HistoricoEvent {
   id: string;
   tipo: 'novo_lote' | 'manutencao' | 'lote_finalizado';
@@ -15,16 +16,38 @@ export interface HistoricoEvent {
   unidade: string;
 }
 
+export interface LoteHistorico {
+  id: string;
+  codigo: string;
+  status: string;
+  caixa_atual: number;
+  peso_inicial?: number | null;
+  peso_atual?: number | null;
+  peso_final?: number | null;
+  data_inicio: string;
+  data_encerramento?: string | null;
+  created_at: string;
+  unidade: string;
+  criado_por_nome: string;
+  // Dados enriquecidos
+  num_voluntarios: number;
+  qualidade_media: number;
+  co2e_evitado: number;
+  tempo_processamento?: number; // em semanas
+  taxa_reducao?: number; // percentual
+}
+
 export interface SearchFilters {
   query: string;
-  tipo?: 'novo_lote' | 'manutencao' | 'lote_finalizado' | 'all';
+  tipo?: 'novo_lote' | 'lote_finalizado' | 'all';
   dataInicio?: string;
   dataFim?: string;
   validador?: string;
 }
 
 export const useHistoricoLotes = () => {
-  const [historico, setHistorico] = useState<HistoricoEvent[]>([]);
+  const [novosLotes, setNovosLotes] = useState<LoteHistorico[]>([]);
+  const [lotesProntos, setLotesProntos] = useState<LoteHistorico[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<SearchFilters>({
     query: '',
@@ -33,75 +56,10 @@ export const useHistoricoLotes = () => {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const fetchHistorico = async () => {
+  const fetchHistoricoLotes = async () => {
     try {
       setLoading(true);
       
-      // Buscar LOTES PRONTOS (finalizados/encerrados) - últimos 4
-      const { data: lotesProntos, error: lotesProntosError } = await supabase
-        .from('lotes')
-        .select('*')
-        .eq('status', 'encerrado')
-        .order('data_encerramento', { ascending: false })
-        .limit(4);
-
-      if (lotesProntosError) throw lotesProntosError;
-
-      // Buscar manejos semanais - últimos 4
-      const { data: manejos, error: manejosError } = await supabase
-        .from('manejo_semanal')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(4);
-
-      if (manejosError) throw manejosError;
-
-      // Buscar NOVOS LOTES (recém-criados na caixa 1) - últimos 4
-      const { data: novosLotes, error: novosLotesError } = await supabase
-        .from('lotes')
-        .select('*')
-        .eq('status', 'em_processamento')
-        .eq('caixa_atual', 1)
-        .order('created_at', { ascending: false })
-        .limit(4);
-
-      if (novosLotesError) throw novosLotesError;
-
-      if (manejosError) throw manejosError;
-
-      // Buscar dados dos lotes e usuários para os manejos
-      let lotesMap = new Map();
-      let usersMap = new Map();
-      
-      if (manejos && manejos.length > 0) {
-        const loteIds = [...new Set(manejos.map(m => m.lote_id))];
-        const userIds = [...new Set(manejos.map(m => m.user_id))];
-        
-        // Buscar dados dos lotes
-        const { data: lotesForManejos, error: lotesForManejosError } = await supabase
-          .from('lotes')
-          .select('id, codigo, unidade, linha_producao')
-          .in('id', loteIds);
-
-        if (lotesForManejosError) throw lotesForManejosError;
-
-        // Buscar nomes dos usuários responsáveis
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('user_id, full_name')
-          .in('user_id', userIds);
-
-        if (profilesError) throw profilesError;
-
-        lotesForManejos?.forEach(lote => {
-          lotesMap.set(lote.id, lote);
-        });
-
-        profiles?.forEach(profile => {
-          usersMap.set(profile.user_id, profile.full_name || 'Usuário');
-        });
-      }
-
       // Função para buscar dados enriquecidos de entregas para um lote
       const getEntregasData = async (loteId: string, loteCodigo: string) => {
         const { data: entregas, error } = await supabase
@@ -112,152 +70,110 @@ export const useHistoricoLotes = () => {
           `)
           .eq('lote_codigo', loteCodigo);
 
-        if (error) return { numVoluntarios: 0, qualidadeMedia: 0, pesoTotal: 0, fotosUrls: [] };
+        if (error) return { numVoluntarios: 0, qualidadeMedia: 0, pesoTotal: 0 };
 
         const voluntarios = new Set(entregas?.map(e => e.voluntario_id) || []);
         const qualidades = entregas?.filter(e => e.qualidade_residuo).map(e => e.qualidade_residuo) || [];
         const qualidadeMedia = qualidades.length > 0 ? qualidades.reduce((a, b) => a + b, 0) / qualidades.length : 0;
         const pesoTotal = entregas?.reduce((sum, e) => sum + Number(e.peso), 0) || 0;
 
-        // Buscar fotos das entregas
-        const entregaIds = entregas?.map(e => e.id) || [];
-        let fotosUrls: string[] = [];
-        
-        if (entregaIds.length > 0) {
-          const { data: fotos } = await supabase
-            .from('entrega_fotos')
-            .select('foto_url')
-            .in('entrega_id', entregaIds);
-          
-          fotosUrls = fotos?.map(f => f.foto_url) || [];
-        }
-
         return {
           numVoluntarios: voluntarios.size,
           qualidadeMedia: Number(qualidadeMedia.toFixed(1)),
-          pesoTotal,
-          fotosUrls
+          pesoTotal
         };
       };
 
-      // Montar eventos do histórico
-      const eventos: HistoricoEvent[] = [];
+      // Buscar NOVOS LOTES (recém-criados na caixa 1) - últimos 6
+      const { data: novosLotesData, error: novosLotesError } = await supabase
+        .from('lotes')
+        .select('*')
+        .eq('status', 'em_processamento')
+        .eq('caixa_atual', 1)
+        .order('created_at', { ascending: false })
+        .limit(6);
 
-      // Eventos de NOVO LOTE (recém-criados na caixa 1)
-      for (const lote of novosLotes || []) {
+      if (novosLotesError) throw novosLotesError;
+
+      // Buscar LOTES PRONTOS (finalizados/encerrados) - últimos 6
+      const { data: lotesProntosData, error: lotesProntosError } = await supabase
+        .from('lotes')
+        .select('*')
+        .eq('status', 'encerrado')
+        .order('data_encerramento', { ascending: false })
+        .limit(6);
+
+      if (lotesProntosError) throw lotesProntosError;
+
+      // Processar novos lotes
+      const novosLotesProcessados: LoteHistorico[] = [];
+      for (const lote of novosLotesData || []) {
         const entregasData = await getEntregasData(lote.id, lote.codigo);
+        const pesoInicial = Number(lote.peso_inicial) || 0;
         
-        eventos.push({
-          id: `novo_lote_${lote.id}`,
-          tipo: 'novo_lote',
-          data: lote.created_at,
-          lote_codigo: lote.codigo,
-          validador_nome: lote.criado_por_nome,
-          dados_especificos: {
-            peso_inicial: lote.peso_inicial,
-            peso_atual: lote.peso_atual,
-            data_inicio: lote.data_inicio,
-            linha_producao: lote.linha_producao,
-            semana_atual: lote.semana_atual,
-            num_voluntarios: entregasData.numVoluntarios,
-            qualidade_media: entregasData.qualidadeMedia,
-            peso_total_entregas: entregasData.pesoTotal,
-            dados_iot: null // Removido dados simulados
-          },
-          fotos: entregasData.fotosUrls,
-          geoloc: lote.latitude && lote.longitude ? {
-            lat: Number(lote.latitude),
-            lng: Number(lote.longitude)
-          } : undefined,
-          unidade: lote.unidade
+        novosLotesProcessados.push({
+          id: lote.id,
+          codigo: lote.codigo,
+          status: lote.status,
+          caixa_atual: lote.caixa_atual,
+          peso_inicial: lote.peso_inicial,
+          peso_atual: lote.peso_atual,
+          peso_final: null,
+          data_inicio: lote.data_inicio,
+          data_encerramento: null,
+          created_at: lote.created_at,
+          unidade: lote.unidade,
+          criado_por_nome: lote.criado_por_nome,
+          num_voluntarios: entregasData.numVoluntarios,
+          qualidade_media: entregasData.qualidadeMedia,
+          co2e_evitado: pesoInicial * 0.766, // Formula especificada
+          tempo_processamento: undefined,
+          taxa_reducao: undefined
         });
       }
 
-      // Eventos de LOTE PRONTO (finalizados)
-      for (const lote of lotesProntos || []) {
+      // Processar lotes prontos
+      const lotesProntosProcessados: LoteHistorico[] = [];
+      for (const lote of lotesProntosData || []) {
         const entregasData = await getEntregasData(lote.id, lote.codigo);
+        const pesoInicial = Number(lote.peso_inicial) || 0;
+        const pesoFinal = Number(lote.peso_atual) || 0;
+        const taxaReducao = pesoInicial > 0 ? ((pesoInicial - pesoFinal) / pesoInicial) * 100 : 0;
         
-        eventos.push({
-          id: `lote_pronto_${lote.id}`,
-          tipo: 'lote_finalizado',
-          data: lote.data_encerramento || lote.updated_at,
-          lote_codigo: lote.codigo,
-          validador_nome: lote.criado_por_nome,
-          dados_especificos: {
-            peso_inicial: lote.peso_inicial,
-            peso_final: lote.peso_atual,
-            data_inicio: lote.data_inicio,
-            data_encerramento: lote.data_encerramento,
-            tempo_total: lote.data_encerramento ? 
-              Math.ceil((new Date(lote.data_encerramento).getTime() - new Date(lote.data_inicio).getTime()) / (1000 * 60 * 60 * 24 * 7)) 
-              : null,
-            reducao_peso: ((Number(lote.peso_inicial) - Number(lote.peso_atual)) / Number(lote.peso_inicial) * 100),
-            num_voluntarios: entregasData.numVoluntarios,
-            qualidade_media: entregasData.qualidadeMedia,
-            dados_iot: null // Removido dados simulados
-          },
-          fotos: entregasData.fotosUrls,
-          geoloc: lote.latitude && lote.longitude ? {
-            lat: Number(lote.latitude),
-            lng: Number(lote.longitude)
-          } : undefined,
-          unidade: lote.unidade
+        // Calcular tempo de processamento em semanas
+        const tempoProcessamento = lote.data_encerramento && lote.data_inicio ? 
+          Math.ceil((new Date(lote.data_encerramento).getTime() - new Date(lote.data_inicio).getTime()) / (1000 * 60 * 60 * 24 * 7)) 
+          : undefined;
+        
+        lotesProntosProcessados.push({
+          id: lote.id,
+          codigo: lote.codigo,
+          status: lote.status,
+          caixa_atual: lote.caixa_atual,
+          peso_inicial: lote.peso_inicial,
+          peso_atual: lote.peso_atual,
+          peso_final: lote.peso_atual, // Para lotes finalizados, peso_atual é o peso_final
+          data_inicio: lote.data_inicio,
+          data_encerramento: lote.data_encerramento,
+          created_at: lote.created_at,
+          unidade: lote.unidade,
+          criado_por_nome: lote.criado_por_nome,
+          num_voluntarios: entregasData.numVoluntarios,
+          qualidade_media: entregasData.qualidadeMedia,
+          co2e_evitado: pesoInicial * 0.766, // Formula especificada
+          tempo_processamento: tempoProcessamento,
+          taxa_reducao: taxaReducao
         });
       }
 
-      // Eventos de MANUTENÇÃO REALIZADA
-      for (const manejo of manejos || []) {
-        const loteData = lotesMap.get(manejo.lote_id);
-        const userName = usersMap.get(manejo.user_id) || 'Não informado';
-        
-        // Buscar todos os 7 lotes que estavam na esteira no momento da manutenção
-        const { data: lotesNaEsteira } = await supabase
-          .from('lotes')
-          .select('codigo')
-          .eq('linha_producao', loteData?.linha_producao || 'A')
-          .eq('unidade', loteData?.unidade || 'CWB001')
-          .gte('caixa_atual', 1)
-          .lte('caixa_atual', 7)
-          .order('caixa_atual', { ascending: true });
-
-        const codigosLotes = lotesNaEsteira?.map(l => l.codigo) || [loteData?.codigo || 'Não informado'];
-        
-        eventos.push({
-          id: `manutencao_${manejo.id}`,
-          tipo: 'manutencao',
-          data: manejo.created_at,
-          lote_codigo: codigosLotes.join(', '),
-          validador_nome: userName,
-          dados_especificos: {
-            peso_antes: manejo.peso_antes || 'Não informado',
-            peso_depois: manejo.peso_depois || 'Não informado',
-            caixa_origem: manejo.caixa_origem || 'Não informado',
-            caixa_destino: manejo.caixa_destino || 'Não informado',
-            observacoes: manejo.observacoes || 'Não informado',
-            foto_url: manejo.foto_url || null,
-            linha_producao: loteData?.linha_producao || 'Não informado',
-            lotes_na_esteira: codigosLotes,
-            total_lotes_esteira: codigosLotes.length
-          },
-          fotos: manejo.foto_url ? [manejo.foto_url] : [],
-          geoloc: manejo.latitude && manejo.longitude ? {
-            lat: Number(manejo.latitude),
-            lng: Number(manejo.longitude)
-          } : undefined,
-          unidade: loteData?.unidade || 'CWB001'
-        });
-      }
-
-      // Ordenar por data (mais recente primeiro) e limitar aos últimos 12
-      eventos.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-      const eventosLimitados = eventos.slice(0, 12);
+      setNovosLotes(novosLotesProcessados);
+      setLotesProntos(lotesProntosProcessados);
       
-      setHistorico(eventosLimitados);
     } catch (error) {
-      console.error('Erro ao buscar histórico:', error);
+      console.error('Erro ao buscar histórico de lotes:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar o histórico",
+        description: "Não foi possível carregar o histórico de lotes",
         variant: "destructive",
       });
     } finally {
@@ -265,38 +181,55 @@ export const useHistoricoLotes = () => {
     }
   };
 
-  // Filtrar eventos baseado nos filtros
-  const eventosFiltrados = useMemo(() => {
-    return historico.filter(evento => {
+  // Combinar e filtrar lotes baseado nos filtros
+  const lotesFiltrados = useMemo(() => {
+    let todosLotes: LoteHistorico[] = [];
+    
+    // Adicionar com base no filtro de tipo
+    if (filters.tipo === 'all' || filters.tipo === 'novo_lote') {
+      todosLotes = [...todosLotes, ...novosLotes];
+    }
+    if (filters.tipo === 'all' || filters.tipo === 'lote_finalizado') {
+      todosLotes = [...todosLotes, ...lotesProntos];
+    }
+    
+    // Filtrar por busca
+    return todosLotes.filter(lote => {
       const matchQuery = !filters.query || 
-        evento.lote_codigo.toLowerCase().includes(filters.query.toLowerCase()) ||
-        evento.validador_nome.toLowerCase().includes(filters.query.toLowerCase());
+        lote.codigo.toLowerCase().includes(filters.query.toLowerCase()) ||
+        lote.criado_por_nome.toLowerCase().includes(filters.query.toLowerCase());
       
-      const matchTipo = !filters.tipo || filters.tipo === 'all' || evento.tipo === filters.tipo;
-      
+      const dataReferencia = lote.data_encerramento || lote.created_at;
       const matchDataInicio = !filters.dataInicio || 
-        new Date(evento.data) >= new Date(filters.dataInicio);
+        new Date(dataReferencia) >= new Date(filters.dataInicio);
       
       const matchDataFim = !filters.dataFim || 
-        new Date(evento.data) <= new Date(filters.dataFim);
+        new Date(dataReferencia) <= new Date(filters.dataFim);
 
-      return matchQuery && matchTipo && matchDataInicio && matchDataFim;
+      return matchQuery && matchDataInicio && matchDataFim;
+    }).sort((a, b) => {
+      // Ordenar por data mais recente primeiro
+      const dataA = new Date(a.data_encerramento || a.created_at).getTime();
+      const dataB = new Date(b.data_encerramento || b.created_at).getTime();
+      return dataB - dataA;
     });
-  }, [historico, filters]);
+  }, [novosLotes, lotesProntos, filters]);
 
   useEffect(() => {
     if (user) {
-      fetchHistorico();
+      fetchHistoricoLotes();
     }
   }, [user]);
 
   return {
-    historico: eventosFiltrados,
+    novosLotes,
+    lotesProntos,
+    lotesFiltrados,
     loading,
     filters,
     setFilters,
-    refetch: fetchHistorico,
-    totalEventos: historico.length,
-    eventosFiltrados: eventosFiltrados.length
+    refetch: fetchHistoricoLotes,
+    totalLotes: novosLotes.length + lotesProntos.length,
+    lotesFiltradosCount: lotesFiltrados.length
   };
 };
