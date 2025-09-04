@@ -179,10 +179,9 @@ export const useLoteFotos = (loteId?: string) => {
         manejo_semanal: null
       }));
 
-      // Combinar fotos
-      const todasFotos = [...fotosEntregasProcessadas, ...fotosManejoProcesadas];
-      console.log('📊 Total de fotos combinadas:', todasFotos.length);
-      console.log('📊 Entregas:', fotosEntregasProcessadas.length, 'Manejo:', fotosManejoProcesadas.length);
+      // Para cards "Novo Lote", usar apenas fotos de entregas (sem manejo)
+      const todasFotos = fotosEntregasProcessadas;
+      console.log('📊 Total de fotos de entregas:', todasFotos.length);
 
       setFotos(todasFotos);
     } catch (error) {
