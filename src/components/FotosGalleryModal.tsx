@@ -135,14 +135,12 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>{title}</DialogTitle>
-              <DialogClose asChild>
-                <Button variant="ghost" size="sm">
-                  <X className="h-4 w-4" />
-                </Button>
-              </DialogClose>
-            </div>
+          <div className="flex items-center justify-between">
+            <DialogTitle>{title}</DialogTitle>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <FileImage className="h-12 w-12 text-muted-foreground mb-4" />
@@ -190,11 +188,9 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
               >
                 {viewMode === 'grid' ? <Eye className="h-3 w-3" /> : <Grid className="h-3 w-3" />}
               </Button>
-              <DialogClose asChild>
-                <Button variant="ghost" size="sm">
-                  <X className="h-4 w-4" />
-                </Button>
-              </DialogClose>
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </DialogHeader>
@@ -228,7 +224,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                         </div>
                         {foto.entregas?.voluntarios && (
                           <div className="text-xs opacity-90 truncate">
-                            {foto.entregas.voluntarios.nome} - #{foto.entregas.voluntarios.numero_balde}
+                            Balde #{foto.entregas.voluntarios.numero_balde} - {foto.entregas.peso ? `${foto.entregas.peso.toFixed(1)}kg` : 'Peso não informado'}
                           </div>
                         )}
                         {foto.manejo_semanal && (
@@ -321,10 +317,10 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                       <Camera className="h-3 w-3" />
                       {TIPO_FOTO_LABELS[currentFoto.tipo_foto as keyof typeof TIPO_FOTO_LABELS] || currentFoto.tipo_foto}
                     </Badge>
-                    {/* Exibir dados do voluntário/balde quando disponível */}
+                    {/* Exibir dados do balde e peso quando disponível */}
                     {currentFoto.entregas?.voluntarios && (
                       <p className="text-xs text-muted-foreground">
-                        {currentFoto.entregas.voluntarios.nome} - Balde #{currentFoto.entregas.voluntarios.numero_balde}
+                        Balde #{currentFoto.entregas.voluntarios.numero_balde} - {currentFoto.entregas.peso ? `${currentFoto.entregas.peso.toFixed(1)}kg` : 'Peso não informado'}
                       </p>
                     )}
                     {/* Exibir dados do manejo quando disponível */}

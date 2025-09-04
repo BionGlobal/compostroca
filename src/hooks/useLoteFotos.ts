@@ -48,113 +48,112 @@ export const useLoteFotos = (loteId?: string) => {
       setLoading(true);
 
       // Buscar dados do lote
-      console.log('Buscando lote com ID:', loteId);
-      const { data: loteData, error: loteError } = await supabase
+      console.log('🔍 Buscando lote com ID:', loteId);
+      const loteResponse = await supabase
         .from('lotes')
-        .select('data_inicio, codigo')
+        .select('data_inicio, codigo, unidade')
         .eq('id', loteId)
         .single();
 
-      console.log('Dados do lote:', loteData);
-      console.log('Erro do lote:', loteError);
+      const loteData = loteResponse.data;
+      console.log('📦 Dados do lote:', loteData);
 
       if (!loteData) {
-        console.warn('Lote não encontrado para ID:', loteId);
+        console.warn('❌ Lote não encontrado para ID:', loteId);
         setFotos([]);
         return;
       }
 
       const dataInicio = new Date(loteData.data_inicio).toISOString().split('T')[0];
-      console.log('Data de início formatada:', dataInicio);
+      console.log('📅 Data de início formatada:', dataInicio);
 
-      // Buscar fotos das entregas do dia de início do lote
-      console.log('Buscando entregas para data:', dataInicio);
-      const { data: entregasPorData, error: entregasError } = await supabase
+      // Buscar entregas da data/unidade do lote
+      console.log('🔍 Buscando entregas para data:', dataInicio, 'e unidade:', loteData.unidade);
+      
+      // Buscar entregas com tipagem simplificada
+      const entregasQuery: any = await supabase
         .from('entregas')
-        .select(`
-          id,
-          peso,
-          qualidade_residuo,
-          created_at,
-          lote_codigo,
-          entrega_fotos!inner(
-            id,
-            foto_url,
-            tipo_foto,
-            created_at
-          ),
-          voluntarios:voluntario_id(
-            id,
-            nome,
-            numero_balde
-          )
-        `)
+        .select('id, peso, qualidade_residuo, created_at, voluntario_id')
         .gte('created_at', `${dataInicio}T00:00:00.000Z`)
         .lt('created_at', `${dataInicio}T23:59:59.999Z`)
-        .is('entrega_fotos.deleted_at', null);
+        .eq('unidade', loteData.unidade)
+        .order('created_at', { ascending: true });
+      
+      const entregas = entregasQuery.data || [];
+      
+      // entregas já está definido acima
+      console.log('📦 Entregas encontradas:', entregas?.length || 0);
 
-      console.log('Entregas encontradas:', entregasPorData);
-      console.log('Erro nas entregas:', entregasError);
+      // Buscar dados dos voluntários
+      const voluntarioIds = [...new Set(entregas.map((e: any) => e.voluntario_id).filter(Boolean))];
+      let voluntariosData: any[] = [];
+      if (voluntarioIds.length > 0) {
+        const voluntariosResponse = await supabase
+          .from('voluntarios')
+          .select('id, nome, numero_balde')
+          .in('id', voluntarioIds);
+        voluntariosData = voluntariosResponse.data || [];
+      }
 
-      // Buscar fotos de manejo semanal do lote
-      console.log('Buscando fotos de manejo para loteId:', loteId);
-      const { data: fotosManejo, error: manejoError } = await supabase
+      // Buscar fotos das entregas
+      let fotosEntregasData: any[] = [];
+      if (entregas.length > 0) {
+        const entregaIds = entregas.map((e: any) => e.id);
+        const fotosResponse = await supabase
+          .from('entrega_fotos')
+          .select('id, entrega_id, foto_url, tipo_foto, created_at')
+          .in('entrega_id', entregaIds)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: true });
+        
+        fotosEntregasData = fotosResponse.data || [];
+        console.log('📸 Fotos de entregas encontradas:', fotosEntregasData.length);
+      }
+
+      // Buscar fotos de manejo semanal do lote específico
+      console.log('🔍 Buscando fotos de manejo para loteId:', loteId);
+      const manejoResponse = await supabase
         .from('lote_fotos')
-        .select(`
-          id,
-          foto_url,
-          tipo_foto,
-          created_at,
-          ordem_foto,
-          entrega_id,
-          manejo_id,
-          manejo_semanal:manejo_id(
-            id,
-            caixa_origem,
-            caixa_destino,
-            peso_antes,
-            peso_depois
-          )
-        `)
+        .select('id, foto_url, tipo_foto, created_at, ordem_foto, entrega_id, manejo_id')
         .eq('lote_id', loteId)
         .not('manejo_id', 'is', null)
         .is('deleted_at', null)
         .order('created_at', { ascending: true });
 
-      console.log('Fotos de manejo encontradas:', fotosManejo);
-      console.log('Erro nas fotos de manejo:', manejoError);
+      const fotosManejo = manejoResponse.data || [];
+      console.log('🧑‍🌾 Fotos de manejo encontradas:', fotosManejo.length);
 
       // Processar fotos das entregas
-      let fotosEntregas: LoteFoto[] = [];
-      if (entregasPorData && Array.isArray(entregasPorData)) {
-        fotosEntregas = entregasPorData.flatMap(entrega => {
-          if (!entrega.entrega_fotos || !Array.isArray(entrega.entrega_fotos)) {
-            return [];
-          }
-          return entrega.entrega_fotos.map((foto: any) => ({
-            id: foto.id,
-            lote_id: loteId,
-            foto_url: foto.foto_url,
-            tipo_foto: foto.tipo_foto,
-            created_at: foto.created_at,
-            entrega_id: entrega.id,
-            manejo_id: null,
-            ordem_foto: null,
-            entregas: {
-              id: entrega.id,
-              peso: entrega.peso,
-              qualidade_residuo: entrega.qualidade_residuo,
-              voluntarios: entrega.voluntarios
-            },
-            manejo_semanal: null
-          }));
-        });
-      }
+      const fotosEntregasProcessadas: LoteFoto[] = fotosEntregasData.map((foto: any) => {
+        const entregaRelacionada = entregas.find((e: any) => e.id === foto.entrega_id);
+        const voluntarioRelacionado = entregaRelacionada ? 
+          voluntariosData.find((v: any) => v.id === entregaRelacionada.voluntario_id) : null;
+        
+        return {
+          id: foto.id,
+          lote_id: loteId,
+          foto_url: foto.foto_url,
+          tipo_foto: foto.tipo_foto,
+          created_at: foto.created_at,
+          entrega_id: foto.entrega_id,
+          manejo_id: null,
+          ordem_foto: null,
+          entregas: entregaRelacionada ? {
+            id: entregaRelacionada.id,
+            peso: entregaRelacionada.peso,
+            qualidade_residuo: entregaRelacionada.qualidade_residuo,
+            voluntarios: voluntarioRelacionado || {
+              id: '',
+              nome: 'Voluntário não encontrado',
+              numero_balde: 0
+            }
+          } : null,
+          manejo_semanal: null
+        };
+      });
 
-      console.log('Fotos de entregas processadas:', fotosEntregas.length);
-
-      // Processar fotos de manejo e garantir tipo correto
-      const fotosManejoProcesadas: LoteFoto[] = (fotosManejo || []).map(foto => ({
+      // Processar fotos de manejo
+      const fotosManejoProcesadas: LoteFoto[] = fotosManejo.map((foto: any) => ({
         id: foto.id,
         lote_id: loteId,
         foto_url: foto.foto_url,
@@ -164,18 +163,17 @@ export const useLoteFotos = (loteId?: string) => {
         manejo_id: foto.manejo_id,
         ordem_foto: foto.ordem_foto,
         entregas: null,
-        manejo_semanal: foto.manejo_semanal
+        manejo_semanal: null
       }));
 
-      console.log('Fotos de manejo processadas:', fotosManejoProcesadas.length);
-
-      // Combinar fotos de entregas e manejo
-      const todasFotos = [...fotosEntregas, ...fotosManejoProcesadas];
-      console.log('Total de fotos combinadas:', todasFotos.length);
+      // Combinar fotos
+      const todasFotos = [...fotosEntregasProcessadas, ...fotosManejoProcesadas];
+      console.log('📊 Total de fotos combinadas:', todasFotos.length);
+      console.log('📊 Entregas:', fotosEntregasProcessadas.length, 'Manejo:', fotosManejoProcesadas.length);
 
       setFotos(todasFotos);
     } catch (error) {
-      console.error('Erro ao buscar fotos:', error);
+      console.error('❌ Erro ao buscar fotos:', error);
     } finally {
       setLoading(false);
     }
