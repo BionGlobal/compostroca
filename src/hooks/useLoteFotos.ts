@@ -70,7 +70,7 @@ export const useLoteFotos = (loteId?: string) => {
           qualidade_residuo,
           created_at,
           lote_codigo,
-          entrega_fotos(
+          entrega_fotos!inner(
             id,
             foto_url,
             tipo_foto,
@@ -84,7 +84,7 @@ export const useLoteFotos = (loteId?: string) => {
         `)
         .gte('created_at', `${dataInicio}T00:00:00.000Z`)
         .lt('created_at', `${dataInicio}T23:59:59.999Z`)
-        .not('entrega_fotos', 'is', null);
+        .is('entrega_fotos.deleted_at', null);
 
       // Buscar fotos de manejo semanal do lote
       const { data: fotosManejo } = await supabase
@@ -283,12 +283,14 @@ export const useLoteFotos = (loteId?: string) => {
     // Se já é uma URL completa, retorna como está
     if (fotoUrl.startsWith('http')) return fotoUrl;
     
-    // Caso contrário, constroi a URL do Supabase Storage
-    const { data } = supabase.storage
-      .from('lote-fotos')
-      .getPublicUrl(fotoUrl);
+    // Para fotos de entregas, usar bucket 'entrega-fotos'
+    // Para fotos de manejo, usar bucket 'lote-fotos'
+    const bucketName = fotoUrl.includes('entrega') || fotoUrl.includes('conteudo') || fotoUrl.includes('pesagem') || fotoUrl.includes('destino') 
+      ? 'entrega-fotos' 
+      : 'lote-fotos';
     
-    return data.publicUrl;
+    // Construir URL do Supabase Storage
+    return `https://yfcxdbhrtjdmwyifgptf.supabase.co/storage/v1/object/public/${bucketName}/${fotoUrl}`;
   };
 
   useEffect(() => {
