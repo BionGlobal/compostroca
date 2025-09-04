@@ -49,13 +49,12 @@ export const useLoteFotos = (loteId?: string) => {
 
       // Buscar dados do lote
       console.log('🔍 Buscando lote com ID:', loteId);
-      const loteResponse = await supabase
+      const { data: loteData, error: loteError } = await supabase
         .from('lotes')
         .select('data_inicio, codigo, unidade')
         .eq('id', loteId)
-        .single();
+        .maybeSingle();
 
-      const loteData = loteResponse.data;
       console.log('📦 Dados do lote:', loteData);
 
       if (!loteData) {
@@ -67,52 +66,67 @@ export const useLoteFotos = (loteId?: string) => {
       const dataInicio = new Date(loteData.data_inicio).toISOString().split('T')[0];
       console.log('📅 Data de início formatada:', dataInicio);
 
-      // Buscar entregas da data/unidade do lote
-      console.log('🔍 Buscando entregas para data:', dataInicio, 'e unidade:', loteData.unidade);
+      // Buscar entregas da data usando query simplificada sem 'unidade'
+      console.log('🔍 Buscando entregas para data:', dataInicio);
       
-      // Buscar entregas com tipagem simplificada
-      const entregasQuery: any = await supabase
+      const entregasQuery = await supabase
         .from('entregas')
         .select('id, peso, qualidade_residuo, created_at, voluntario_id')
         .gte('created_at', `${dataInicio}T00:00:00.000Z`)
-        .lt('created_at', `${dataInicio}T23:59:59.999Z`)
-        .eq('unidade', loteData.unidade)
-        .order('created_at', { ascending: true });
+        .lt('created_at', `${dataInicio}T23:59:59.999Z`);
       
       const entregas = entregasQuery.data || [];
-      
-      // entregas já está definido acima
-      console.log('📦 Entregas encontradas:', entregas?.length || 0);
+      console.log('📦 Entregas encontradas:', entregas.length);
 
-      // Buscar dados dos voluntários
-      const voluntarioIds = [...new Set(entregas.map((e: any) => e.voluntario_id).filter(Boolean))];
+      // Buscar dados dos voluntários separadamente
       let voluntariosData: any[] = [];
-      if (voluntarioIds.length > 0) {
-        const voluntariosResponse = await supabase
+      let entregasFiltradas: any[] = [];
+      
+      if (entregas.length > 0) {
+        // Filtrar entregas por voluntários da mesma unidade do lote
+        const { data: voluntariosUnidade } = await supabase
           .from('voluntarios')
-          .select('id, nome, numero_balde')
-          .in('id', voluntarioIds);
-        voluntariosData = voluntariosResponse.data || [];
+          .select('id')
+          .eq('unidade', loteData.unidade);
+        
+        const voluntariosUnidadeIds = (voluntariosUnidade || []).map(v => v.id);
+        entregasFiltradas = entregas.filter(e => 
+          e.voluntario_id && voluntariosUnidadeIds.includes(e.voluntario_id)
+        );
+
+        const voluntarioIds = entregasFiltradas
+          .map(e => e.voluntario_id)
+          .filter((id): id is string => typeof id === 'string' && id !== null && id !== '');
+        
+        const uniqueVoluntarioIds = Array.from(new Set(voluntarioIds));
+        
+        if (uniqueVoluntarioIds.length > 0) {
+          const { data: voluntarios } = await supabase
+            .from('voluntarios')
+            .select('id, nome, numero_balde')
+            .in('id', uniqueVoluntarioIds);
+          voluntariosData = voluntarios || [];
+        }
       }
 
-      // Buscar fotos das entregas
+      // Buscar fotos das entregas encontradas
       let fotosEntregasData: any[] = [];
-      if (entregas.length > 0) {
-        const entregaIds = entregas.map((e: any) => e.id);
-        const fotosResponse = await supabase
+      if (entregasFiltradas.length > 0) {
+        const entregaIds = entregasFiltradas.map(e => e.id);
+        const { data: fotosData } = await supabase
           .from('entrega_fotos')
           .select('id, entrega_id, foto_url, tipo_foto, created_at')
           .in('entrega_id', entregaIds)
           .is('deleted_at', null)
           .order('created_at', { ascending: true });
         
-        fotosEntregasData = fotosResponse.data || [];
+        fotosEntregasData = fotosData || [];
         console.log('📸 Fotos de entregas encontradas:', fotosEntregasData.length);
       }
 
       // Buscar fotos de manejo semanal do lote específico
       console.log('🔍 Buscando fotos de manejo para loteId:', loteId);
-      const manejoResponse = await supabase
+      const { data: fotosManejo } = await supabase
         .from('lote_fotos')
         .select('id, foto_url, tipo_foto, created_at, ordem_foto, entrega_id, manejo_id')
         .eq('lote_id', loteId)
@@ -120,14 +134,13 @@ export const useLoteFotos = (loteId?: string) => {
         .is('deleted_at', null)
         .order('created_at', { ascending: true });
 
-      const fotosManejo = manejoResponse.data || [];
-      console.log('🧑‍🌾 Fotos de manejo encontradas:', fotosManejo.length);
+      console.log('🧑‍🌾 Fotos de manejo encontradas:', fotosManejo?.length || 0);
 
       // Processar fotos das entregas
-      const fotosEntregasProcessadas: LoteFoto[] = fotosEntregasData.map((foto: any) => {
-        const entregaRelacionada = entregas.find((e: any) => e.id === foto.entrega_id);
+      const fotosEntregasProcessadas: LoteFoto[] = fotosEntregasData.map(foto => {
+        const entregaRelacionada = entregasFiltradas.find(e => e.id === foto.entrega_id);
         const voluntarioRelacionado = entregaRelacionada ? 
-          voluntariosData.find((v: any) => v.id === entregaRelacionada.voluntario_id) : null;
+          voluntariosData.find(v => v.id === entregaRelacionada.voluntario_id) : null;
         
         return {
           id: foto.id,
@@ -153,7 +166,7 @@ export const useLoteFotos = (loteId?: string) => {
       });
 
       // Processar fotos de manejo
-      const fotosManejoProcesadas: LoteFoto[] = fotosManejo.map((foto: any) => ({
+      const fotosManejoProcesadas: LoteFoto[] = (fotosManejo || []).map(foto => ({
         id: foto.id,
         lote_id: loteId,
         foto_url: foto.foto_url,
