@@ -45,11 +45,33 @@ export const useAdvancedPDFGenerator = () => {
         `Data de Início: ${new Date(lote.data_inicio).toLocaleDateString('pt-BR')}`,
         `Validador: ${lote.criado_por_nome}`,
         `Peso Inicial Total: ${formatWeight(pesoInicial)}`,
+        `Peso Final: N/A`,
+        `Redução Total: N/A`,
         `Voluntários Envolvidos: ${lote.num_voluntarios}`,
         `Qualidade Média: ${lote.qualidade_media.toFixed(1)}/3`
       ];
 
       info.forEach(line => {
+        pdf.text(line, 20, yPosition);
+        yPosition += 6;
+      });
+
+      yPosition += 10;
+
+      // Impacto ambiental
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Impacto Ambiental:', 20, yPosition);
+      yPosition += 8;
+
+      pdf.setFont('helvetica', 'normal');
+      const impacto = [
+        `CO2e Evitado: N/A`,
+        `Resíduos Desviados: ${formatWeight(pesoInicial)}`,
+        `Composto Produzido: N/A`,
+        `Taxa de Redução: N/A`
+      ];
+
+      impacto.forEach(line => {
         pdf.text(line, 20, yPosition);
         yPosition += 6;
       });
