@@ -205,8 +205,17 @@ export const useIOSPermissions = () => {
         constraints.video = useFrontCamera ? { facingMode: 'user' } : true;
       }
 
+      console.log('📷 Constraints usadas:', JSON.stringify(constraints, null, 2));
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
+      // Verificar se o stream é válido
+      const videoTracks = stream.getVideoTracks();
+      if (videoTracks.length === 0) {
+        console.error('📷 Stream sem tracks de vídeo');
+        throw new Error('Stream inválido - sem tracks de vídeo');
+      }
+      
+      console.log('📷 Configurações obtidas:', videoTracks[0].getSettings());
       setPermissions(prev => ({ ...prev, camera: 'granted' }));
       console.log('✅ Câmera acessada com sucesso');
       

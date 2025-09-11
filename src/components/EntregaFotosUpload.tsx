@@ -58,7 +58,10 @@ export const EntregaFotosUpload: React.FC<EntregaFotosUploadProps> = ({
 
   const startCamera = async () => {
     try {
+      console.log('📷 Iniciando câmera...');
+      
       if (stream) {
+        console.log('📷 Parando stream anterior...');
         stream.getTracks().forEach(track => track.stop());
       }
       
@@ -70,18 +73,50 @@ export const EntregaFotosUpload: React.FC<EntregaFotosUploadProps> = ({
         return;
       }
       
+      console.log('📷 Solicitando acesso à câmera...');
       const mediaStream = await requestCameraAccess();
       
       if (mediaStream) {
+        console.log('📷 Stream obtida com sucesso');
         if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
+          const video = videoRef.current;
+          video.srcObject = mediaStream;
           setStream(mediaStream);
           
-          videoRef.current.onloadedmetadata = () => {
+          const handleMetadataLoaded = () => {
+            console.log('📷 Metadata carregada, câmera ativa');
             setCameraActive(true);
           };
+          
+          const handleCanPlay = () => {
+            console.log('📷 Video pode ser reproduzido');
+            setCameraActive(true);
+          };
+          
+          const handleError = (e: Event) => {
+            console.error('📷 Erro no elemento video:', e);
+            setCameraError('Erro no carregamento do vídeo');
+          };
+          
+          video.onloadedmetadata = handleMetadataLoaded;
+          video.oncanplay = handleCanPlay;
+          video.onerror = handleError;
+          
+          // Fallback para garantir que a câmera seja ativada
+          setTimeout(() => {
+            if (video && video.readyState >= 2) {
+              console.log('📷 Forçando ativação da câmera via timeout');
+              setCameraActive(true);
+            }
+          }, 1500);
+          
+          // Tentar reproduzir o vídeo explicitamente
+          video.play().catch(error => {
+            console.error('📷 Erro ao reproduzir vídeo:', error);
+          });
         }
       } else {
+        console.error('📷 Não foi possível obter o stream da câmera');
         setCameraError('Não foi possível acessar a câmera.');
         
         if (deviceInfo?.isIOS) {
@@ -89,8 +124,8 @@ export const EntregaFotosUpload: React.FC<EntregaFotosUploadProps> = ({
         }
       }
     } catch (error) {
-      console.error('Erro ao acessar câmera:', error);
-      setCameraError('Erro ao acessar a câmera.');
+      console.error('📷 Erro ao acessar câmera:', error);
+      setCameraError(`Erro ao acessar a câmera: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     }
   };
 
@@ -107,15 +142,36 @@ export const EntregaFotosUpload: React.FC<EntregaFotosUploadProps> = ({
       const canvas = canvasRef.current;
       const video = videoRef.current;
       
+      console.log('📷 Capturando foto...');
+      console.log('📷 Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+      
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        console.error('📷 Dimensões do vídeo inválidas');
+        setCameraError('Erro: dimensões do vídeo inválidas');
+        return;
+      }
+      
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(video, 0, 0);
-        const imageData = canvas.toDataURL('image/jpeg', 0.8);
-        setCapturedImage(imageData);
+        try {
+          ctx.drawImage(video, 0, 0);
+          const imageData = canvas.toDataURL('image/jpeg', 0.8);
+          console.log('📷 Foto capturada com sucesso');
+          setCapturedImage(imageData);
+        } catch (error) {
+          console.error('📷 Erro ao capturar foto:', error);
+          setCameraError('Erro ao capturar a foto');
+        }
+      } else {
+        console.error('📷 Não foi possível obter o contexto do canvas');
+        setCameraError('Erro interno do canvas');
       }
+    } else {
+      console.error('📷 Video ou canvas não disponível');
+      setCameraError('Erro: câmera não está pronta');
     }
   };
 
@@ -244,11 +300,16 @@ export const EntregaFotosUpload: React.FC<EntregaFotosUploadProps> = ({
   };
 
   const retakePhoto = () => {
+    console.log('📷 Refazendo foto...');
     setCapturedImage(null);
     setSelectedFile(null);
+    setCameraError(null);
     
     if (captureMode === 'camera') {
-      startCamera();
+      setCameraActive(false);
+      setTimeout(() => {
+        startCamera();
+      }, 100);
     }
   };
 
@@ -258,10 +319,15 @@ export const EntregaFotosUpload: React.FC<EntregaFotosUploadProps> = ({
   };
 
   const switchToCamera = () => {
+    console.log('📷 Mudando para modo câmera...');
     setCaptureMode('camera');
     setCapturedImage(null);
     setSelectedFile(null);
-    startCamera();
+    setCameraError(null);
+    setCameraActive(false);
+    setTimeout(() => {
+      startCamera();
+    }, 100);
   };
 
   const switchToUpload = () => {
@@ -272,17 +338,21 @@ export const EntregaFotosUpload: React.FC<EntregaFotosUploadProps> = ({
   };
 
   useEffect(() => {
+    console.log('📷 Efeito inicial - modo:', captureMode);
     if (captureMode === 'camera') {
       startCamera();
     }
     
     return () => {
+      console.log('📷 Cleanup - parando câmera');
       stopCamera();
     };
   }, []);
 
   useEffect(() => {
-    if (currentStep && !capturedImage && captureMode === 'camera') {
+    console.log('📷 Mudança de step:', currentStep, 'Modo:', captureMode, 'Imagem capturada:', !!capturedImage);
+    if (currentStep && !capturedImage && captureMode === 'camera' && !cameraActive) {
+      console.log('📷 Reiniciando câmera para novo step');
       startCamera();
     }
   }, [currentStep]);
@@ -340,14 +410,14 @@ export const EntregaFotosUpload: React.FC<EntregaFotosUploadProps> = ({
           {captureMode === 'camera' ? (
             // Camera Mode
             cameraError ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center bg-black/80">
                 {deviceInfo?.isIOS && permissions.camera === 'denied' ? (
                   <AlertTriangle className="h-12 w-12 mb-2 text-orange-500" />
                 ) : (
                   <Camera className="h-12 w-12 mb-2 text-muted-foreground" />
                 )}
                 
-                <p className="text-sm text-white mb-4">{cameraError}</p>
+                <p className="text-sm text-white mb-4 break-words max-w-full">{cameraError}</p>
                 
                 {deviceInfo?.isIOS && permissions.camera === 'denied' && (
                   <div className="text-xs text-gray-300 space-y-1 max-w-xs">
@@ -366,13 +436,23 @@ export const EntregaFotosUpload: React.FC<EntregaFotosUploadProps> = ({
                 </Button>
               </div>
             ) : !capturedImage ? (
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-              />
+              <>
+                {!cameraActive && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                    <div className="text-center">
+                      <Camera className="h-12 w-12 mb-2 text-white animate-pulse mx-auto" />
+                      <p className="text-white text-sm">Carregando câmera...</p>
+                    </div>
+                  </div>
+                )}
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`w-full h-full object-cover ${!cameraActive ? 'opacity-0' : 'opacity-100'} transition-opacity duration-500`}
+                />
+              </>
             ) : (
               <img
                 src={capturedImage}
