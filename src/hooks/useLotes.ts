@@ -320,6 +320,101 @@ export const useLotes = () => {
     }
   };
 
+  const cancelarLote = async (loteId: string) => {
+    if (!user || !loteAtivoCaixa01) {
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado ou lote não encontrado",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      setLoading(true);
+      console.log('🗑️ Cancelando lote:', loteId);
+
+      // Buscar todas as entregas do lote
+      const { data: entregas, error: entregasError } = await supabase
+        .from('entregas')
+        .select('id')
+        .eq('lote_codigo', loteAtivoCaixa01.codigo)
+        .is('deleted_at', null);
+
+      if (entregasError) throw entregasError;
+
+      // Se há entregas, deletar as fotos primeiro e depois as entregas
+      if (entregas && entregas.length > 0) {
+        console.log(`📸 Deletando fotos de ${entregas.length} entregas...`);
+        
+        // Deletar fotos das entregas
+        for (const entrega of entregas) {
+          const { error: fotosError } = await supabase
+            .from('entrega_fotos')
+            .delete()
+            .eq('entrega_id', entrega.id);
+          
+          if (fotosError) {
+            console.error('Erro ao deletar fotos da entrega:', entrega.id, fotosError);
+            throw fotosError;
+          }
+        }
+
+        // Deletar entregas
+        console.log('📦 Deletando entregas...');
+        const { error: deleteEntregasError } = await supabase
+          .from('entregas')
+          .delete()
+          .eq('lote_codigo', loteAtivoCaixa01.codigo);
+
+        if (deleteEntregasError) throw deleteEntregasError;
+      }
+
+      // Deletar o lote
+      console.log('🗂️ Deletando lote...');
+      const { error: deleteLoteError } = await supabase
+        .from('lotes')
+        .delete()
+        .eq('id', loteId);
+
+      if (deleteLoteError) throw deleteLoteError;
+
+      // Log da atividade
+      await supabase
+        .rpc('log_user_activity', {
+          p_user_id: user.id,
+          p_action_type: 'DELETE',
+          p_action_description: `Lote ${loteAtivoCaixa01.codigo} cancelado com ${entregas?.length || 0} entregas`,
+          p_table_affected: 'lotes',
+          p_record_id: loteId
+        });
+
+      console.log('✅ Lote cancelado com sucesso');
+      setLoteAtivoCaixa01(null);
+      setVoluntariosCount(0);
+      
+      // Notificar outros componentes
+      notifyLoteUpdate();
+      
+      toast({
+        title: "Lote Cancelado",
+        description: `Lote ${loteAtivoCaixa01.codigo} foi cancelado e ${entregas?.length || 0} entregas foram removidas permanentemente.`,
+      });
+
+      return true;
+    } catch (error: any) {
+      console.error('Erro ao cancelar lote:', error);
+      toast({
+        title: "Erro ao Cancelar",
+        description: error.message || "Não foi possível cancelar o lote",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Subscribe to lote updates
   useEffect(() => {
     const unsubscribe = subscribeToLoteUpdates(() => {
@@ -342,6 +437,7 @@ export const useLotes = () => {
     loading,
     criarNovoLote,
     encerrarLote,
+    cancelarLote,
     atualizarPesoLote,
     refetch: fetchLoteAtivoCaixa01,
   };

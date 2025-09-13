@@ -2,16 +2,19 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Clock, User, Weight, Users, Play } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { MapPin, Clock, User, Weight, Users, Play, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useLotes } from '@/hooks/useLotes';
 
 export const LoteCard = () => {
-  const { loteAtivoCaixa01, voluntariosCount, loading, criarNovoLote, encerrarLote } = useLotes();
+  const { loteAtivoCaixa01, voluntariosCount, loading, criarNovoLote, encerrarLote, cancelarLote } = useLotes();
   const [isCreating, setIsCreating] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
+  const [confirmCode, setConfirmCode] = useState('');
 
   const handleCriarLote = async () => {
     setIsCreating(true);
@@ -25,6 +28,17 @@ export const LoteCard = () => {
     setIsClosing(true);
     await encerrarLote(loteAtivoCaixa01.id);
     setIsClosing(false);
+  };
+
+  const handleCancelarLote = async () => {
+    if (!loteAtivoCaixa01) return;
+    
+    setIsCanceling(true);
+    const success = await cancelarLote(loteAtivoCaixa01.id);
+    if (success) {
+      setConfirmCode('');
+    }
+    setIsCanceling(false);
   };
 
   const formatLocation = (lat?: number, lng?: number) => {
@@ -174,41 +188,99 @@ export const LoteCard = () => {
           </div>
         </div>
 
-        {/* Botão Encerrar */}
+        {/* Botões de Ação */}
         {loteAtivoCaixa01.status === 'ativo' && (
-          <div className="pt-3 border-t border-emerald-300/30 dark:border-emerald-600/30">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  disabled={isClosing}
-                  className="w-full sm:w-auto"
-                >
-                  {isClosing ? 'Encerrando...' : 'Encerrar Entregas'}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="sm:max-w-md">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Encerrar Entregas</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Tem certeza que deseja finalizar a fase de entregas do lote <strong>{loteAtivoCaixa01.codigo}</strong>?
-                    <br /><br />
-                    O lote será transferido para a esteira de produção e não poderá mais receber novos resíduos.
-                    O peso total atual é de <strong>{loteAtivoCaixa01.peso_atual.toFixed(2)} kg</strong>.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={handleEncerrarLote}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          <div className="pt-3 border-t border-emerald-300/30 dark:border-emerald-600/30 space-y-2">
+            <div className="flex flex-col sm:flex-row gap-2">
+              {/* Botão Encerrar */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    disabled={isClosing || isCanceling}
+                    className="flex-1 sm:flex-none"
                   >
-                    Finalizar Entregas
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                    {isClosing ? 'Encerrando...' : 'Encerrar Entregas'}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="sm:max-w-md">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Encerrar Entregas</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tem certeza que deseja finalizar a fase de entregas do lote <strong>{loteAtivoCaixa01.codigo}</strong>?
+                      <br /><br />
+                      O lote será transferido para a esteira de produção e não poderá mais receber novos resíduos.
+                      O peso total atual é de <strong>{loteAtivoCaixa01.peso_atual.toFixed(2)} kg</strong>.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleEncerrarLote}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Finalizar Entregas
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              {/* Botão Cancelar Lote */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    disabled={isClosing || isCanceling}
+                    className="flex-1 sm:flex-none border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800 hover:border-red-400 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/50 dark:hover:text-red-300"
+                  >
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    {isCanceling ? 'Cancelando...' : 'Cancelar Lote'}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="sm:max-w-md">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                      <AlertTriangle className="h-5 w-5" />
+                      Cancelar Lote - AÇÃO IRREVERSÍVEL
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-3">
+                      <p>
+                        <strong>ATENÇÃO:</strong> Esta ação irá cancelar completamente o lote <strong>{loteAtivoCaixa01.codigo}</strong> e:
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-sm bg-red-50 dark:bg-red-950/30 p-3 rounded border border-red-200 dark:border-red-800">
+                        <li><strong>{voluntariosCount}</strong> registros de voluntários serão perdidos</li>
+                        <li>Todas as entregas e fotos do lote serão <strong>deletadas permanentemente</strong></li>
+                        <li>O lote voltará ao estado inicial (sem lote ativo)</li>
+                        <li><strong>Esta ação NÃO PODE ser desfeita</strong></li>
+                      </ul>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Para confirmar, digite o código do lote:</p>
+                        <Input
+                          value={confirmCode}
+                          onChange={(e) => setConfirmCode(e.target.value)}
+                          placeholder={loteAtivoCaixa01.codigo}
+                          className="font-mono"
+                        />
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setConfirmCode('')}>
+                      Manter Lote
+                    </AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleCancelarLote}
+                      disabled={confirmCode !== loteAtivoCaixa01.codigo}
+                      className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                    >
+                      Cancelar Definitivamente
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         )}
       </CardContent>
