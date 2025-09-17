@@ -1,143 +1,188 @@
 import React from 'react';
-import { Calendar, MapPin, Users, Star, Scale, TrendingDown, Leaf, Download, Camera } from 'lucide-react';
-import { FlippableCard } from './FlippableCard';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { formatWeight, formatLocation, calculateWeightReduction } from '@/lib/organizationUtils';
-import { HistoricoEvent } from '@/hooks/useHistoricoLotes';
+import { Calendar, Users, Scale, MapPin, Clock, Leaf, Hash, ShieldCheck } from "lucide-react";
+import { FlippableCard } from "@/components/FlippableCard";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { formatHashDisplay } from "@/lib/hashUtils";
+import { useLoteHash } from "@/hooks/useLoteHash";
 
 interface LoteProntoCardProps {
-  evento: HistoricoEvent;
+  evento: any;
   onViewPhotos?: (loteId: string, title: string) => void;
-  onDownloadPDF?: () => void;
+  onDownloadPDF?: (evento: any) => void;
   loading?: boolean;
 }
 
-export const LoteProntoCard = ({ evento, onViewPhotos, onDownloadPDF, loading }: LoteProntoCardProps) => {
+export const LoteProntoCard: React.FC<LoteProntoCardProps> = ({
+  evento,
+  onViewPhotos,
+  onDownloadPDF,
+  loading = false
+}) => {
+  const { generateAndSaveHash, copyHashToClipboard, loading: hashLoading } = useLoteHash();
+
+  const handleViewPhotos = () => {
+    if (onViewPhotos) {
+      onViewPhotos(evento.dados_especificos.id, `Fotos do Lote Finalizado ${evento.lote_codigo}`);
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    if (onDownloadPDF) {
+      onDownloadPDF(evento);
+    }
+  };
+
+  const handleGenerateHash = async () => {
+    if (!evento.hash_integridade) {
+      await generateAndSaveHash(evento.dados_especificos.id);
+    }
+  };
+
+  const handleCopyHash = async () => {
+    if (evento.hash_integridade) {
+      await copyHashToClipboard(evento.hash_integridade);
+    }
+  };
+
   const dados = evento.dados_especificos;
-  const co2Evitado = dados.peso_inicial ? (Number(dados.peso_inicial) * 0.766).toFixed(2) : 'Não informado';
+  const voluntarios = dados.num_voluntarios || 0;
+  const co2Evitado = dados.peso_inicial ? (Number(dados.peso_inicial) * 0.766).toFixed(2) : '0';
   const reducaoPercentual = dados.peso_inicial && dados.peso_final ? 
-    calculateWeightReduction(dados.peso_inicial, dados.peso_final) : 0;
+    (((dados.peso_inicial - dados.peso_final) / dados.peso_inicial) * 100) : 0;
 
   const frontContent = (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full p-6">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h3 className="text-lg sm:text-xl font-bold text-white mb-2 tracking-wide">
+          <h3 className="text-xl font-bold text-white mb-2">
             {evento.lote_codigo}
           </h3>
-          <Badge variant="outline" className="bg-emerald-500/20 text-white border-emerald-300/50 text-xs font-semibold px-3 py-1 backdrop-blur-sm">
-            ✅ Finalizado
+          <Badge className="bg-green-500/20 text-green-300 border border-green-500/30">
+            Finalizado
           </Badge>
         </div>
-        <div className="text-right">
-          <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-2">
-            <Leaf className="w-7 h-7 text-white" />
+        <div className="flex flex-col items-center">
+          <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center mb-2">
+            <Leaf className="w-6 h-6 text-white" />
           </div>
-          <p className="text-xs text-white/90 font-medium">Distribuído</p>
         </div>
       </div>
 
       {/* Métricas principais */}
       <div className="space-y-3 flex-1">
-        <div className="flex items-center gap-2 text-sm text-white/90">
+        <div className="flex items-center gap-2 text-sm text-gray-300">
           <Calendar className="w-4 h-4" />
-          <span>Início: {dados.data_inicio ? new Date(dados.data_inicio).toLocaleDateString('pt-BR') : 'Não informado'}</span>
+          <span>Início: {dados.data_inicio ? new Date(dados.data_inicio).toLocaleDateString('pt-BR') : 'N/A'}</span>
         </div>
         
-        <div className="flex items-center gap-2 text-sm text-white/90">
+        <div className="flex items-center gap-2 text-sm text-gray-300">
           <Calendar className="w-4 h-4" />
-          <span>Finalizado: {dados.data_encerramento ? new Date(dados.data_encerramento).toLocaleDateString('pt-BR') : 'Não informado'}</span>
+          <span>Fim: {dados.data_encerramento ? new Date(dados.data_encerramento).toLocaleDateString('pt-BR') : 'N/A'}</span>
         </div>
         
-        <div className="flex items-center gap-2 text-sm text-white/90">
+        <div className="flex items-center gap-2 text-sm text-gray-300">
           <Scale className="w-4 h-4" />
-          <span>Peso final: {dados.peso_final ? formatWeight(dados.peso_final) : 'Não informado'}</span>
+          <span>Peso final: {dados.peso_final ? `${dados.peso_final}kg` : 'N/A'}</span>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-white/90">
+        <div className="flex items-center gap-2 text-sm text-gray-300">
           <Users className="w-4 h-4" />
-          <span>Voluntários: {dados.num_voluntarios || 'Não informado'}</span>
+          <span>{voluntarios} voluntários</span>
         </div>
-      </div>
-
-      {/* Footer info */}
-      <div className="pt-3 border-t border-white/20">
-        <p className="text-xs text-white/70">
-          Toque para ver mais detalhes
-        </p>
+        
+        {/* Indicador de Hash */}
+        <div className="flex items-center gap-2 text-sm">
+          {evento.hash_integridade ? (
+            <div className="flex items-center gap-1 text-green-400">
+              <ShieldCheck className="w-4 h-4" />
+              <span className="text-xs">Verificado</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 text-yellow-400">
+              <Hash className="w-4 h-4" />
+              <span className="text-xs">Sem hash</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 
   const backContent = (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full p-6">
       {/* Header */}
       <div className="mb-4">
         <h3 className="text-lg font-bold text-white mb-2">Detalhes Completos</h3>
       </div>
 
       {/* Dados detalhados */}
-      <div className="space-y-2 flex-1 text-sm">
+      <div className="space-y-3 flex-1 text-sm">
         {evento.geoloc && (
-          <div className="flex items-start gap-2 text-white/90">
-            <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span className="text-xs break-all">
-              {formatLocation(evento.geoloc.lat, evento.geoloc.lng)}
-            </span>
+          <div className="flex items-center gap-2 text-white/90">
+            <MapPin className="w-4 h-4" />
+            <span className="text-xs">{evento.geoloc.lat.toFixed(6)}, {evento.geoloc.lng.toFixed(6)}</span>
           </div>
         )}
 
         <div className="text-white/90">
-          <p className="text-xs mb-1">Peso inicial: {dados.peso_inicial ? formatWeight(dados.peso_inicial) : 'Não informado'}</p>
-          <p className="text-xs mb-1">Peso final: {dados.peso_final ? formatWeight(dados.peso_final) : 'Não informado'}</p>
+          <p className="text-xs mb-1">Peso inicial: {dados.peso_inicial ? `${dados.peso_inicial}kg` : 'N/A'}</p>
+          <p className="text-xs mb-1">Peso final: {dados.peso_final ? `${dados.peso_final}kg` : 'N/A'}</p>
           {dados.peso_inicial && dados.peso_final && (
             <p className="text-xs mb-1">Redução: {reducaoPercentual.toFixed(1)}%</p>
           )}
         </div>
 
         <div className="text-white/90">
-          <p className="text-xs mb-1">Validador responsável: {evento.validador_nome || 'Não informado'}</p>
-          <p className="text-xs mb-1">Voluntários participantes: {dados.num_voluntarios || 'Não informado'}</p>
-          <p className="text-xs mb-1">Qualidade média: {dados.qualidade_media ? `${dados.qualidade_media}/5` : 'Não informado'}</p>
-        </div>
-
-        <div className="text-white/90">
+          <p className="text-xs mb-1">Responsável: {evento.validador_nome || 'N/A'}</p>
           <p className="text-xs mb-1">CO2e evitado: {co2Evitado} kg</p>
-          <p className="text-xs">Tempo total: {dados.tempo_total ? `${dados.tempo_total} semanas` : 'Não informado'}</p>
+          <p className="text-xs">Tempo total: {dados.tempo_total || 7} semanas</p>
         </div>
       </div>
 
-      {/* Botões de ação */}
-      <div className="flex flex-col gap-2 pt-3 border-t border-white/20">
-        {onViewPhotos && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={(e) => { 
-              e.stopPropagation(); 
-              // Para lotes prontos, mostrar fotos das entregas da data de início e fotos da última manutenção (caixa 7)
-              onViewPhotos?.(evento.dados_especificos.id, `Fotos do Lote Finalizado ${evento.lote_codigo}`);
-            }}
-            className="bg-white/20 border-white/30 text-white hover:bg-white/30 text-xs h-8"
-          >
-            <Camera className="w-3 h-3 mr-1" />
-            Ver Fotos
-          </Button>
-        )}
-        {onDownloadPDF && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={(e) => { e.stopPropagation(); onDownloadPDF(); }}
-            disabled={loading}
-            className="bg-white/20 border-white/30 text-white hover:bg-white/30 text-xs h-8"
-          >
-            <Download className="w-3 h-3 mr-1" />
-            {loading ? 'Gerando...' : 'PDF'}
-          </Button>
-        )}
+      {/* Ações */}
+      <div className="space-y-4">
+        <Button 
+          onClick={handleViewPhotos}
+          className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/20"
+        >
+          Ver Fotos
+        </Button>
+        
+        <Button 
+          onClick={handleDownloadPDF}
+          disabled={loading}
+          className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/20"
+        >
+          {loading ? "Gerando..." : "Baixar PDF"}
+        </Button>
+
+        {/* Seção de Hash de Integridade */}
+        <div className="pt-2 border-t border-white/20">
+          {evento.hash_integridade ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-white/70">
+                <ShieldCheck className="w-4 h-4" />
+                <span>Hash de Integridade</span>
+              </div>
+              <Button 
+                onClick={handleCopyHash}
+                className="w-full bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 text-xs"
+              >
+                {formatHashDisplay(evento.hash_integridade)}
+              </Button>
+            </div>
+          ) : (
+            <Button 
+              onClick={handleGenerateHash}
+              disabled={hashLoading}
+              className="w-full bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 border border-yellow-500/30"
+            >
+              {hashLoading ? "Gerando..." : "Gerar Hash SHA256"}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -146,8 +191,8 @@ export const LoteProntoCard = ({ evento, onViewPhotos, onDownloadPDF, loading }:
     <FlippableCard
       frontContent={frontContent}
       backContent={backContent}
-      gradientClass="bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600"
-      className="transition-all duration-300 hover:shadow-2xl hover:shadow-emerald-500/25"
+      gradientClass="bg-gradient-to-br from-green-600 via-emerald-600 to-teal-600"
+      className="hover:shadow-lg hover:shadow-green-500/25 transition-all duration-300"
     />
   );
 };

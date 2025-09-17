@@ -17,11 +17,12 @@ interface FotosLoteProntoModalProps {
 }
 
 const TIPO_FOTO_LABELS = {
-  'entrega_conteudo': 'Conteúdo da Entrega',
-  'entrega_pesagem': 'Pesagem',
-  'entrega_destino': 'Destino',
-  'manejo_semanal': 'Manejo Semanal'
-} as const;
+  'entrega_conteudo': 'Entrega - Conteúdo',
+  'entrega_pesagem': 'Entrega - Pesagem', 
+  'entrega_destino': 'Entrega - Destino',
+  'manejo_semanal': 'Manutenção Final',
+  'entrega': 'Entregas (Início)'
+};
 
 export const FotosLoteProntoModal: React.FC<FotosLoteProntoModalProps> = ({
   isOpen,
@@ -34,11 +35,8 @@ export const FotosLoteProntoModal: React.FC<FotosLoteProntoModalProps> = ({
   const [imageLoading, setImageLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'single' | 'grid'>('single');
   
-  const { fotos, loading, getFotoUrl, getFotosEntregas, getFotosManejo } = useLoteProntoFotos(loteId);
+  const { fotos, loading, getFotoUrl, getFotosByTipo, getFotosEntregas, getFotosManejo } = useLoteProntoFotos(loteId);
   const { downloadPhotosAsZip, loading: zipLoading } = useZipDownload();
-
-  const fotosEntregas = getFotosEntregas();
-  const fotosManejo = getFotosManejo();
 
   const nextFoto = () => {
     if (currentIndex < fotos.length - 1) {
@@ -88,7 +86,6 @@ export const FotosLoteProntoModal: React.FC<FotosLoteProntoModalProps> = ({
     if (fotos.length === 0) return;
     
     try {
-      // Buscar código do lote
       const { data: lote } = await supabase
         .from('lotes')
         .select('codigo')
@@ -115,18 +112,24 @@ export const FotosLoteProntoModal: React.FC<FotosLoteProntoModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl h-[90vh] p-0 bg-black/95 border-none">
-        <DialogHeader className="px-6 py-4 bg-black/50 backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-white text-lg font-semibold">
-              {title}
-            </DialogTitle>
+      <DialogContent className="max-w-6xl h-[90vh] p-0">
+        <DialogHeader className="px-6 py-4 border-b">
+          <div className="flex items-center justify-between border-b border-border pb-4">
+            <div>
+              <h2 className="text-xl font-semibold">{title}</h2>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p>{fotos.length} {fotos.length === 1 ? 'foto' : 'fotos'} encontrada{fotos.length === 1 ? '' : 's'}</p>
+                <div className="flex gap-4 text-xs">
+                  <span>Entregas: {getFotosByTipo('entrega').length}</span>
+                  <span>Manutenção: {getFotosByTipo('manejo_semanal').length}</span>
+                </div>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setViewMode(viewMode === 'single' ? 'grid' : 'single')}
-                className="text-white hover:bg-white/20"
               >
                 {viewMode === 'single' ? <Grid className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </Button>
@@ -136,118 +139,130 @@ export const FotosLoteProntoModal: React.FC<FotosLoteProntoModalProps> = ({
                   size="sm"
                   onClick={handleDownloadZip}
                   disabled={zipLoading}
-                  className="text-white hover:bg-white/20"
                 >
                   <Archive className="w-4 h-4 mr-2" />
                   {zipLoading ? 'Gerando...' : 'ZIP'}
                 </Button>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                className="text-white hover:bg-white/20"
-              >
+              <Button variant="ghost" size="sm" onClick={onClose}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="flex-1 flex flex-col p-6">
+        <div className="flex-1 overflow-hidden">
           {loading ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-white text-center">
+            <div className="flex-1 flex items-center justify-center h-96">
+              <div className="text-center">
                 <Camera className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>Carregando fotos...</p>
               </div>
             </div>
           ) : fotos.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-white text-center">
+            <div className="flex-1 flex items-center justify-center h-96">
+              <div className="text-center">
                 <FileImage className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p className="text-lg mb-2">Nenhuma foto encontrada</p>
                 <p className="text-sm opacity-70">
-                  Não há fotos das entregas iniciais nem da última manutenção para este lote.
+                  Histórico de fotos não disponível para este lote.
                 </p>
               </div>
             </div>
           ) : viewMode === 'grid' ? (
-            <div className="flex-1 overflow-auto">
-              <div className="mb-6">
-                <h3 className="text-white text-lg font-semibold mb-4">
-                  📦 Fotos das Entregas Iniciais ({fotosEntregas.length})
-                </h3>
-                {fotosEntregas.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {fotosEntregas.map((foto, index) => (
-                      <div key={foto.id} className="bg-white/10 rounded-lg overflow-hidden">
-                        <img
-                          src={getFotoUrl(foto.foto_url)}
-                          alt={`Foto ${index + 1}`}
-                          className="w-full h-32 object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={() => {
-                            setCurrentIndex(fotos.findIndex(f => f.id === foto.id));
-                            setViewMode('single');
-                          }}
-                        />
-                        <div className="p-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {TIPO_FOTO_LABELS[foto.tipo_foto] || foto.tipo_foto}
-                          </Badge>
-                          {foto.entregas && (
-                            <p className="text-white text-xs mt-1">
-                              {foto.entregas.voluntarios.nome} - {foto.entregas.peso}kg
-                            </p>
-                          )}
+            <div className="p-6 overflow-auto max-h-[calc(90vh-120px)]">
+              <div className="space-y-8">
+                {/* Fotos das Entregas */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    📦 Entregas Iniciais ({getFotosEntregas().length})
+                  </h3>
+                  {getFotosEntregas().length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {getFotosEntregas().map((foto, index) => (
+                        <div key={foto.id} className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                          <img
+                            src={getFotoUrl(foto.foto_url)}
+                            alt={`Entrega ${index + 1}`}
+                            className="w-full h-32 object-cover cursor-pointer"
+                            onClick={() => {
+                              setCurrentIndex(fotos.findIndex(f => f.id === foto.id));
+                              setViewMode('single');
+                            }}
+                          />
+                          <div className="p-3">
+                            <Badge variant="outline" className="text-xs mb-2">
+                              {TIPO_FOTO_LABELS[foto.tipo_foto] || foto.tipo_foto}
+                            </Badge>
+                            <div className="text-xs text-gray-500">
+                              {format(new Date(foto.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </div>
+                            {foto.entrega_data && (
+                              <div className="text-xs text-gray-600 mt-1">
+                                <div>Voluntário: {foto.entrega_data.voluntario.nome}</div>
+                                <div>Peso: {foto.entrega_data.peso}kg | Balde: {foto.entrega_data.voluntario.numero_balde}</div>
+                                {foto.entrega_data.observacoes && (
+                                  <div className="mt-1 italic">"{foto.entrega_data.observacoes}"</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-white/70 text-sm">Nenhuma foto de entrega encontrada</p>
-                )}
-              </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-sm">Nenhuma foto de entrega encontrada</p>
+                  )}
+                </div>
 
-              <div>
-                <h3 className="text-white text-lg font-semibold mb-4">
-                  🔧 Fotos da Última Manutenção (Caixa 7) ({fotosManejo.length})
-                </h3>
-                {fotosManejo.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {fotosManejo.map((foto, index) => (
-                      <div key={foto.id} className="bg-white/10 rounded-lg overflow-hidden">
-                        <img
-                          src={getFotoUrl(foto.foto_url)}
-                          alt={`Foto manejo ${index + 1}`}
-                          className="w-full h-32 object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={() => {
-                            setCurrentIndex(fotos.findIndex(f => f.id === foto.id));
-                            setViewMode('single');
-                          }}
-                        />
-                        <div className="p-2">
-                          <Badge variant="outline" className="text-xs text-white border-white/30">
-                            Manejo Semanal
-                          </Badge>
-                          {foto.manejo_semanal && (
-                            <p className="text-white text-xs mt-1">
-                              {foto.manejo_semanal.peso_antes}kg → {foto.manejo_semanal.peso_depois}kg
-                            </p>
-                          )}
+                {/* Fotos da Manutenção */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    🔧 Manutenção Final ({getFotosManejo().length})
+                  </h3>
+                  {getFotosManejo().length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {getFotosManejo().map((foto, index) => (
+                        <div key={foto.id} className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                          <img
+                            src={getFotoUrl(foto.foto_url)}
+                            alt={`Manejo ${index + 1}`}
+                            className="w-full h-32 object-cover cursor-pointer"
+                            onClick={() => {
+                              setCurrentIndex(fotos.findIndex(f => f.id === foto.id));
+                              setViewMode('single');
+                            }}
+                          />
+                          <div className="p-3">
+                            <Badge variant="outline" className="text-xs mb-2">
+                              Manutenção Final
+                            </Badge>
+                            <div className="text-xs text-gray-500">
+                              {format(new Date(foto.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </div>
+                            {foto.manejo_data && (
+                              <div className="text-xs text-gray-600 mt-1">
+                                <div>Caixa {foto.manejo_data.caixa_origem} → {foto.manejo_data.caixa_destino || 'Final'}</div>
+                                <div>Peso: {foto.manejo_data.peso_antes}kg → {foto.manejo_data.peso_depois}kg</div>
+                                {foto.manejo_data.observacoes && (
+                                  <div className="mt-1 italic">"{foto.manejo_data.observacoes}"</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-white/70 text-sm">Nenhuma foto de manutenção encontrada</p>
-                )}
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-sm">Nenhuma foto de manutenção encontrada</p>
+                  )}
+                </div>
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex">
+            <div className="flex h-[calc(90vh-120px)]">
               {/* Área da imagem */}
-              <div className="flex-1 flex items-center justify-center relative">
+              <div className="flex-1 flex items-center justify-center relative bg-black">
                 {imageError ? (
                   <div className="text-center text-white">
                     <AlertCircle className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -297,46 +312,42 @@ export const FotosLoteProntoModal: React.FC<FotosLoteProntoModalProps> = ({
 
               {/* Painel lateral com informações */}
               {currentFoto && (
-                <div className="w-80 bg-black/50 backdrop-blur-sm p-6 overflow-y-auto">
+                <div className="w-80 bg-gray-50 border-l p-6 overflow-y-auto">
                   <div className="space-y-4">
-                    <div>
-                      <Badge variant="secondary">
-                        {TIPO_FOTO_LABELS[currentFoto.tipo_foto] || currentFoto.tipo_foto}
-                      </Badge>
+                    <div className="text-sm font-medium mb-2">
+                      {TIPO_FOTO_LABELS[currentFoto.tipo_foto] || currentFoto.tipo_foto}
                     </div>
-
-                    <div className="text-white space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        <span className="text-sm">
-                          {format(new Date(currentFoto.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                        </span>
-                      </div>
+                    <div className="text-xs text-gray-500 mb-3">
+                      {format(new Date(currentFoto.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                     </div>
-
-                    {currentFoto.entregas && (
-                      <div className="bg-white/10 rounded-lg p-3">
-                        <h4 className="text-white font-medium mb-2">Dados da Entrega</h4>
-                        <div className="text-white text-sm space-y-1">
-                          <p>Voluntário: {currentFoto.entregas.voluntarios.nome}</p>
-                          <p>Balde: #{currentFoto.entregas.voluntarios.numero_balde}</p>
-                          <p>Peso: {currentFoto.entregas.peso} kg</p>
-                          <p>Qualidade: {currentFoto.entregas.qualidade_residuo}/3</p>
-                        </div>
+                    {currentFoto.entrega_data && (
+                      <div className="text-xs text-gray-600 space-y-2 bg-blue-50 p-3 rounded">
+                        <div><strong>Voluntário:</strong> {currentFoto.entrega_data.voluntario.nome}</div>
+                        <div><strong>Peso entregue:</strong> {currentFoto.entrega_data.peso}kg</div>
+                        <div><strong>Balde nº:</strong> {currentFoto.entrega_data.voluntario.numero_balde}</div>
+                        {currentFoto.entrega_data.qualidade_residuo && (
+                          <div><strong>Qualidade:</strong> {currentFoto.entrega_data.qualidade_residuo}/5 ⭐</div>
+                        )}
+                        {currentFoto.entrega_data.observacoes && (
+                          <div className="mt-2 p-2 bg-white rounded border-l-2 border-blue-300">
+                            <strong>Observações:</strong> {currentFoto.entrega_data.observacoes}
+                          </div>
+                        )}
                       </div>
                     )}
-
-                    {currentFoto.manejo_semanal && (
-                      <div className="bg-white/10 rounded-lg p-3">
-                        <h4 className="text-white font-medium mb-2">Dados do Manejo</h4>
-                        <div className="text-white text-sm space-y-1">
-                          <p>Caixa: {currentFoto.manejo_semanal.caixa_origem} → {currentFoto.manejo_semanal.caixa_destino}</p>
-                          <p>Peso antes: {currentFoto.manejo_semanal.peso_antes} kg</p>
-                          <p>Peso depois: {currentFoto.manejo_semanal.peso_depois} kg</p>
-                          {currentFoto.manejo_semanal.observacoes && (
-                            <p>Obs: {currentFoto.manejo_semanal.observacoes}</p>
-                          )}
-                        </div>
+                    {currentFoto.manejo_data && (
+                      <div className="text-xs text-gray-600 space-y-2 bg-green-50 p-3 rounded">
+                        <div><strong>Transferência:</strong> Caixa {currentFoto.manejo_data.caixa_origem} → {currentFoto.manejo_data.caixa_destino || 'Final'}</div>
+                        <div><strong>Redução de peso:</strong> {currentFoto.manejo_data.peso_antes}kg → {currentFoto.manejo_data.peso_depois}kg</div>
+                        <div><strong>Perda:</strong> {(currentFoto.manejo_data.peso_antes - currentFoto.manejo_data.peso_depois).toFixed(2)}kg ({(((currentFoto.manejo_data.peso_antes - currentFoto.manejo_data.peso_depois) / currentFoto.manejo_data.peso_antes) * 100).toFixed(1)}%)</div>
+                        {currentFoto.manejo_data.latitude && currentFoto.manejo_data.longitude && (
+                          <div><strong>Local:</strong> {currentFoto.manejo_data.latitude.toFixed(6)}, {currentFoto.manejo_data.longitude.toFixed(6)}</div>
+                        )}
+                        {currentFoto.manejo_data.observacoes && (
+                          <div className="mt-2 p-2 bg-white rounded border-l-2 border-green-300">
+                            <strong>Observações:</strong> {currentFoto.manejo_data.observacoes}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -344,13 +355,13 @@ export const FotosLoteProntoModal: React.FC<FotosLoteProntoModalProps> = ({
                       variant="outline"
                       size="sm"
                       onClick={() => handleDownload(currentFoto)}
-                      className="w-full text-white border-white/30 hover:bg-white/20"
+                      className="w-full"
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Baixar Foto
                     </Button>
 
-                    <div className="text-center text-white/70 text-sm">
+                    <div className="text-center text-gray-500 text-sm">
                       {currentIndex + 1} de {fotos.length}
                     </div>
                   </div>
