@@ -95,10 +95,10 @@ export const usePublicProductionBelt = (unitCode: string) => {
         // Calcular voluntários únicos do lote
         const voluntariosUnicos = new Set(entregas?.map(e => e.voluntario_id) || []).size;
 
-        // Simular dados IoT (em produção viriam de sensores reais)
+        // Dados IoT (placeholders até integração)
         const iotData = lote.iot_data as any;
-        const temperatura = iotData?.temperatura || Math.floor(Math.random() * (65 - 35) + 35);
-        const umidade = iotData?.umidade || Math.floor(Math.random() * (70 - 40) + 40);
+        const temperatura = iotData?.temperatura || null;
+        const umidade = iotData?.umidade || null;
 
         // Calcular progresso baseado na semana atual
         const progressoPercentual = Math.min((lote.semana_atual / 7) * 100, 100);

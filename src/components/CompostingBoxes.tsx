@@ -23,10 +23,10 @@ interface CompostingBox {
   loteData?: string;
   temperature?: number; // Apenas na caixa 1
   chemistry?: {
-    ph: number;
-    nitrogen: number;
-    phosphorus: number;
-    potassium: number;
+    ph: number | null;
+    nitrogen: number | null;
+    phosphorus: number | null;
+    potassium: number | null;
   }; // Apenas na caixa 6
 }
 
@@ -67,10 +67,10 @@ export const CompostingBoxes = () => {
       loteData: loteNaCaixa.data_inicio,
       temperature: boxNumber === 1 ? loteNaCaixa.temperatura : undefined,
       chemistry: boxNumber === 6 ? {
-        ph: loteNaCaixa.ph || 7.2,
-        nitrogen: (loteNaCaixa.nitrogenio || 21) / 10, // Converte de mg/kg para %
-        phosphorus: (loteNaCaixa.fosforo || 8) / 10,
-        potassium: (loteNaCaixa.potassio || 15) / 10,
+        ph: loteNaCaixa.ph || null,
+        nitrogen: loteNaCaixa.nitrogenio ? loteNaCaixa.nitrogenio / 10 : null,
+        phosphorus: loteNaCaixa.fosforo ? loteNaCaixa.fosforo / 10 : null,
+        potassium: loteNaCaixa.potassio ? loteNaCaixa.potassio / 10 : null,
       } : undefined,
     };
   };
@@ -129,7 +129,8 @@ export const CompostingBoxes = () => {
     return (
       <div className="grid grid-cols-2 gap-2 mt-2">
         {indicators.map((indicator) => {
-          const isOptimal = indicator.value >= indicator.optimal[0] && indicator.value <= indicator.optimal[1];
+          const hasValue = indicator.value !== null && indicator.value !== undefined;
+          const isOptimal = hasValue && indicator.value >= indicator.optimal[0] && indicator.value <= indicator.optimal[1];
           const Icon = indicator.icon;
           
           return (
@@ -137,7 +138,7 @@ export const CompostingBoxes = () => {
               <Icon className="h-3 w-3 text-white" />
               <span className="text-xs font-medium text-white">{indicator.label}:</span>
               <span className={`text-xs font-bold text-white`}>
-                {indicator.value}{indicator.unit}
+                {hasValue ? `${indicator.value}${indicator.unit}` : `-${indicator.unit}`}
               </span>
             </div>
           );
@@ -217,14 +218,14 @@ export const CompostingBoxes = () => {
                   )}
 
                   {/* Dados IoT - Temperatura (Caixa 1) */}
-                  {box.temperature && (
+                  {box.number === 1 && (
                     <div className="flex items-center gap-2 p-2 bg-gradient-primary rounded-lg text-primary-foreground mb-2">
                       <Thermometer className="h-4 w-4" />
                       <span className="text-sm font-medium">
-                        {box.temperature}°C
+                        {box.temperature ? `${box.temperature}°C` : '-°C'}
                       </span>
                       <span className="text-xs opacity-90">
-                        Temperatura ideal
+                        Temperatura
                       </span>
                     </div>
                   )}

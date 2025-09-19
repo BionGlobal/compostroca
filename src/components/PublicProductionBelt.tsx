@@ -156,11 +156,11 @@ export const PublicProductionBelt = ({ lotesAtivos }: PublicProductionBeltProps)
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div className="flex items-center gap-1">
                             <Thermometer className="h-3 w-3 text-orange-500" />
-                            <span>{lote.temperatura}°C</span>
+                            <span>{lote.temperatura ? `${lote.temperatura}°C` : '-°C'}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Droplets className="h-3 w-3 text-blue-500" />
-                            <span>{lote.umidade}%</span>
+                            <span>{lote.umidade ? `${lote.umidade}%` : '-%'}</span>
                           </div>
                         </div>
                       </div>

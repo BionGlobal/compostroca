@@ -35,13 +35,13 @@ export interface LoteExtended {
   validadorNome: string;
   
   // Dados IoT (placeholders para futuro)
-  temperatura?: number;
-  umidade?: number;
-  condutividade?: number;
-  ph?: number;
-  nitrogenio?: number;
-  fosforo?: number;
-  potassio?: number;
+  temperatura?: number | null;
+  umidade?: number | null;
+  condutividade?: number | null;
+  ph?: number | null;
+  nitrogenio?: number | null;
+  fosforo?: number | null;
+  potassio?: number | null;
 }
 
 export interface ManejoRecord {
@@ -236,14 +236,14 @@ export const useLotesManager = () => {
         progressoPercentual,
         dataEntradaCaixa: lote.data_inicio, // Placeholder - em produção seria calculado
         validadorNome: lote.criado_por_nome,
-        // Dados IoT simulados (placeholders)
-        temperatura: Math.round(25 + Math.random() * 10),
-        umidade: Math.round(60 + Math.random() * 20),
-        ph: Number((6.5 + Math.random() * 1.5).toFixed(1)),
-        condutividade: Number((1.2 + Math.random() * 0.8).toFixed(1)),
-        nitrogenio: Math.round(15 + Math.random() * 10),
-        fosforo: Math.round(8 + Math.random() * 7),
-        potassio: Math.round(12 + Math.random() * 8),
+        // Dados IoT (placeholders até integração)
+        temperatura: null,
+        umidade: null,
+        ph: null,
+        condutividade: null,
+        nitrogenio: null,
+        fosforo: null,
+        potassio: null,
       };
     });
   };
