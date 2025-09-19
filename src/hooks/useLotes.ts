@@ -332,64 +332,91 @@ export const useLotes = () => {
 
     try {
       setLoading(true);
-      console.log('🗑️ Cancelando lote:', loteId);
+      console.log('🗑️ Cancelando lote:', loteId, 'código:', loteAtivoCaixa01.codigo);
 
-      // Buscar todas as entregas do lote
+      // 1. Buscar entregas do lote
       const { data: entregas, error: entregasError } = await supabase
         .from('entregas')
         .select('id')
-        .eq('lote_codigo', loteAtivoCaixa01.codigo)
-        .is('deleted_at', null);
+        .eq('lote_codigo', loteAtivoCaixa01.codigo);
 
       if (entregasError) throw entregasError;
 
-      // Se há entregas, deletar as fotos primeiro e depois as entregas
+      // 2. Deletar fotos das entregas
       if (entregas && entregas.length > 0) {
-        console.log(`📸 Deletando fotos de ${entregas.length} entregas...`);
+        console.log('📸 Deletando fotos das entregas...');
+        const entregaIds = entregas.map(e => e.id);
         
-        // Deletar fotos das entregas
-        for (const entrega of entregas) {
-          const { error: fotosError } = await supabase
-            .from('entrega_fotos')
-            .delete()
-            .eq('entrega_id', entrega.id);
-          
-          if (fotosError) {
-            console.error('Erro ao deletar fotos da entrega:', entrega.id, fotosError);
-            throw fotosError;
-          }
-        }
-
-        // Deletar entregas
-        console.log('📦 Deletando entregas...');
-        const { error: deleteEntregasError } = await supabase
-          .from('entregas')
+        const { error: deleteFotosEntregasError } = await supabase
+          .from('entrega_fotos')
           .delete()
-          .eq('lote_codigo', loteAtivoCaixa01.codigo);
+          .in('entrega_id', entregaIds);
 
-        if (deleteEntregasError) throw deleteEntregasError;
+        if (deleteFotosEntregasError) {
+          console.error('Erro ao deletar fotos das entregas:', deleteFotosEntregasError);
+          throw deleteFotosEntregasError;
+        }
       }
 
-      // Deletar o lote
+      // 3. Deletar entregas
+      console.log('📦 Deletando entregas...');
+      const { error: deleteEntregasError } = await supabase
+        .from('entregas')
+        .delete()
+        .eq('lote_codigo', loteAtivoCaixa01.codigo);
+
+      if (deleteEntregasError) {
+        console.error('Erro ao deletar entregas:', deleteEntregasError);
+        throw deleteEntregasError;
+      }
+
+      // 4. Deletar fotos do lote
+      console.log('🖼️ Deletando fotos do lote...');
+      const { error: deleteFotosLoteError } = await supabase
+        .from('lote_fotos')
+        .delete()
+        .eq('lote_id', loteId);
+
+      if (deleteFotosLoteError) {
+        console.error('Erro ao deletar fotos do lote:', deleteFotosLoteError);
+        throw deleteFotosLoteError;
+      }
+
+      // 5. Deletar registros de manejo semanal
+      console.log('🔄 Deletando registros de manejo semanal...');
+      const { error: deleteManejoError } = await supabase
+        .from('manejo_semanal')
+        .delete()
+        .eq('lote_id', loteId);
+
+      if (deleteManejoError) {
+        console.error('Erro ao deletar manejo semanal:', deleteManejoError);
+        throw deleteManejoError;
+      }
+
+      // 6. Deletar o lote
       console.log('🗂️ Deletando lote...');
       const { error: deleteLoteError } = await supabase
         .from('lotes')
         .delete()
         .eq('id', loteId);
 
-      if (deleteLoteError) throw deleteLoteError;
+      if (deleteLoteError) {
+        console.error('Erro ao deletar lote:', deleteLoteError);
+        throw deleteLoteError;
+      }
 
-      // Log da atividade
+      // 7. Log da atividade
       await supabase
         .rpc('log_user_activity', {
           p_user_id: user.id,
           p_action_type: 'DELETE',
-          p_action_description: `Lote ${loteAtivoCaixa01.codigo} cancelado com ${entregas?.length || 0} entregas`,
+          p_action_description: `Lote ${loteAtivoCaixa01.codigo} cancelado completamente`,
           p_table_affected: 'lotes',
           p_record_id: loteId
         });
 
-      console.log('✅ Lote cancelado com sucesso');
+      console.log('✅ Lote cancelado com sucesso - Caixa 1 liberada');
       setLoteAtivoCaixa01(null);
       setVoluntariosCount(0);
       
@@ -398,15 +425,15 @@ export const useLotes = () => {
       
       toast({
         title: "Lote Cancelado",
-        description: `Lote ${loteAtivoCaixa01.codigo} foi cancelado e ${entregas?.length || 0} entregas foram removidas permanentemente.`,
+        description: `Lote ${loteAtivoCaixa01.codigo} foi cancelado completamente e a Caixa 1 está liberada.`,
       });
 
       return true;
     } catch (error: any) {
-      console.error('Erro ao cancelar lote:', error);
+      console.error('❌ Erro ao cancelar lote:', error);
       toast({
         title: "Erro ao Cancelar",
-        description: error.message || "Não foi possível cancelar o lote",
+        description: `Falha: ${error.message || "Não foi possível cancelar o lote"}`,
         variant: "destructive",
       });
       return false;
