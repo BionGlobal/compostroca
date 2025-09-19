@@ -8,7 +8,7 @@ interface ProductionBeltProps {
   lotesAtivos: LoteExtended[];
   onManejoClick: (lote: LoteExtended) => void;
   onFinalizarClick: (lote: LoteExtended) => void;
-  onViewPhotos?: (lote: LoteExtended) => void;
+  onViewPhotos?: (loteId: string, title: string, isLoteProng?: boolean) => void;
 }
 
 export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, onViewPhotos }: ProductionBeltProps) => {
@@ -197,7 +197,7 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, o
                           variant="outline"
                           size="sm"
                           className="w-full"
-                          onClick={() => onViewPhotos(lote)}
+                          onClick={() => onViewPhotos(lote.id, `Fotos das Entregas - ${lote.codigo}`, false)}
                         >
                           <Camera className="h-3 w-3 mr-1" />
                           Ver Fotos

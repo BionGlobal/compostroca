@@ -33,7 +33,7 @@ interface LoteData {
 
 interface CardHistoricoLoteProps {
   lote: LoteData;
-  onViewPhotos: (loteId: string, title: string, entregaId?: string, manejoId?: string) => void;
+  onViewPhotos: (loteId: string, title: string, isLoteProng?: boolean, entregaId?: string, manejoId?: string) => void;
   onDownloadPDF: () => void;
   loading?: boolean;
 }
@@ -171,7 +171,8 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
             size="sm"
             onClick={() => onViewPhotos(
               lote.id,
-              isNovoLote ? 'Fotos das Entregas' : 'Fotos do Lote Finalizado'
+              isNovoLote ? 'Fotos das Entregas' : 'Fotos do Lote Finalizado',
+              isLoteProng // Passar flag para indicar tipo de lote
             )}
             className="flex-1 flex items-center gap-2"
           >

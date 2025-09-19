@@ -66,14 +66,13 @@ export const useLoteFotos = (loteId?: string) => {
       const dataInicio = new Date(loteData.data_inicio).toISOString().split('T')[0];
       console.log('📅 Data de início formatada:', dataInicio);
 
-      // Buscar entregas da data usando query simplificada sem 'unidade'
-      console.log('🔍 Buscando entregas para data:', dataInicio);
+      // Buscar entregas pelo código do lote 
+      console.log('🔍 Buscando entregas para lote:', loteData.codigo);
       
       const entregasQuery = await supabase
         .from('entregas')
         .select('id, peso, qualidade_residuo, created_at, voluntario_id')
-        .gte('created_at', `${dataInicio}T00:00:00.000Z`)
-        .lt('created_at', `${dataInicio}T23:59:59.999Z`);
+        .eq('lote_codigo', loteData.codigo);
       
       const entregas = entregasQuery.data || [];
       console.log('📦 Entregas encontradas:', entregas.length);

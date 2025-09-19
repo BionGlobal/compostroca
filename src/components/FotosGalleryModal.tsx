@@ -6,8 +6,8 @@ import { ChevronLeft, ChevronRight, X, Calendar, Camera, AlertCircle, FileImage,
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useLoteFotos, LoteFoto } from '@/hooks/useLoteFotos';
+import { useLoteProntoFotos, LoteProntoFoto } from '@/hooks/useLoteProntoFotos';
 import { useZipDownload } from '@/hooks/useZipDownload';
-import { useEntregasFotosLote } from '@/hooks/useEntregasFotosLote';
 import { supabase } from '@/integrations/supabase/client';
 
 interface FotosGalleryModalProps {
@@ -15,6 +15,7 @@ interface FotosGalleryModalProps {
   onClose: () => void;
   loteId: string;
   title: string;
+  isLoteProng?: boolean; // Indica se é um lote encerrado (pronto)
   entregaId?: string;
   manejoId?: string;
 }
@@ -31,6 +32,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
   onClose,
   loteId,
   title,
+  isLoteProng = false,
   entregaId,
   manejoId
 }) => {
@@ -39,32 +41,27 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'single' | 'grid'>('grid');
 
-  const { fotos, loading, getFotoUrl } = useLoteFotos(loteId);
-  const { fotos: fotosEntregas, loading: loadingEntregas, getFotoUrl: getFotoUrlEntregas } = useEntregasFotosLote(loteId);
+  // Usar hooks baseado no tipo de lote
+  const { fotos: fotosNovos, loading: loadingNovos, getFotoUrl: getFotoUrlNovos } = useLoteFotos(!isLoteProng ? loteId : undefined);
+  const { fotos: fotosProntos, loading: loadingProntos, getFotoUrl: getFotoUrlProntos } = useLoteProntoFotos(isLoteProng ? loteId : undefined);
   const { downloadPhotosAsZip, loading: zipLoading } = useZipDownload();
   
-  // Se tem entregaId ou manejoId específicos, usar o hook original
-  // Senão, usar o novo hook para fotos de entregas
-  const useEntregasMode = !entregaId && !manejoId;
+  // Selecionar fotos e funções baseado no tipo de lote
+  const fotos = isLoteProng ? fotosProntos : fotosNovos;
+  const loading = isLoteProng ? loadingProntos : loadingNovos;
+  const getFotoUrl = isLoteProng ? getFotoUrlProntos : getFotoUrlNovos;
   
-  // Filtrar fotos baseado nos parâmetros
-  const filteredFotos = useEntregasMode 
-    ? fotosEntregas.map(foto => ({
-        ...foto,
-        tipo_foto: `entrega_${foto.tipo_foto}`,
-        foto_url: getFotoUrlEntregas(foto.foto_url)
-      }))
-    : fotos.filter(foto => {
-        if (entregaId) return foto.entrega_id === entregaId;
-        if (manejoId) return foto.manejo_id === manejoId;
-        return true;
-      }).map(foto => ({
-        ...foto,
-        foto_url: getFotoUrl(foto.foto_url)
-      }));
+  // Filtrar fotos baseado nos parâmetros (se especificados)
+  const filteredFotos = fotos.filter((foto: any) => {
+    if (entregaId) return foto.entrega_id === entregaId;
+    if (manejoId) return foto.manejo_id === manejoId;
+    return true; // Mostrar todas as fotos se nenhum filtro especificado
+  }).map((foto: any) => ({
+    ...foto,
+    foto_url: typeof getFotoUrl === 'function' ? getFotoUrl(foto.foto_url) : foto.foto_url
+  }));
 
   const currentFoto = filteredFotos[currentIndex];
-  const currentLoading = useEntregasMode ? loadingEntregas : loading;
 
   const nextFoto = () => {
     if (currentIndex < filteredFotos.length - 1) {
@@ -141,7 +138,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
     setIsLoading(true);
   };
 
-  if (!isOpen || currentLoading) return null;
+  if (!isOpen || loading) return null;
   
   if (filteredFotos.length === 0) {
     return (
@@ -227,14 +224,24 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                         <div className="text-xs font-medium mb-1 truncate">
                           {TIPO_FOTO_LABELS[foto.tipo_foto as keyof typeof TIPO_FOTO_LABELS] || foto.tipo_foto}
                         </div>
-                        {foto.entregas?.voluntarios && (
+                        {!isLoteProng && (foto as any).entregas?.voluntarios && (
                           <div className="text-xs opacity-90 truncate">
-                            Balde #{foto.entregas.voluntarios.numero_balde} - {foto.entregas.peso ? `${foto.entregas.peso.toFixed(1)}kg` : 'Peso não informado'}
+                            Balde #{(foto as any).entregas.voluntarios.numero_balde} - {(foto as any).entregas.peso ? `${(foto as any).entregas.peso.toFixed(1)}kg` : 'Peso não informado'}
                           </div>
                         )}
-                        {foto.manejo_semanal && (
+                        {isLoteProng && (foto as any).entrega_data && (
                           <div className="text-xs opacity-90 truncate">
-                            Caixa {foto.manejo_semanal.caixa_origem} → {foto.manejo_semanal.caixa_destino || 'Final'}
+                            Balde #{(foto as any).entrega_data.voluntario.numero_balde} - {(foto as any).entrega_data.peso.toFixed(1)}kg
+                          </div>
+                        )}
+                        {!isLoteProng && (foto as any).manejo_semanal && (
+                          <div className="text-xs opacity-90 truncate">
+                            Caixa {(foto as any).manejo_semanal.caixa_origem} → {(foto as any).manejo_semanal.caixa_destino || 'Final'}
+                          </div>
+                        )}
+                        {isLoteProng && (foto as any).manejo_data && (
+                          <div className="text-xs opacity-90 truncate">
+                            Caixa {(foto as any).manejo_data.caixa_origem} → {(foto as any).manejo_data.caixa_destino || 'Final'}
                           </div>
                         )}
                       </div>
@@ -322,20 +329,20 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                       <Camera className="h-3 w-3" />
                       {TIPO_FOTO_LABELS[currentFoto.tipo_foto as keyof typeof TIPO_FOTO_LABELS] || currentFoto.tipo_foto}
                     </Badge>
-                    {/* Exibir dados baseado no modo */}
-                    {useEntregasMode && 'entrega_peso' in currentFoto && (
+                    {/* Exibir dados baseado no tipo de foto */}
+                    {isLoteProng && 'entrega_data' in currentFoto && currentFoto.entrega_data && (
                       <p className="text-xs text-muted-foreground">
-                        Peso: {currentFoto.entrega_peso.toFixed(1)}kg - {currentFoto.voluntario_nome || 'Voluntário não informado'}
+                        Entrega: {currentFoto.entrega_data.peso.toFixed(1)}kg - {currentFoto.entrega_data.voluntario.nome}
                       </p>
                     )}
-                    {!useEntregasMode && 'entregas' in currentFoto && currentFoto.entregas?.voluntarios && (
+                    {isLoteProng && 'manejo_data' in currentFoto && currentFoto.manejo_data && (
                       <p className="text-xs text-muted-foreground">
-                        Balde #{currentFoto.entregas.voluntarios.numero_balde} - {currentFoto.entregas.peso ? `${currentFoto.entregas.peso.toFixed(1)}kg` : 'Peso não informado'}
+                        Manejo: Caixa {currentFoto.manejo_data.caixa_origem} → {currentFoto.manejo_data.caixa_destino || 'Final'}
                       </p>
                     )}
-                    {!useEntregasMode && 'manejo_semanal' in currentFoto && currentFoto.manejo_semanal && (
+                    {!isLoteProng && (currentFoto as any).entregas?.voluntarios && (
                       <p className="text-xs text-muted-foreground">
-                        Manejo: Caixa {currentFoto.manejo_semanal.caixa_origem} → {currentFoto.manejo_semanal.caixa_destino || 'Final'}
+                        Balde #{(currentFoto as any).entregas.voluntarios.numero_balde} - {(currentFoto as any).entregas.peso ? `${(currentFoto as any).entregas.peso.toFixed(1)}kg` : 'Peso não informado'}
                       </p>
                     )}
                   </div>

@@ -37,7 +37,7 @@ import { ManutencaoCardFlip } from '@/components/ManutencaoCardFlip';
 import { LoteProntoCard } from '@/components/LoteProntoCard';
 import { FotosGalleryModal } from '@/components/FotosGalleryModal';
 import { FotosLoteProntoModal } from '@/components/FotosLoteProntoModal';
-import { useEntregasFotosLote } from '@/hooks/useEntregasFotosLote';
+
 
 const Lotes = () => {
   const {
@@ -104,8 +104,8 @@ const Lotes = () => {
     setSelectedLoteForFinalization(lote.id);
   };
 
-  // History handlers
-  const handleViewPhotos = (loteId: string, title: string, entregaId?: string, manejoId?: string) => {
+  // History handlers  
+  const handleViewPhotos = (loteId: string, title: string, isLoteProng?: boolean, entregaId?: string, manejoId?: string) => {
     setFotosModalData({
       open: true,
       loteId,
@@ -286,7 +286,7 @@ const Lotes = () => {
                 lotesAtivos={lotesAtivos}
                 onManejoClick={handleManejoClick}
                 onFinalizarClick={handleFinalizarClick}
-                onViewPhotos={handleViewLotePhotos}
+                onViewPhotos={handleViewPhotos}
               />
             </CardContent>
           </Card>
