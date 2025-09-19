@@ -5,6 +5,18 @@ export const ORGANIZATION_UNITS = {
   // Adicionar outras unidades conforme necessário
 } as const;
 
+export const ORGANIZATION_ADDRESSES = {
+  'CWB001': 'Rua XV de Novembro, 123 - Cajuru, Curitiba - PR',
+  'CWB002': 'Av. São José, 456 - Boqueirão, Curitiba - PR',
+  'CWB003': 'Rua Portão, 789 - Portão, Curitiba - PR',
+} as const;
+
+export const ORGANIZATION_COORDINATES = {
+  'CWB001': { lat: -25.4284, lng: -49.2733 },
+  'CWB002': { lat: -25.4839, lng: -49.2944 },
+  'CWB003': { lat: -25.4372, lng: -49.2733 },
+} as const;
+
 export const getOrganizationName = (code: string): string => {
   return ORGANIZATION_UNITS[code as keyof typeof ORGANIZATION_UNITS] || code;
 };
