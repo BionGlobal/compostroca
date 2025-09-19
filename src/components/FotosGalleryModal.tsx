@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useLoteFotos, LoteFoto } from '@/hooks/useLoteFotos';
 import { useZipDownload } from '@/hooks/useZipDownload';
+import { useEntregasFotosLote } from '@/hooks/useEntregasFotosLote';
 import { supabase } from '@/integrations/supabase/client';
 
 interface FotosGalleryModalProps {
@@ -39,19 +40,31 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
   const [viewMode, setViewMode] = useState<'single' | 'grid'>('grid');
 
   const { fotos, loading, getFotoUrl } = useLoteFotos(loteId);
+  const { fotos: fotosEntregas, loading: loadingEntregas, getFotoUrl: getFotoUrlEntregas } = useEntregasFotosLote(loteId);
   const { downloadPhotosAsZip, loading: zipLoading } = useZipDownload();
   
+  // Se tem entregaId ou manejoId específicos, usar o hook original
+  // Senão, usar o novo hook para fotos de entregas
+  const useEntregasMode = !entregaId && !manejoId;
+  
   // Filtrar fotos baseado nos parâmetros
-  const filteredFotos = fotos.filter(foto => {
-    if (entregaId) return foto.entrega_id === entregaId;
-    if (manejoId) return foto.manejo_id === manejoId;
-    return true;
-  }).map(foto => ({
-    ...foto,
-    foto_url: getFotoUrl(foto.foto_url)
-  }));
+  const filteredFotos = useEntregasMode 
+    ? fotosEntregas.map(foto => ({
+        ...foto,
+        tipo_foto: `entrega_${foto.tipo_foto}`,
+        foto_url: getFotoUrlEntregas(foto.foto_url)
+      }))
+    : fotos.filter(foto => {
+        if (entregaId) return foto.entrega_id === entregaId;
+        if (manejoId) return foto.manejo_id === manejoId;
+        return true;
+      }).map(foto => ({
+        ...foto,
+        foto_url: getFotoUrl(foto.foto_url)
+      }));
 
   const currentFoto = filteredFotos[currentIndex];
+  const currentLoading = useEntregasMode ? loadingEntregas : loading;
 
   const nextFoto = () => {
     if (currentIndex < filteredFotos.length - 1) {
@@ -128,7 +141,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
     setIsLoading(true);
   };
 
-  if (!isOpen || loading) return null;
+  if (!isOpen || currentLoading) return null;
   
   if (filteredFotos.length === 0) {
     return (
@@ -309,14 +322,18 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                       <Camera className="h-3 w-3" />
                       {TIPO_FOTO_LABELS[currentFoto.tipo_foto as keyof typeof TIPO_FOTO_LABELS] || currentFoto.tipo_foto}
                     </Badge>
-                    {/* Exibir dados do balde e peso quando disponível */}
-                    {currentFoto.entregas?.voluntarios && (
+                    {/* Exibir dados baseado no modo */}
+                    {useEntregasMode && 'entrega_peso' in currentFoto && (
+                      <p className="text-xs text-muted-foreground">
+                        Peso: {currentFoto.entrega_peso.toFixed(1)}kg - {currentFoto.voluntario_nome || 'Voluntário não informado'}
+                      </p>
+                    )}
+                    {!useEntregasMode && 'entregas' in currentFoto && currentFoto.entregas?.voluntarios && (
                       <p className="text-xs text-muted-foreground">
                         Balde #{currentFoto.entregas.voluntarios.numero_balde} - {currentFoto.entregas.peso ? `${currentFoto.entregas.peso.toFixed(1)}kg` : 'Peso não informado'}
                       </p>
                     )}
-                    {/* Exibir dados do manejo quando disponível */}
-                    {currentFoto.manejo_semanal && (
+                    {!useEntregasMode && 'manejo_semanal' in currentFoto && currentFoto.manejo_semanal && (
                       <p className="text-xs text-muted-foreground">
                         Manejo: Caixa {currentFoto.manejo_semanal.caixa_origem} → {currentFoto.manejo_semanal.caixa_destino || 'Final'}
                       </p>

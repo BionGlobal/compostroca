@@ -37,6 +37,7 @@ import { ManutencaoCardFlip } from '@/components/ManutencaoCardFlip';
 import { LoteProntoCard } from '@/components/LoteProntoCard';
 import { FotosGalleryModal } from '@/components/FotosGalleryModal';
 import { FotosLoteProntoModal } from '@/components/FotosLoteProntoModal';
+import { useEntregasFotosLote } from '@/hooks/useEntregasFotosLote';
 
 const Lotes = () => {
   const {
@@ -111,6 +112,16 @@ const Lotes = () => {
       title,
       entregaId,
       manejoId
+    });
+  };
+
+  const handleViewLotePhotos = (lote: any) => {
+    setFotosModalData({
+      open: true,
+      loteId: lote.id,
+      title: `Fotos das Entregas - ${lote.codigo}`,
+      entregaId: undefined,
+      manejoId: undefined
     });
   };
 
@@ -275,6 +286,7 @@ const Lotes = () => {
                 lotesAtivos={lotesAtivos}
                 onManejoClick={handleManejoClick}
                 onFinalizarClick={handleFinalizarClick}
+                onViewPhotos={handleViewLotePhotos}
               />
             </CardContent>
           </Card>

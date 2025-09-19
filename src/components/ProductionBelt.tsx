@@ -1,16 +1,17 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Clock, CheckCircle, AlertTriangle, Package, ArrowRight, Settings, MapPin, User, Thermometer, Droplets } from 'lucide-react';
+import { Clock, CheckCircle, AlertTriangle, Package, ArrowRight, Settings, MapPin, User, Thermometer, Droplets, Camera } from 'lucide-react';
 import { LoteExtended } from '@/hooks/useLotesManager';
 
 interface ProductionBeltProps {
   lotesAtivos: LoteExtended[];
   onManejoClick: (lote: LoteExtended) => void;
   onFinalizarClick: (lote: LoteExtended) => void;
+  onViewPhotos?: (lote: LoteExtended) => void;
 }
 
-export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }: ProductionBeltProps) => {
+export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, onViewPhotos }: ProductionBeltProps) => {
   // Organiza lotes por caixa (1-7)
   const caixasPorLote = Array.from({ length: 7 }, (_, index) => {
     const numeroBox = index + 1;
@@ -56,6 +57,40 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }:
     return ((lote.peso_inicial - lote.peso_atual) / lote.peso_inicial) * 100;
   };
 
+  const getPhaseBadge = (numeroBox: number) => {
+    switch (numeroBox) {
+      case 1:
+        return (
+          <Badge className="bg-yellow-500 text-white hover:bg-yellow-600 text-xs px-2 py-0.5">
+            Mesofílica
+          </Badge>
+        );
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+        return (
+          <Badge className="bg-red-500 text-white hover:bg-red-600 text-xs px-2 py-0.5">
+            Termofílico
+          </Badge>
+        );
+      case 6:
+        return (
+          <Badge className="bg-blue-500 text-white hover:bg-blue-600 text-xs px-2 py-0.5">
+            Resfriamento
+          </Badge>
+        );
+      case 7:
+        return (
+          <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs px-2 py-0.5">
+            Maturação
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
+
   const formatarData = (data: string) => {
     return new Date(data).toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -90,7 +125,7 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }:
                       <Package className="h-4 w-4" />
                       <span className="font-semibold text-sm">Caixa {numeroBox}</span>
                     </div>
-                    {lote && getStatusIcon(lote.statusManejo)}
+                    {lote ? getPhaseBadge(numeroBox) : getPhaseBadge(numeroBox)}
                   </div>
 
                   {/* Conteúdo da Caixa */}
@@ -156,15 +191,18 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }:
                         </div>
                       </div>
 
-                      {/* Status Badge */}
-                      <Badge
-                        variant={getStatusBadgeVariant(lote.statusManejo)}
-                        className="text-xs w-full justify-center"
-                      >
-                        {lote.statusManejo === 'atrasado' && 'Atrasado'}
-                        {lote.statusManejo === 'pendente' && 'Pendente'}
-                        {lote.statusManejo === 'realizado' && 'Em dia'}
-                      </Badge>
+                      {/* Ver Fotos Button */}
+                      {onViewPhotos && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => onViewPhotos(lote)}
+                        >
+                          <Camera className="h-3 w-3 mr-1" />
+                          Ver Fotos
+                        </Button>
+                      )}
 
                       {/* Ações */}
                       <div className="mt-auto pt-2">
@@ -181,7 +219,7 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }:
                         ) : (
                           <div className="text-center">
                             <p className="text-xs text-muted-foreground">
-                              Semana {lote.semana_atual} de 7
+                              Semana {numeroBox} de 7
                             </p>
                           </div>
                         )}
@@ -189,13 +227,16 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }:
                     </div>
                   ) : (
                     <div className="flex-1 flex items-center justify-center">
-                      <div className="text-center">
+                      <div className="text-center space-y-2">
                         <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
                         <p className="text-sm text-muted-foreground">
                           Caixa vazia
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-xs text-muted-foreground">
                           Aguardando lote
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Semana {numeroBox} de 7
                         </p>
                       </div>
                     </div>
@@ -224,25 +265,6 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick }:
         </div>
       </div>
 
-      {/* Legenda */}
-      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-primary/20 border border-primary/30" />
-          <span>Entrada (Caixa 1)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-secondary/20 border border-secondary/30" />
-          <span>Processamento (Caixa 2-6)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-success/20 border border-success/30" />
-          <span>Finalização (Caixa 7)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded bg-muted/30 border border-muted border-dashed" />
-          <span>Vazia</span>
-        </div>
-      </div>
     </div>
   );
 };
