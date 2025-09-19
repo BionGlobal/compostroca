@@ -198,14 +198,17 @@ export default function ProductionBeltPublic() {
         </section>
 
         {/* Footer Informativo */}
-        <footer className="text-center py-8 text-sm text-muted-foreground">
+        <footer className="text-center py-8 text-sm text-muted-foreground space-y-2">
           <div className="flex items-center justify-center gap-2 mb-2">
             <img src={compostrocaIcon} alt="Compostroca" className="h-5 w-5" />
             <span className="font-semibold">CompostRoca</span>
           </div>
           <p>Sistema de Gestão de Compostagem Urbana</p>
-          <p className="text-xs mt-1">
+          <p className="text-xs">
             Dados atualizados automaticamente a cada 30 segundos
+          </p>
+          <p className="flex items-center justify-center gap-1 text-xs">
+            Powered by <span className="font-semibold text-primary">Bion</span>
           </p>
         </footer>
       </main>

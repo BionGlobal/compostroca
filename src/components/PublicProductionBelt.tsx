@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Package, ArrowRight, User, Thermometer, Droplets } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Package, ArrowRight, User, Thermometer, Droplets, Camera } from 'lucide-react';
 import { formatPesoDisplay } from '@/lib/organizationUtils';
 import type { LoteExtended } from '@/hooks/usePublicProductionBelt';
 
@@ -159,6 +160,17 @@ export const PublicProductionBelt = ({ lotesAtivos }: PublicProductionBeltProps)
                           </div>
                         </div>
                       </div>
+
+                      {/* Ver Fotos Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mb-2"
+                        onClick={() => window.open(`/fotos/${lote.id}`, '_blank')}
+                      >
+                        <Camera className="h-3 w-3 mr-1" />
+                        Ver Fotos
+                      </Button>
 
                       {/* Progresso */}
                       <div className="mt-auto pt-2">
