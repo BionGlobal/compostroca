@@ -85,9 +85,13 @@ export const PublicProductionBelt = ({ lotesAtivos }: PublicProductionBeltProps)
               {/* Caixa de Compostagem - Idêntica ao ProductionBelt */}
               <Card className={`
                 relative w-64 sm:w-72 h-auto min-h-[280px] sm:min-h-[300px] transition-all duration-300
-                ${getBoxColor(numeroBox, lote)}
-                ${lote ? 'hover:shadow-lg' : ''}
-              `}>
+                 ${getBoxColor(numeroBox, lote)}
+                 ${lote ? 'hover:shadow-lg hover:scale-105' : ''}
+               `}>
+                 {/* Indicador de dados ao vivo */}
+                 {lote && (
+                   <div className="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                 )}
                 <CardContent className="p-3 h-full flex flex-col">
                   {/* Header da Caixa */}
                   <div className="flex items-center justify-between mb-3">

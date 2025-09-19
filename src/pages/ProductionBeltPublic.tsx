@@ -94,9 +94,8 @@ export default function ProductionBeltPublic() {
             </div>
             
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="w-4 h-4" />
-              <span>Atualizado em {formatLastUpdate(data.lastUpdate)}</span>
-              <RefreshCw className="w-3 h-3 animate-pulse" />
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span>Dados ao vivo • {formatLastUpdate(data.lastUpdate)}</span>
             </div>
           </div>
         </div>
@@ -204,9 +203,10 @@ export default function ProductionBeltPublic() {
             <span className="font-semibold">CompostRoca</span>
           </div>
           <p>Sistema de Gestão de Compostagem Urbana</p>
-          <p className="text-xs">
-            Dados atualizados automaticamente a cada 30 segundos
-          </p>
+          <div className="flex items-center justify-center gap-2 text-xs">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span>Dados atualizados em tempo real</span>
+          </div>
           <p className="flex items-center justify-center gap-1 text-xs">
             Powered by <span className="font-semibold text-primary">Bion</span>
           </p>

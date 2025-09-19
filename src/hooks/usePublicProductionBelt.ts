@@ -146,10 +146,131 @@ export const usePublicProductionBelt = (unitCode: string) => {
     if (unitCode && !kpisLoading) {
       fetchPublicData();
       
-      // Configurar auto-refresh a cada 30 segundos
-      const interval = setInterval(fetchPublicData, 30000);
+      // Configurar listeners em tempo real
+      const channel = supabase
+        .channel(`public-production-${unitCode}`)
+        
+        // Listener para mudanças em lotes
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'lotes',
+          filter: `unidade=eq.${unitCode}`
+        }, (payload) => {
+          console.log('Lote atualizado:', payload);
+          
+          setData(prev => {
+            if (!prev) return prev;
+            
+            const { new: newLote, old: oldLote, eventType } = payload;
+            
+            if (eventType === 'DELETE') {
+              return {
+                ...prev,
+                lotesAtivos: prev.lotesAtivos.filter(lote => lote.id !== oldLote.id)
+              };
+            }
+            
+            if (eventType === 'INSERT') {
+              // Buscar dados completos do novo lote
+              fetchPublicData();
+              return prev;
+            }
+            
+            if (eventType === 'UPDATE') {
+              const updatedLotes = prev.lotesAtivos.map(lote => {
+                if (lote.id === newLote.id) {
+                  // Calcular progresso baseado na semana atual
+                  const progressoPercentual = Math.min((newLote.semana_atual / 7) * 100, 100);
+                  
+                  // Determinar status do manejo
+                  const statusManejo = newLote.caixa_atual === 7 ? 'realizado' : 'pendente';
+                  
+                  // Manter dados IoT existentes ou simular se não existir
+                  const iotData = newLote.iot_data as any;
+                  const temperatura = iotData?.temperatura || lote.temperatura;
+                  const umidade = iotData?.umidade || lote.umidade;
+                  
+                  return {
+                    ...lote,
+                    ...newLote,
+                    temperatura,
+                    umidade,
+                    progressoPercentual,
+                    statusManejo,
+                  };
+                }
+                return lote;
+              });
+              
+              return {
+                ...prev,
+                lotesAtivos: updatedLotes,
+                lastUpdate: new Date().toISOString(),
+              };
+            }
+            
+            return prev;
+          });
+        })
+        
+        // Listener para novas entregas
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'entregas'
+        }, (payload) => {
+          console.log('Nova entrega:', payload);
+          
+          const { lote_codigo } = payload.new;
+          
+          // Atualizar contadores de voluntários apenas para o lote específico
+          setData(prev => {
+            if (!prev) return prev;
+            
+            const lotesAtivos = prev.lotesAtivos.map(lote => {
+              if (lote.codigo === lote_codigo) {
+                return {
+                  ...lote,
+                  voluntariosUnicos: lote.voluntariosUnicos + 1 // Incremento aproximado
+                };
+              }
+              return lote;
+            });
+            
+            return {
+              ...prev,
+              lotesAtivos,
+              lastUpdate: new Date().toISOString(),
+            };
+          });
+        })
+        
+        // Listener para novas fotos
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'lote_fotos'
+        }, (payload) => {
+          console.log('Nova foto de lote:', payload);
+          
+          setData(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              lastUpdate: new Date().toISOString(),
+            };
+          });
+        })
+        
+        .subscribe((status) => {
+          console.log(`Canal realtime ${unitCode}:`, status);
+        });
       
-      return () => clearInterval(interval);
+      return () => {
+        console.log(`Removendo canal realtime ${unitCode}`);
+        supabase.removeChannel(channel);
+      };
     }
   }, [unitCode, kpisLoading]);
 
