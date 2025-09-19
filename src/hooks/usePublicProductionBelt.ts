@@ -7,13 +7,15 @@ import {
   ORGANIZATION_COORDINATES,
   formatPesoDisplay 
 } from '@/lib/organizationUtils';
+import { useUnifiedKPIs, type UnifiedKPIs } from './useUnifiedKPIs';
 
-interface LoteExtended {
+export interface LoteExtended {
   id: string;
   codigo: string;
   peso_inicial: number;
   peso_atual: number;
   data_inicio: string;
+  data_finalizacao: string | null;
   data_proxima_transferencia: string | null;
   status: string;
   caixa_atual: number;
@@ -22,17 +24,20 @@ interface LoteExtended {
   unidade: string;
   iot_data: any;
   linha_producao: string;
+  // Dados calculados para o componente
+  validadorNome: string;
+  voluntariosUnicos: number;
+  temperatura: number;
+  umidade: number;
+  progressoPercentual: number;
+  statusManejo: string;
 }
 
-interface PublicMetrics {
-  lotesAtivos: number;
-  pesoTotal: number;
-  voluntariosEngajados: number;
-  co2eEvitado: number;
-  lastUpdate: string;
+export interface PublicMetrics extends UnifiedKPIs {
+  // Adiciona propriedades específicas públicas se necessário
 }
 
-interface PublicUnitData {
+export interface PublicUnitData {
   unitCode: string;
   unitName: string;
   address: string;
@@ -47,11 +52,9 @@ export const usePublicProductionBelt = (unitCode: string) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-
-  const calculateCO2eEvitado = (pesoTotal: number): number => {
-    // Fator de conversão: 1kg de resíduo orgânico compostado evita ~0.4kg CO2e
-    return pesoTotal * 0.4;
-  };
+  
+  // Hook unificado para KPIs
+  const { kpis, loading: kpisLoading } = useUnifiedKPIs(unitCode);
 
   const fetchPublicData = async () => {
     try {
@@ -63,59 +66,65 @@ export const usePublicProductionBelt = (unitCode: string) => {
         .from('lotes')
         .select('*')
         .eq('unidade', unitCode)
-        .eq('status', 'ativo')
-        .order('created_at', { ascending: true });
+        .in('status', ['ativo', 'em_processamento'])
+        .gte('caixa_atual', 1)
+        .lte('caixa_atual', 7)
+        .order('caixa_atual', { ascending: true });
 
       if (lotesError) {
         console.error('Erro ao buscar lotes:', lotesError);
         throw new Error('Erro ao carregar dados dos lotes');
       }
 
-      // Buscar voluntários únicos dos lotes ativos
-      const { data: entregas, error: entregasError } = await supabase
-        .from('entregas')
-        .select(`
-          voluntario_id,
-          voluntarios (
-            id,
-            nome,
-            unidade
-          )
-        `)
-        .in('lote_codigo', lotes?.map(l => l.codigo) || []);
+      // Buscar dados de entregas para cada lote para calcular voluntários únicos
+      const lotesExtended: LoteExtended[] = [];
+      
+      for (const lote of lotes || []) {
+        // Buscar entregas do lote
+        const { data: entregas } = await supabase
+          .from('entregas')
+          .select(`
+            voluntario_id,
+            voluntarios (
+              id,
+              nome
+            )
+          `)
+          .eq('lote_codigo', lote.codigo);
 
-      if (entregasError) {
-        console.error('Erro ao buscar entregas:', entregasError);
+        // Calcular voluntários únicos do lote
+        const voluntariosUnicos = new Set(entregas?.map(e => e.voluntario_id) || []).size;
+
+        // Simular dados IoT (em produção viriam de sensores reais)
+        const iotData = lote.iot_data as any;
+        const temperatura = iotData?.temperatura || Math.floor(Math.random() * (65 - 35) + 35);
+        const umidade = iotData?.umidade || Math.floor(Math.random() * (70 - 40) + 40);
+
+        // Calcular progresso baseado na semana atual
+        const progressoPercentual = Math.min((lote.semana_atual / 7) * 100, 100);
+
+        // Determinar status do manejo
+        const statusManejo = lote.caixa_atual === 7 ? 'realizado' : 'pendente';
+
+        lotesExtended.push({
+          ...lote,
+          validadorNome: lote.criado_por_nome,
+          voluntariosUnicos,
+          temperatura,
+          umidade,
+          progressoPercentual,
+          statusManejo,
+        });
       }
 
-      // Calcular voluntários únicos
-      const voluntariosUnicos = new Set();
-      entregas?.forEach(entrega => {
-        if (entrega.voluntarios && entrega.voluntarios.unidade === unitCode) {
-          voluntariosUnicos.add(entrega.voluntario_id);
-        }
-      });
-
-      // Calcular métricas
-      const pesoTotal = lotes?.reduce((sum, lote) => sum + (lote.peso_atual || 0), 0) || 0;
-      const co2eEvitado = calculateCO2eEvitado(pesoTotal);
-
-      const metrics: PublicMetrics = {
-        lotesAtivos: lotes?.length || 0,
-        pesoTotal,
-        voluntariosEngajados: voluntariosUnicos.size,
-        co2eEvitado,
-        lastUpdate: new Date().toISOString(),
-      };
-
-      // Montar dados públicos
+      // Montar dados públicos com KPIs unificados
       const publicData: PublicUnitData = {
         unitCode,
         unitName: getOrganizationName(unitCode),
         address: ORGANIZATION_ADDRESSES[unitCode as keyof typeof ORGANIZATION_ADDRESSES] || 'Endereço não disponível',
         coordinates: ORGANIZATION_COORDINATES[unitCode as keyof typeof ORGANIZATION_COORDINATES] || { lat: 0, lng: 0 },
-        lotesAtivos: lotes || [],
-        metrics,
+        lotesAtivos: lotesExtended,
+        metrics: kpis as PublicMetrics,
         lastUpdate: new Date().toISOString(),
       };
 
@@ -134,7 +143,7 @@ export const usePublicProductionBelt = (unitCode: string) => {
   };
 
   useEffect(() => {
-    if (unitCode) {
+    if (unitCode && !kpisLoading) {
       fetchPublicData();
       
       // Configurar auto-refresh a cada 30 segundos
@@ -142,11 +151,11 @@ export const usePublicProductionBelt = (unitCode: string) => {
       
       return () => clearInterval(interval);
     }
-  }, [unitCode]);
+  }, [unitCode, kpisLoading]);
 
   return {
     data,
-    loading,
+    loading: loading || kpisLoading,
     error,
     refetch: fetchPublicData,
   };

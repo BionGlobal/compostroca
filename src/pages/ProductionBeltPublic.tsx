@@ -103,30 +103,33 @@ export default function ProductionBeltPublic() {
       </header>
 
       <main className="max-w-7xl mx-auto p-4 space-y-8">
-        {/* Métricas Principais */}
+        {/* Métricas Principais - Parcial + Total */}
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-4 text-center">
             Indicadores da Unidade
           </h2>
           
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Lotes Ativos */}
+            {/* Lotes */}
             <Card className="glass-light organic-hover">
               <CardContent className="p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <Leaf className="w-5 h-5 text-success" />
-                  <Badge variant="secondary" className="text-xs">Ativos</Badge>
+                  <Badge variant="secondary" className="text-xs">Lotes</Badge>
                 </div>
                 <div className="text-2xl font-bold text-success">
                   {data.metrics.lotesAtivos}
                 </div>
+                <div className="text-xs text-muted-foreground mb-1">
+                  Ativos
+                </div>
                 <div className="text-xs text-muted-foreground">
-                  Lotes em Processamento
+                  Total: {data.metrics.lotesTotal}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Peso Total */}
+            {/* Peso */}
             <Card className="glass-light organic-hover">
               <CardContent className="p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-2">
@@ -134,10 +137,13 @@ export default function ProductionBeltPublic() {
                   <Badge variant="outline" className="text-xs">Peso</Badge>
                 </div>
                 <div className="text-2xl font-bold text-primary">
-                  {formatPesoDisplay(data.metrics.pesoTotal)}
+                  {formatPesoDisplay(data.metrics.pesoAtivo)}
+                </div>
+                <div className="text-xs text-muted-foreground mb-1">
+                  Ativos
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Peso Total Ativo
+                  Total: {data.metrics.pesoTotal.toFixed(1)} ton
                 </div>
               </CardContent>
             </Card>
@@ -147,13 +153,16 @@ export default function ProductionBeltPublic() {
               <CardContent className="p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <Users className="w-5 h-5 text-secondary" />
-                  <Badge variant="default" className="text-xs">Engajados</Badge>
+                  <Badge variant="default" className="text-xs">Voluntários</Badge>
                 </div>
                 <div className="text-2xl font-bold text-secondary">
                   {data.metrics.voluntariosEngajados}
                 </div>
+                <div className="text-xs text-muted-foreground mb-1">
+                  Engajados
+                </div>
                 <div className="text-xs text-muted-foreground">
-                  Voluntários Ativos
+                  Total: {data.metrics.voluntariosTotal} ({data.metrics.engajamentoPercentual.toFixed(0)}%)
                 </div>
               </CardContent>
             </Card>
@@ -166,10 +175,13 @@ export default function ProductionBeltPublic() {
                   <Badge variant="outline" className="text-xs">CO₂e</Badge>
                 </div>
                 <div className="text-xl font-bold text-earth">
-                  {data.metrics.co2eEvitado.toFixed(1)} kg
+                  {data.metrics.co2eAtivo.toFixed(0)} kg
+                </div>
+                <div className="text-xs text-muted-foreground mb-1">
+                  Evitado Ativo
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  CO₂e Evitado
+                  Total: {data.metrics.co2eTotal.toFixed(1)} ton
                 </div>
               </CardContent>
             </Card>
