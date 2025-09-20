@@ -395,12 +395,6 @@ export default function LoteAuditoria() {
                                   }`}>
                                     {formatWeight(stage.peso_depois)}
                                   </p>
-                                  
-                                  {stage.peso_antes && stage.peso_antes !== stage.peso_depois && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      Redução: {formatWeight(stage.peso_antes - stage.peso_depois)} ({((stage.peso_antes - stage.peso_depois) / stage.peso_antes * 100).toFixed(1)}%)
-                                    </p>
-                                  )}
                                 </div>
                               </div>
                               
