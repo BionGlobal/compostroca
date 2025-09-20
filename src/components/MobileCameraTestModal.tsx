@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { SimpleCameraTest } from '@/components/SimpleCameraTest';
+import { SimpleCameraCapture } from '@/components/SimpleCameraCapture';
 import { useIOSPermissions } from '@/hooks/useIOSPermissions';
 import { 
   Smartphone, 
@@ -103,9 +103,15 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
   // Se está testando, mostrar interface de câmera simples
   if (isTestingFlow) {
     return (
-      <SimpleCameraTest
+      <SimpleCameraCapture
         onPhotoCapture={handleTestPhoto}
         onCancel={handleCancelTest}
+        currentStep={1}
+        totalSteps={1}
+        instruction={{
+          title: 'Teste Simples da Câmera',
+          description: 'Capture uma foto para testar se a câmera está funcionando'
+        }}
         className="fixed inset-0 z-50 bg-background"
       />
     );
