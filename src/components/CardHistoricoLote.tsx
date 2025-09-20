@@ -168,21 +168,23 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
 
         {/* Ações - Mobile First */}
         <div className="flex flex-col gap-2 pt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onViewPhotos(
-              lote.id,
-              isNovoLote ? 'Fotos das Entregas' : 'Fotos do Lote Finalizado',
-              isLoteProng // Passar flag para indicar tipo de lote
-            )}
-            className="flex-1 flex items-center gap-2"
-          >
-            <Camera className="h-4 w-4" />
-            {isNovoLote ? 'Ver Fotos da Entrega' : 'Ver Todas as Fotos'}
-          </Button>
+          {isNovoLote && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onViewPhotos(
+                lote.id,
+                'Fotos das Entregas',
+                false
+              )}
+              className="flex-1 flex items-center gap-2"
+            >
+              <Camera className="h-4 w-4" />
+              Ver Fotos da Entrega
+            </Button>
+          )}
           
-          {isLoteProng ? (
+          {isLoteProng && (
             <Button 
               asChild
               size="sm"
@@ -192,16 +194,6 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
                 <ExternalLink className="h-4 w-4" />
                 Ver Detalhes
               </Link>
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              onClick={onDownloadPDF}
-              disabled={loading}
-              className="flex-1 flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              {loading ? 'Gerando...' : 'Baixar PDF'}
             </Button>
           )}
         </div>
