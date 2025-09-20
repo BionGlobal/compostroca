@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom';
-import { useLoteAuditoria } from '@/hooks/useLoteAuditoria';
+import { useLoteAuditoriaEnhanced } from '@/hooks/useLoteAuditoriaEnhanced';
 import { usePDFGenerator } from '@/hooks/usePDFGenerator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,9 +14,10 @@ import { formatHashDisplay } from '@/lib/hashUtils';
 
 export default function LoteAuditoria() {
   const { codigoUnico } = useParams<{ codigoUnico: string }>();
-  const { loteAuditoria, loading } = useLoteAuditoria(codigoUnico);
+  const { loteAuditoria, loading } = useLoteAuditoriaEnhanced(codigoUnico);
   const { generatePDF, loading: pdfLoading } = usePDFGenerator();
   const [showPhotos, setShowPhotos] = useState(false);
+  const [fotosParaGaleria, setFotosParaGaleria] = useState<any[]>([]);
 
   const handleDownloadPDF = async () => {
     if (!loteAuditoria) return;
@@ -112,7 +113,7 @@ export default function LoteAuditoria() {
                 className="flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 <FileText className="h-4 w-4" />
-                Ver Fotos ({loteAuditoria.todasFotos.length})
+                Ver Fotos ({loteAuditoria.todasFotosUnificadas.length})
               </Button>
               <Button 
                 onClick={handleDownloadPDF}
@@ -408,11 +409,22 @@ export default function LoteAuditoria() {
                                 
                                 {stage.fotos.length > 0 && (
                                   <button
-                                    onClick={() => setShowPhotos(true)}
+                                    onClick={() => {
+                                      setFotosParaGaleria(stage.fotos.map(f => ({
+                                        id: f.id,
+                                        foto_url: f.foto_url,
+                                        tipo_foto: f.tipo_foto,
+                                        created_at: stage.created_at
+                                      })));
+                                      setShowPhotos(true);
+                                    }}
                                     className="text-sm text-primary hover:text-primary/80 flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-full hover:bg-primary/20 transition-colors"
                                   >
                                     <Camera className="h-4 w-4" />
-                                    Fotos
+                                    {stage.fotos.length} foto(s)
+                                    {stage.integridade_validada && (
+                                      <span className="text-xs bg-green-100 text-green-700 px-1 rounded">✓</span>
+                                    )}
                                   </button>
                                 )}
                               </div>
@@ -493,20 +505,34 @@ export default function LoteAuditoria() {
                   <div className="flex justify-between">
                     <span className="text-sm">Fotos de Entregas:</span>
                     <span className="font-medium">
-                      {loteAuditoria.todasFotos.filter(f => f.origem === 'entrega').length}
+                      {loteAuditoria.todasFotosUnificadas.filter(f => f.origem === 'entrega').length}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm">Fotos de Manutenção:</span>
                     <span className="font-medium">
-                      {loteAuditoria.todasFotos.filter(f => f.origem === 'manutencao').length}
+                      {loteAuditoria.todasFotosUnificadas.filter(f => f.origem === 'manutencao').length}
                     </span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-medium">
-                    <span>Total:</span>
-                    <span>{loteAuditoria.todasFotos.length}</span>
+                    <span>Total Unificado:</span>
+                    <span>{loteAuditoria.todasFotosUnificadas.length}</span>
                   </div>
+                  {loteAuditoria.estatisticasIntegridade.duplicatas_detectadas > 0 && (
+                    <div className="flex justify-between text-sm text-amber-600">
+                      <span>Duplicatas Removidas:</span>
+                      <span>{loteAuditoria.estatisticasIntegridade.duplicatas_detectadas}</span>
+                    </div>
+                  )}
+                  {loteAuditoria.estatisticasIntegridade.inconsistencias.length > 0 && (
+                    <div className="mt-2 p-2 bg-amber-50 rounded text-xs text-amber-700">
+                      <div className="font-medium">Avisos de Integridade:</div>
+                      {loteAuditoria.estatisticasIntegridade.inconsistencias.map((inc, idx) => (
+                        <div key={idx}>• {inc}</div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -518,7 +544,7 @@ export default function LoteAuditoria() {
       <PublicFotosGalleryModal
         isOpen={showPhotos}
         onClose={() => setShowPhotos(false)}
-        fotos={loteAuditoria.todasFotos.map(foto => ({
+        fotos={loteAuditoria.todasFotosUnificadas.map(foto => ({
           id: foto.id,
           foto_url: foto.foto_url,
           tipo_foto: foto.tipo_foto,

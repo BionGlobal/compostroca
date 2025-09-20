@@ -595,6 +595,14 @@ export type Database = {
         Args: { lote_id_param: string }
         Returns: boolean
       }
+      migrar_fotos_manejo_para_lote_fotos: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          ja_existentes: number
+          migradas: number
+          total_processadas: number
+        }[]
+      }
     }
     Enums: {
       approval_status: "pending" | "approved" | "rejected"
