@@ -201,19 +201,27 @@ export const useLoteAuditoria = (codigoUnico?: string) => {
       // Process manutencoes with fotos - directly from manejo_semanal
       const manutencoesProcessed = (manejoData || []).map((manejo, index) => {
         const userProfile = userProfiles?.find(p => p.user_id === manejo.user_id);
-        const manejoFotos = (lotefotos || []).filter(foto => foto.manejo_id === manejo.id);
         
-        // Determine action type based on caixa_destino
+        // Get only photos specifically associated with this manejo_id
+        const manejoFotos = (lotefotos || []).filter(foto => 
+          foto.manejo_id === manejo.id && foto.entrega_id === null
+        );
+        
+        // Determine action type based on caixa_destino and index
         let acaoTipo = '';
-        if (manejo.caixa_destino) {
-          acaoTipo = `TRANSFERÊNCIA ${manejo.caixa_origem} → ${manejo.caixa_destino}`;
+        const semanaNumero = index + 1;
+        
+        if (semanaNumero === 1) {
+          acaoTipo = 'INÍCIO DO LOTE - Entregas de Voluntários';
+        } else if (manejo.caixa_destino) {
+          acaoTipo = `MANUTENÇÃO - Transferência Caixa ${manejo.caixa_origem} → ${manejo.caixa_destino}`;
         } else {
-          acaoTipo = 'FINALIZAÇÃO';
+          acaoTipo = 'FINALIZAÇÃO DO LOTE';
         }
         
         return {
           id: manejo.id,
-          semana_numero: index + 1, // Sequential numbering since we order by created_at
+          semana_numero: semanaNumero,
           peso_antes: manejo.peso_antes,
           peso_depois: manejo.peso_depois,
           observacoes: manejo.observacoes || '',

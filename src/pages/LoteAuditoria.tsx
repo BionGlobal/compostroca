@@ -96,18 +96,20 @@ export default function LoteAuditoria() {
       {/* Header */}
       <header className="bg-card border-b border-border">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-primary">Auditoria Pública</h1>
+          <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
+            <div className="text-center lg:text-left">
+              <h1 className="text-2xl lg:text-3xl font-bold text-primary">
+                Lote {loteAuditoria.codigo_unico || loteAuditoria.codigo}
+              </h1>
               <p className="text-muted-foreground mt-1">
-                Lote de Compostagem #{loteAuditoria.codigo}
+                Auditoria e transparência
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <Button 
                 onClick={() => setShowPhotos(true)}
                 variant="outline"
-                className="flex items-center gap-2"
+                className="flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 <FileText className="h-4 w-4" />
                 Ver Fotos ({loteAuditoria.todasFotos.length})
@@ -115,10 +117,10 @@ export default function LoteAuditoria() {
               <Button 
                 onClick={handleDownloadPDF}
                 disabled={pdfLoading}
-                className="flex items-center gap-2"
+                className="flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 <Download className="h-4 w-4" />
-                {pdfLoading ? 'Gerando...' : 'Baixar Relatório PDF'}
+                {pdfLoading ? 'Gerando...' : 'Baixar PDF'}
               </Button>
             </div>
           </div>
@@ -248,13 +250,15 @@ export default function LoteAuditoria() {
                         </Avatar>
                         <div>
                           <p className="font-medium">{voluntario.nome}</p>
-                          <p className="text-sm text-muted-foreground">Balde #{voluntario.numero_balde}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Balde #{voluntario.numero_balde || '-'}
+                          </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="font-medium">{formatWeight(voluntario.peso_total)}</p>
                         <p className="text-sm text-muted-foreground">
-                          {voluntario.entregas_count} entregas • ★{voluntario.qualidade_media.toFixed(1)}
+                          {voluntario.entregas_count || '-'} entregas • ★{voluntario.qualidade_media > 0 ? voluntario.qualidade_media.toFixed(1) : '-'}
                         </p>
                       </div>
                     </div>
@@ -266,71 +270,94 @@ export default function LoteAuditoria() {
             {/* Timeline de Manutenções */}
             <Card>
               <CardHeader>
-                <CardTitle>Linha do Tempo - 7 Etapas de Manutenção</CardTitle>
+                <CardTitle>Linha do Tempo - Processo de Compostagem</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {loteAuditoria.manutencoes.map((manutencao, index) => (
-                    <div key={manutencao.id} className="relative">
-                      {index < loteAuditoria.manutencoes.length - 1 && (
-                        <div className="absolute left-4 top-8 bottom-0 w-0.5 bg-border"></div>
-                      )}
-                      <div className="flex gap-4">
-                        <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-bold">
-                          {manutencao.semana_numero}
-                        </div>
-                        <div className="flex-1 bg-muted p-4 rounded-lg">
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <h4 className="font-medium">{manutencao.acao_tipo}</h4>
-                              <span className="text-xs text-muted-foreground">Etapa {manutencao.semana_numero}</span>
-                            </div>
-                            <span className="text-sm text-muted-foreground">
-                              {new Date(manutencao.created_at).toLocaleDateString('pt-BR', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </span>
-                          </div>
-                          
-                          {manutencao.observacoes && (
-                            <div className="mb-3 p-3 bg-background rounded border-l-4 border-primary">
-                              <p className="text-sm font-medium text-primary mb-1">Observações do Administrador:</p>
-                              <p className="text-sm">{manutencao.observacoes}</p>
-                            </div>
+                  {loteAuditoria.manutencoes
+                    .slice()
+                    .reverse()
+                    .map((manutencao, index) => {
+                      const etapaNumber = loteAuditoria.manutencoes.length - index;
+                      const isFirst = index === 0;
+                      const isLast = index === loteAuditoria.manutencoes.length - 1;
+                      
+                      // For first week, show delivery photos; for other weeks, show maintenance photos
+                      const fotosParaMostrar = etapaNumber === 1 ? 
+                        loteAuditoria.todasFotos.filter(f => f.origem === 'entrega') :
+                        manutencao.fotos;
+                      
+                      return (
+                        <div key={manutencao.id} className="relative">
+                          {!isLast && (
+                            <div className="absolute left-5 top-12 bottom-0 w-0.5 bg-gradient-to-b from-primary to-primary/20"></div>
                           )}
-                          
-                          <div className="grid grid-cols-2 gap-4 mb-3">
-                            <div>
-                              <span className="text-sm text-muted-foreground">Peso antes:</span>
-                              <p className="font-medium">{formatWeight(manutencao.peso_antes)}</p>
+                          <div className="flex gap-4">
+                            <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg ${
+                              etapaNumber === 7 ? 'bg-green-500' :
+                              etapaNumber >= 5 ? 'bg-blue-500' :
+                              etapaNumber >= 3 ? 'bg-yellow-500' : 'bg-primary'
+                            }`}>
+                              {etapaNumber}
                             </div>
-                            <div>
-                              <span className="text-sm text-muted-foreground">Peso depois:</span>
-                              <p className="font-medium">{formatWeight(manutencao.peso_depois)}</p>
+                            <div className="flex-1 bg-card border border-border rounded-lg p-4 shadow-sm">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3 gap-2">
+                                <div>
+                                  <h4 className="font-semibold text-lg">{manutencao.acao_tipo}</h4>
+                                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-primary/10 text-primary">
+                                    Etapa {etapaNumber}
+                                  </span>
+                                </div>
+                                <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded">
+                                  {new Date(manutencao.created_at).toLocaleDateString('pt-BR', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                              </div>
+                              
+                              {manutencao.observacoes && (
+                                <div className="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
+                                  <p className="text-sm font-medium text-blue-800 mb-1">💬 Observações:</p>
+                                  <p className="text-sm text-blue-700">{manutencao.observacoes}</p>
+                                </div>
+                              )}
+                              
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                <div className="bg-red-50 p-3 rounded-lg border border-red-200">
+                                  <span className="text-sm text-red-600 font-medium">⚖️ Peso inicial:</span>
+                                  <p className="font-bold text-red-700 text-lg">{formatWeight(manutencao.peso_antes)}</p>
+                                </div>
+                                <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                                  <span className="text-sm text-green-600 font-medium">⚖️ Peso final:</span>
+                                  <p className="font-bold text-green-700 text-lg">{formatWeight(manutencao.peso_depois)}</p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                                <p className="text-sm text-muted-foreground">
+                                  👤 Responsável: <span className="font-medium">{manutencao.usuario_nome}</span>
+                                </p>
+                                {fotosParaMostrar.length > 0 && (
+                                  <button
+                                    onClick={() => setShowPhotos(true)}
+                                    className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 bg-primary/10 px-3 py-1 rounded-full hover:bg-primary/20 transition-colors"
+                                  >
+                                    📸 {fotosParaMostrar.length} foto(s)
+                                    {etapaNumber === 1 && (
+                                      <span className="text-xs ml-1">(entregas)</span>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                          
-                          <div className="flex justify-between items-center">
-                            <p className="text-sm text-muted-foreground">
-                              Responsável: {manutencao.usuario_nome}
-                            </p>
-                            {manutencao.fotos.length > 0 && (
-                              <button
-                                onClick={() => setShowPhotos(true)}
-                                className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
-                              >
-                                📸 {manutencao.fotos.length} foto(s)
-                              </button>
-                            )}
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })}
                 </div>
               </CardContent>
             </Card>
@@ -440,15 +467,14 @@ export default function LoteAuditoria() {
       <footer className="border-t bg-card/50 py-6">
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center space-x-4">
-            <img 
-              src="/lovable-uploads/powered-by-bion.png" 
-              alt="Powered by Bion" 
-              className="h-16 opacity-80 hover:opacity-100 transition-opacity"
-            />
+            <a href="https://www.bion.global" target="_blank" rel="noopener noreferrer">
+              <img 
+                src="/lovable-uploads/powered-by-bion.png" 
+                alt="Powered by Bion" 
+                className="h-12 opacity-80 hover:opacity-100 transition-opacity"
+              />
+            </a>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Auditoria individual de lote - Sistema Compostroca
-          </p>
         </div>
       </footer>
     </div>
