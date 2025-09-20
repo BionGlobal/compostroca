@@ -103,23 +103,12 @@ export const useLoteAuditoria = (codigoUnico?: string) => {
         .select('id, nome, numero_balde')
         .in('id', voluntarioIds);
 
-      // Get entrega fotos separately
-      const entregaIds = entregas?.map(e => e.id) || [];
-      const { data: entregaFotos, error: entregaFotosError } = await supabase
-        .from('entrega_fotos')
-        .select('id, foto_url, tipo_foto, entrega_id')
-        .in('entrega_id', entregaIds);
-
       if (entregasError) {
         console.error('Erro ao buscar entregas:', entregasError);
       }
 
       if (voluntariosError) {
         console.error('Erro ao buscar voluntários:', voluntariosError);
-      }
-
-      if (entregaFotosError) {
-        console.error('Erro ao buscar fotos de entregas:', entregaFotosError);
       }
 
       // Get manejo_semanal data directly (bypass lotes_manutencoes which is empty)
@@ -151,7 +140,8 @@ export const useLoteAuditoria = (codigoUnico?: string) => {
       const { data: lotefotos, error: fotosError } = await supabase
         .from('lote_fotos')
         .select('id, foto_url, tipo_foto, created_at, manejo_id, entrega_id')
-        .eq('lote_id', lote.id);
+        .eq('lote_id', lote.id)
+        .is('deleted_at', null);
 
       if (fotosError) {
         console.error('Erro ao buscar fotos do lote:', fotosError);
@@ -192,7 +182,7 @@ export const useLoteAuditoria = (codigoUnico?: string) => {
       // Process entregas with fotos
       const entregasProcessed = (entregas || []).map(entrega => {
         const voluntario = voluntariosData?.find(v => v.id === entrega.voluntario_id);
-        const fotos = entregaFotos?.filter(f => f.entrega_id === entrega.id) || [];
+        const fotos = (lotefotos || []).filter(f => f.entrega_id === entrega.id);
         
         return {
           id: entrega.id,
@@ -239,24 +229,20 @@ export const useLoteAuditoria = (codigoUnico?: string) => {
       });
 
       // Combine all photos with origin
-      const todasFotos = [
-        // Fotos de entregas
-        ...(entregaFotos || []).map(foto => ({
+      const todasFotos = (lotefotos || []).map(foto => {
+        const origem: 'entrega' | 'manutencao' = foto.entrega_id ? 'entrega' : 'manutencao';
+        const created_at = foto.entrega_id ? 
+          entregas?.find(e => e.id === foto.entrega_id)?.created_at || foto.created_at :
+          foto.created_at;
+        
+        return {
           id: foto.id,
           foto_url: foto.foto_url,
           tipo_foto: foto.tipo_foto,
-          origem: 'entrega' as const,
-          created_at: entregas?.find(e => e.id === foto.entrega_id)?.created_at || ''
-        })),
-        // Fotos de lote (manutenções)
-        ...(lotefotos || []).map(foto => ({
-          id: foto.id,
-          foto_url: foto.foto_url,
-          tipo_foto: foto.tipo_foto,
-          origem: 'manutencao' as const,
-          created_at: foto.created_at
-        }))
-      ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+          origem,
+          created_at
+        };
+      }).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
       const auditoria: LoteAuditoria = {
         id: lote.id,
