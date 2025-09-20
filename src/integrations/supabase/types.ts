@@ -576,6 +576,16 @@ export type Database = {
           unidade_nome: string
         }[]
       }
+      buscar_lotes_por_status_debug: {
+        Args: { status_filter?: string }
+        Returns: {
+          codigo: string
+          id: string
+          status: string
+          total_count: number
+          unidade_nome: string
+        }[]
+      }
       calcular_impacto_lote: {
         Args: { lote_id_param: string }
         Returns: {
