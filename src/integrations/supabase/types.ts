@@ -53,6 +53,7 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           lote_codigo: string | null
+          lote_id: string | null
           observacoes: string | null
           peso: number
           qualidade_residuo: number | null
@@ -68,6 +69,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           lote_codigo?: string | null
+          lote_id?: string | null
           observacoes?: string | null
           peso: number
           qualidade_residuo?: number | null
@@ -83,6 +85,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           lote_codigo?: string | null
+          lote_id?: string | null
           observacoes?: string | null
           peso?: number
           qualidade_residuo?: number | null
@@ -164,8 +167,11 @@ export type Database = {
       lotes: {
         Row: {
           caixa_atual: number
+          co2eq_evitado: number | null
           codigo: string
+          codigo_unico: string | null
           created_at: string | null
+          creditos_cau: number | null
           criado_por: string
           criado_por_nome: string
           data_encerramento: string | null
@@ -184,6 +190,7 @@ export type Database = {
           peso_atual: number | null
           peso_final: number | null
           peso_inicial: number | null
+          qr_code_url: string | null
           semana_atual: number
           status: string
           unidade: string
@@ -191,8 +198,11 @@ export type Database = {
         }
         Insert: {
           caixa_atual?: number
+          co2eq_evitado?: number | null
           codigo: string
+          codigo_unico?: string | null
           created_at?: string | null
+          creditos_cau?: number | null
           criado_por: string
           criado_por_nome: string
           data_encerramento?: string | null
@@ -211,6 +221,7 @@ export type Database = {
           peso_atual?: number | null
           peso_final?: number | null
           peso_inicial?: number | null
+          qr_code_url?: string | null
           semana_atual?: number
           status?: string
           unidade?: string
@@ -218,8 +229,11 @@ export type Database = {
         }
         Update: {
           caixa_atual?: number
+          co2eq_evitado?: number | null
           codigo?: string
+          codigo_unico?: string | null
           created_at?: string | null
+          creditos_cau?: number | null
           criado_por?: string
           criado_por_nome?: string
           data_encerramento?: string | null
@@ -238,10 +252,38 @@ export type Database = {
           peso_atual?: number | null
           peso_final?: number | null
           peso_inicial?: number | null
+          qr_code_url?: string | null
           semana_atual?: number
           status?: string
           unidade?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      lotes_manutencoes: {
+        Row: {
+          created_at: string
+          id: string
+          lote_id: string
+          manejo_id: string
+          semana_numero: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lote_id: string
+          manejo_id: string
+          semana_numero: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lote_id?: string
+          manejo_id?: string
+          semana_numero?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -436,6 +478,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calcular_impacto_lote: {
+        Args: { lote_id_param: string }
+        Returns: {
+          co2eq_evitado_calc: number
+          creditos_cau_calc: number
+        }[]
+      }
       can_modify_data: {
         Args: { user_id?: string }
         Returns: boolean
@@ -465,6 +514,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: undefined
+      }
+      lote_tem_7_manutencoes: {
+        Args: { lote_id_param: string }
+        Returns: boolean
       }
     }
     Enums: {
