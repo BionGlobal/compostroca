@@ -84,13 +84,18 @@ export const useAuditoriaGeral = () => {
     try {
       setLoadingLotes(true);
       const currentFilters = filterState || filters;
+      
+      // Converter datas para o formato correto
+      const dataInicio = currentFilters.dataInicio ? new Date(currentFilters.dataInicio).toISOString().split('T')[0] : null;
+      const dataFim = currentFilters.dataFim ? new Date(currentFilters.dataFim).toISOString().split('T')[0] : null;
+      
       const { data, error } = await supabase.rpc('buscar_lotes_finalizados', {
         pagina: page,
         termo_busca: term,
-        unidade_filter: currentFilters.unidade,
-        data_inicio: currentFilters.dataInicio || null,
-        data_fim: currentFilters.dataFim || null,
-        validador_filter: currentFilters.validador
+        unidade_filter: currentFilters.unidade || '',
+        data_inicio: dataInicio,
+        data_fim: dataFim,
+        validador_filter: currentFilters.validador || ''
       });
       
       if (error) {
@@ -159,10 +164,17 @@ export const useAuditoriaGeral = () => {
 
   useEffect(() => {
     fetchUnidades();
-    fetchLotesFinalizados();
+    // Buscar apenas os primeiros 10 lotes
+    fetchLotesFinalizados(1, '', {
+      unidade: '',
+      dataInicio: '',
+      dataFim: '',
+      validador: ''
+    });
   }, []);
 
-  const totalPages = Math.ceil(totalCount / 20);
+  // Usar paginação de 10 itens para melhor experiência mobile
+  const totalPages = Math.ceil(totalCount / 10);
 
   return {
     unidades,

@@ -14,7 +14,7 @@ import {
 import { Shield, Building2, FileCheck, TrendingUp, Scale, Leaf, Users } from 'lucide-react';
 import { useAuditoriaGeral } from '@/hooks/useAuditoriaGeral';
 import { UnidadeCard } from '@/components/UnidadeCard';
-import { LoteSearchTable } from '@/components/LoteSearchTable';
+import { LoteCardList } from '@/components/LoteCardList';
 import { AdvancedSearchFilters } from '@/components/AdvancedSearchFilters';
 import { ChainIntegrityMonitor } from '@/components/ChainIntegrityMonitor';
 
@@ -184,7 +184,7 @@ export default function AuditoriaGeral() {
                   </div>
                 </div>
 
-                <LoteSearchTable lotes={lotesFinalizados} loading={loadingLotes} />
+                <LoteCardList lotes={lotesFinalizados} loading={loadingLotes} />
 
                 {/* Pagination */}
                 {totalPages > 1 && (

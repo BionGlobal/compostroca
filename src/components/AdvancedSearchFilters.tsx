@@ -45,6 +45,8 @@ export const AdvancedSearchFilters = ({
   const handleFilterChange = (key: keyof FilterState, value: string) => {
     const newFilters = { ...filters, [key]: value };
     onFiltersChange(newFilters);
+    // Aplicar filtros automaticamente
+    onSearch(searchTerm);
   };
 
   const clearFilters = () => {
