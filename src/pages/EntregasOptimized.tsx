@@ -14,7 +14,7 @@ import { EntregaFotosUpload } from '@/components/EntregaFotosUpload';
 import { EntregaFotosGaleria } from '@/components/EntregaFotosGaleria';
 import { EditEntregaModal } from '@/components/EditEntregaModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LoteActiveCard } from '@/components/LoteActiveCard';
+import { LoteControlCard } from '@/components/LoteControlCard';
 import { formatPesoDisplay } from '@/lib/organizationUtils';
 import { useIOSPermissions } from '@/hooks/useIOSPermissions';
 import { IOSPermissionsAlert } from '@/components/IOSPermissionsAlert';
@@ -196,7 +196,9 @@ const EntregasOptimized = () => {
     <div className="p-4 space-y-6">
       <IOSPermissionsAlert showOnlyWhenNeeded compact />
       
-      {dataLoading.lotes ? <LoteSkeletonLoader /> : <LoteActiveCard />}
+      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b">
+        {dataLoading.lotes ? <LoteSkeletonLoader /> : <LoteControlCard />}
+      </div>
       
       <Card>
         <CardHeader>
