@@ -18,7 +18,7 @@ import { EntregaFotosGaleria } from '@/components/EntregaFotosGaleria';
 import { EditEntregaModal } from '@/components/EditEntregaModal';
 import { useEntregaFotos } from '@/hooks/useEntregaFotos';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LoteCard } from '@/components/LoteCard';
+import { LoteActiveCard } from '@/components/LoteActiveCard';
 import { useLotes } from '@/hooks/useLotes';
 import { formatPesoDisplay } from '@/lib/organizationUtils';
 import { useIOSPermissions } from '@/hooks/useIOSPermissions';
@@ -219,7 +219,7 @@ const Entregas = () => {
     <div className="p-4 space-y-6">
       <IOSPermissionsAlert showOnlyWhenNeeded compact />
       
-      <LoteCard />
+      <LoteActiveCard />
       
       <Card>
         <CardHeader>
