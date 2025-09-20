@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { usePublicProductionBelt } from '@/hooks/usePublicProductionBelt';
 import { PublicProductionBelt } from '@/components/PublicProductionBelt';
+import { FotosGalleryModal } from '@/components/FotosGalleryModal';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,6 +21,32 @@ export default function ProductionBeltPublic() {
   }
 
   const { data, loading, error } = usePublicProductionBelt(unitCode);
+
+  // Estado para modal de fotos - igual à página Lotes
+  const [fotosModalData, setFotosModalData] = useState<{
+    open: boolean;
+    loteId: string;
+    title: string;
+    entregaId?: string;
+    manejoId?: string;
+  }>({
+    open: false,
+    loteId: '',
+    title: '',
+    entregaId: undefined,
+    manejoId: undefined
+  });
+
+  // Handler para visualizar fotos - igual à página Lotes
+  const handleViewPhotos = (loteId: string, title: string) => {
+    setFotosModalData({
+      open: true,
+      loteId,
+      title,
+      entregaId: undefined,
+      manejoId: undefined
+    });
+  };
 
   if (loading) {
     return (
@@ -193,7 +221,10 @@ export default function ProductionBeltPublic() {
             Esteira de Produção ao Vivo
           </h2>
           
-          <PublicProductionBelt lotesAtivos={data.lotesAtivos} />
+          <PublicProductionBelt 
+            lotesAtivos={data.lotesAtivos} 
+            onViewPhotos={handleViewPhotos}
+          />
         </section>
 
         {/* Footer com "Powered by Bion" */}
@@ -212,6 +243,16 @@ export default function ProductionBeltPublic() {
           </div>
         </footer>
       </main>
+
+      {/* Modal de Galeria de Fotos - igual à página Lotes */}
+      <FotosGalleryModal
+        isOpen={fotosModalData.open}
+        onClose={() => setFotosModalData(prev => ({ ...prev, open: false }))}
+        loteId={fotosModalData.loteId}
+        title={fotosModalData.title}
+        entregaId={fotosModalData.entregaId}
+        manejoId={fotosModalData.manejoId}
+      />
     </div>
   );
 }

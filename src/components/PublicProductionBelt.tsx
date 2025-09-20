@@ -9,9 +9,10 @@ import type { LoteExtended } from '@/hooks/usePublicProductionBelt';
 
 interface PublicProductionBeltProps {
   lotesAtivos: LoteExtended[];
+  onViewPhotos?: (loteId: string, title: string) => void;
 }
 
-export const PublicProductionBelt = ({ lotesAtivos }: PublicProductionBeltProps) => {
+export const PublicProductionBelt = ({ lotesAtivos, onViewPhotos }: PublicProductionBeltProps) => {
   // Organiza lotes por caixa (1-7) - exatamente igual ao ProductionBelt
   const caixasPorLote = Array.from({ length: 7 }, (_, index) => {
     const numeroBox = index + 1;
@@ -170,7 +171,7 @@ export const PublicProductionBelt = ({ lotesAtivos }: PublicProductionBeltProps)
                         variant="outline"
                         size="sm"
                         className="w-full mb-2"
-                        onClick={() => window.open(`/fotos/${lote.id}`, '_blank')}
+                        onClick={() => onViewPhotos?.(lote.id, `Fotos das Entregas - ${lote.codigo}`)}
                       >
                         <Camera className="h-3 w-3 mr-1" />
                         Ver Fotos
