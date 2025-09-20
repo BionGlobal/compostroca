@@ -43,6 +43,7 @@ export const PublicFotosLote = () => {
           .from('lote_fotos')
           .select('id, foto_url, tipo_foto, created_at')
           .eq('lote_id', loteId)
+          .is('deleted_at', null)
           .order('created_at', { ascending: true });
 
         if (fotosError) {
