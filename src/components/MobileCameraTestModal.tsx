@@ -5,8 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { useSimpleMobileCamera } from '@/hooks/useSimpleMobileCamera';
 import { SimpleCameraCapture } from '@/components/SimpleCameraCapture';
+import { useIOSPermissions } from '@/hooks/useIOSPermissions';
 import { 
   Smartphone, 
   Camera, 
@@ -16,10 +16,10 @@ import {
   AlertTriangle,
   RefreshCw,
   Shield,
-  Globe,
   TestTube,
   Eye,
-  Zap
+  Zap,
+  Download
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -35,26 +35,16 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
   const [activeTab, setActiveTab] = useState('overview');
   const [testPhotos, setTestPhotos] = useState<string[]>([]);
   const [isTestingFlow, setIsTestingFlow] = useState(false);
+  const [currentTestStep, setCurrentTestStep] = useState(1);
   const { toast } = useToast();
 
   const {
-    isActive,
-    isCapturing,
-    error,
-    facingMode,
-    hasFrontCamera,
-    hasBackCamera,
-    permissions,
     deviceInfo,
-    videoRef,
-    canvasRef,
-    startCamera,
-    stopCamera,
-    switchCamera,
-    capturePhoto,
+    permissions,
     requestCameraAccess,
-    requestGeolocationAccess
-  } = useSimpleMobileCamera();
+    requestGeolocationAccess,
+    checkPermissions
+  } = useIOSPermissions();
 
   const getPermissionStatus = (permission: string) => {
     if (permission === 'granted') {
@@ -68,58 +58,87 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
   };
 
   const handleTestPhoto = async (dataUrl: string, metadata: any) => {
-    setTestPhotos(prev => [...prev, dataUrl]);
-    toast({
-      title: 'Foto de Teste Capturada',
-      description: 'Foto salva com sucesso no teste da câmera',
+    console.log('📸 Foto de teste capturada:', {
+      photoSize: dataUrl.length,
+      metadata,
+      step: currentTestStep
     });
+    
+    setTestPhotos(prev => [...prev, dataUrl]);
+    
+    // Simular múltiplas etapas de teste
+    if (currentTestStep < 3) {
+      setCurrentTestStep(prev => prev + 1);
+      toast({
+        title: `Foto ${currentTestStep} Capturada`,
+        description: `Agora capture a foto ${currentTestStep + 1} para continuar o teste`,
+      });
+    } else {
+      // Finalizar teste
+      setIsTestingFlow(false);
+      setCurrentTestStep(1);
+      setActiveTab('results');
+      toast({
+        title: 'Teste Completo!',
+        description: 'Todas as fotos de teste foram capturadas com sucesso',
+      });
+    }
   };
 
   const handleStartFlowTest = () => {
+    setCurrentTestStep(1);
     setIsTestingFlow(true);
-    setActiveTab('flow-test');
   };
 
   const handleCancelFlowTest = () => {
     setIsTestingFlow(false);
+    setCurrentTestStep(1);
     setActiveTab('overview');
   };
 
-  const handleQuickCameraTest = async () => {
-    try {
-      await startCamera('environment');
-      const result = await capturePhoto();
-      setTestPhotos(prev => [...prev, result.dataUrl]);
-      stopCamera();
-      
-      toast({
-        title: 'Teste Rápido Concluído',
-        description: 'Câmera testada com sucesso!',
-      });
-    } catch (error) {
-      toast({
-        title: 'Erro no Teste',
-        description: 'Falha ao testar a câmera',
-        variant: 'destructive'
-      });
-    }
+  const handleRefreshPermissions = async () => {
+    await checkPermissions();
+    toast({
+      title: 'Permissões Atualizadas',
+      description: 'Status das permissões foi verificado novamente',
+    });
+  };
+
+  const downloadPhoto = (photoUrl: string, index: number) => {
+    const link = document.createElement('a');
+    link.download = `teste-camera-${index + 1}-${Date.now()}.jpg`;
+    link.href = photoUrl;
+    link.click();
   };
 
   const cameraStatus = getPermissionStatus(permissions.camera);
   const locationStatus = getPermissionStatus(permissions.geolocation);
 
+  // Se está testando o fluxo, mostrar a interface vertical completa
   if (isTestingFlow) {
+    const testInstructions = [
+      {
+        title: 'Foto de Teste 1',
+        description: 'Capture uma foto usando a câmera traseira para testar a qualidade'
+      },
+      {
+        title: 'Foto de Teste 2', 
+        description: 'Capture uma foto usando a câmera frontal (se disponível)'
+      },
+      {
+        title: 'Foto de Teste 3',
+        description: 'Capture uma foto final para verificar estabilidade da câmera'
+      }
+    ];
+
     return (
       <SimpleCameraCapture
         onPhotoCapture={handleTestPhoto}
         onCancel={handleCancelFlowTest}
-        currentStep={1}
-        totalSteps={1}
-        instruction={{
-          title: 'Teste da Nova Câmera',
-          description: 'Capture uma foto para testar o sistema de câmera mobile'
-        }}
-        className="fixed inset-0 z-50"
+        currentStep={currentTestStep}
+        totalSteps={3}
+        instruction={testInstructions[currentTestStep - 1]}
+        className="fixed inset-0 z-50 bg-background"
       />
     );
   }
@@ -137,7 +156,7 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview">Status</TabsTrigger>
-            <TabsTrigger value="quick-test">Teste Rápido</TabsTrigger>
+            <TabsTrigger value="test">Teste</TabsTrigger>
             <TabsTrigger value="results">Resultados</TabsTrigger>
           </TabsList>
 
@@ -179,6 +198,16 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
                     </Badge>
                   </div>
                 </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefreshPermissions}
+                  className="w-full mt-3"
+                >
+                  <RefreshCw className="h-3 w-3 mr-2" />
+                  Atualizar Status
+                </Button>
               </CardContent>
             </Card>
 
@@ -216,34 +245,12 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
                       {deviceInfo?.isInAppBrowser ? 'Sim' : 'Não'}
                     </Badge>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Capacidades da Câmera */}
-            <Card>
-              <CardContent className="p-4 space-y-3">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Camera className="h-4 w-4" />
-                  Capacidades da Câmera
-                </h3>
-                
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${hasFrontCamera ? 'bg-success' : 'bg-destructive'}`} />
-                    <span>Câmera Frontal</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${hasBackCamera ? 'bg-success' : 'bg-destructive'}`} />
-                    <span>Câmera Traseira</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${deviceInfo?.supportsMediaDevices ? 'bg-success' : 'bg-destructive'}`} />
-                    <span>MediaDevices API</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${deviceInfo?.isHTTPS ? 'bg-success' : 'bg-destructive'}`} />
-                    <span>Contexto Seguro</span>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">HTTPS:</span>
+                    <Badge variant={deviceInfo?.isHTTPS ? 'default' : 'destructive'}>
+                      {deviceInfo?.isHTTPS ? 'Seguro' : 'Inseguro'}
+                    </Badge>
                   </div>
                 </div>
               </CardContent>
@@ -267,53 +274,25 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
             )}
           </TabsContent>
 
-          <TabsContent value="quick-test" className="space-y-4">
-            {/* Teste Rápido */}
-            <Card>
-              <CardContent className="p-4 space-y-4">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Zap className="h-4 w-4" />
-                  Teste Rápido da Câmera
-                </h3>
-                
-                <p className="text-sm text-muted-foreground">
-                  Teste básico que captura uma foto usando a câmera padrão.
-                </p>
-
-                <Button
-                  onClick={handleQuickCameraTest}
-                  disabled={isCapturing || isActive}
-                  className="w-full"
-                  variant="outline"
-                >
-                  {isCapturing ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <Camera className="h-4 w-4 mr-2" />
-                  )}
-                  {isCapturing ? 'Capturando...' : 'Teste Rápido'}
-                </Button>
-              </CardContent>
-            </Card>
-
+          <TabsContent value="test" className="space-y-4">
             {/* Teste do Fluxo Completo */}
             <Card>
               <CardContent className="p-4 space-y-4">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Eye className="h-4 w-4" />
-                  Teste do Fluxo Completo
+                  Teste da Interface de Entrega
                 </h3>
                 
                 <p className="text-sm text-muted-foreground">
-                  Teste completo usando a nova interface de câmera mobile-first com todos os recursos.
+                  Teste completo usando a mesma interface vertical do processo de entrega com todos os recursos: câmera móvel, troca de câmeras, upload de arquivo e captura de metadados.
                 </p>
 
                 <Button
                   onClick={handleStartFlowTest}
                   className="w-full bg-gradient-primary text-primary-foreground"
                 >
-                  <TestTube className="h-4 w-4 mr-2" />
-                  Testar Fluxo Completo
+                  <Camera className="h-4 w-4 mr-2" />
+                  Iniciar Teste da Câmera
                 </Button>
               </CardContent>
             </Card>
@@ -326,12 +305,12 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
                   
                   <div className="space-y-2">
                     {permissions.camera !== 'granted' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => requestCameraAccess()}
-                      className="w-full"
-                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => requestCameraAccess()}
+                        className="w-full"
+                      >
                         <Camera className="h-3 w-3 mr-2" />
                         Solicitar Câmera
                       </Button>
@@ -352,6 +331,21 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
                 </CardContent>
               </Card>
             )}
+
+            {/* Dicas para iOS */}
+            {deviceInfo?.isIOS && (
+              <Card className="bg-accent/50">
+                <CardContent className="p-4">
+                  <h4 className="font-medium mb-2">💡 Dicas para iOS:</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• Use o Safari para melhor compatibilidade</li>
+                    <li>• Permita acesso à câmera quando solicitado</li>
+                    <li>• Se a câmera não funcionar, verifique as configurações do Safari</li>
+                    <li>• Evite navegadores in-app (Instagram, Facebook, etc.)</li>
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="results" className="space-y-4">
@@ -366,40 +360,80 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
                   <div className="text-center text-muted-foreground py-8">
                     <Camera className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     <p>Nenhuma foto de teste capturada ainda</p>
+                    <p className="text-xs mt-1">Vá para a aba "Teste" para começar</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {testPhotos.map((photo, index) => (
-                      <img
-                        key={index}
-                        src={photo}
-                        alt={`Teste ${index + 1}`}
-                        className="w-full h-20 object-cover rounded border"
-                      />
-                    ))}
-                  </div>
-                )}
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 gap-3">
+                      {testPhotos.map((photo, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={photo}
+                            alt={`Teste ${index + 1}`}
+                            className="w-full h-32 object-cover rounded border"
+                          />
+                          <div className="absolute top-2 left-2">
+                            <Badge variant="secondary">
+                              Foto {index + 1}
+                            </Badge>
+                          </div>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => downloadPhoto(photo, index)}
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Download className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
 
-                {testPhotos.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setTestPhotos([])}
-                    className="w-full"
-                  >
-                    Limpar Fotos de Teste
-                  </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTestPhotos([])}
+                        className="flex-1"
+                      >
+                        Limpar Fotos
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActiveTab('test')}
+                        className="flex-1"
+                      >
+                        Novo Teste
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>
+
+            {/* Estatísticas do Teste */}
+            {testPhotos.length > 0 && (
+              <Card>
+                <CardContent className="p-4">
+                  <h4 className="font-medium mb-3">📊 Estatísticas do Teste</h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Total de fotos:</span>
+                      <div className="font-medium">{testPhotos.length}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Status:</span>
+                      <Badge variant="default" className="ml-1">
+                        ✅ Sucesso
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
-
-        {/* Canvas oculto para testes */}
-        <div className="hidden">
-          <video ref={videoRef} />
-          <canvas ref={canvasRef} />
-        </div>
       </DialogContent>
     </Dialog>
   );
