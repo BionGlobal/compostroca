@@ -513,6 +513,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      associar_entregas_lotes_finalizados: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       buscar_lotes_finalizados: {
         Args:
           | {

@@ -161,7 +161,7 @@ export const useLoteProntoFotos = (loteId?: string) => {
                 id: entrega.id,
                 peso: entrega.peso,
                 created_at: entrega.created_at,
-                qualidade_residuo: entrega.qualidade_residuo,
+                qualidade_residuo: entrega.qualidade_residuo || 0,
                 observacoes: entrega.observacoes,
                 voluntario: {
                   id: entrega.voluntarios.id,

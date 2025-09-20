@@ -421,7 +421,8 @@ const Lotes = () => {
         isOpen={fotosLoteProntoModal.open}
         onClose={() => setFotosLoteProntoModal(prev => ({ ...prev, open: false }))}
         loteId={fotosLoteProntoModal.loteId}
-        title={fotosLoteProntoModal.title}
+        loteCodigo={fotosLoteProntoModal.title || ''}
+        fotos={[]}
       />
     </div>
   );

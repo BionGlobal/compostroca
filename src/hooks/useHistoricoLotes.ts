@@ -31,6 +31,7 @@ export interface LoteHistorico {
   criado_por_nome: string;
   // Dados enriquecidos
   num_voluntarios: number;
+  voluntariosCount?: number; // Para compatibilidade
   qualidade_media: number;
   co2e_evitado: number;
   tempo_processamento?: number; // em semanas
@@ -38,6 +39,7 @@ export interface LoteHistorico {
   // Dados de geolocalização
   latitude?: number | null;
   longitude?: number | null;
+  hash_integridade?: string; // Hash de integridade para lotes finalizados
 }
 
 export interface SearchFilters {
@@ -189,7 +191,7 @@ export const useHistoricoLotes = () => {
         const entregasData = await getEntregasDataByDate(lote.codigo, lote.data_inicio);
         const manejoGeoData = await getManejoFinalGeolocalizacao(lote.id);
         const pesoInicial = Number(lote.peso_inicial) || 0;
-        const pesoFinal = Number(lote.peso_atual) || 0;
+        const pesoFinal = Number(lote.peso_final) || Number(lote.peso_atual) || 0;
         const taxaReducao = pesoInicial > 0 ? ((pesoInicial - pesoFinal) / pesoInicial) * 100 : 0;
         
         lotesProntosProcessados.push({
@@ -199,13 +201,14 @@ export const useHistoricoLotes = () => {
           caixa_atual: lote.caixa_atual,
           peso_inicial: lote.peso_inicial,
           peso_atual: lote.peso_atual,
-          peso_final: lote.peso_atual, // Para lotes finalizados, peso_atual é o peso_final
+          peso_final: lote.peso_final || lote.peso_atual, // Para lotes finalizados
           data_inicio: lote.data_inicio,
           data_encerramento: lote.data_encerramento,
           created_at: lote.created_at,
           unidade: lote.unidade,
           criado_por_nome: lote.criado_por_nome,
           num_voluntarios: entregasData.numVoluntarios,
+          voluntariosCount: entregasData.numVoluntarios, // Adicionar para compatibilidade
           qualidade_media: entregasData.qualidadeMedia,
           co2e_evitado: pesoInicial * 0.766, // Formula especificada
           tempo_processamento: undefined, // Removido tempo de processamento
