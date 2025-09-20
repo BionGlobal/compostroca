@@ -96,10 +96,13 @@ export const LoteControlCard = () => {
     }
   };
 
-  // Se não pode criar lote ou esteira está completa, não mostrar o card
-  if (!canCreateLote || (isProductionBeltFull && !loteAtivoCaixa01)) {
-    return null;
-  }
+  // Determinar se o botão deve estar desabilitado e a mensagem
+  const isDisabled = !canCreateLote || isProductionBeltFull;
+  const getDisabledMessage = () => {
+    if (!canCreateLote) return "Apenas administradores podem criar lotes";
+    if (isProductionBeltFull) return "Esteira completa - finalize um lote antes de criar outro";
+    return "";
+  };
 
   return (
     <Card className="w-full bg-card border-border">
@@ -112,13 +115,21 @@ export const LoteControlCard = () => {
       <CardContent className="space-y-4">
         {!loteAtivoCaixa01 ? (
           // Estado inicial - apenas botão "Iniciar Lote"
-          <Button
-            onClick={handleIniciarLote}
-            className="w-full"
-            size="sm"
-          >
-            Iniciar Lote
-          </Button>
+          <div className="space-y-2">
+            <Button
+              onClick={handleIniciarLote}
+              className="w-full"
+              size="sm"
+              disabled={isDisabled}
+            >
+              Iniciar Lote
+            </Button>
+            {isDisabled && (
+              <p className="text-xs text-muted-foreground text-center">
+                {getDisabledMessage()}
+              </p>
+            )}
+          </div>
         ) : (
           // Estado expandido - mostrar informações do lote e controles
           <div className="space-y-4">
