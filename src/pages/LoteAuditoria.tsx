@@ -412,7 +412,7 @@ export default function LoteAuditoria() {
                                     className="text-sm text-primary hover:text-primary/80 flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-full hover:bg-primary/20 transition-colors"
                                   >
                                     <Camera className="h-4 w-4" />
-                                    {stage.fotos.length} foto(s)
+                                    Fotos
                                   </button>
                                 )}
                               </div>
