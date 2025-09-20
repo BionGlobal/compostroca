@@ -325,23 +325,11 @@ export default function LoteAuditoria() {
                             </div>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                              {stage.peso_antes !== null && stage.peso_depois !== null && (
+                              {stage.peso_depois !== null && (
                                 <div className="flex items-center gap-2">
                                   <Scale className="h-4 w-4 text-muted-foreground" />
                                   <span className="text-sm">
-                                    {formatWeight(stage.peso_antes)} → {formatWeight(stage.peso_depois)}
-                                    {stage.data_estimada && (
-                                      <span className="text-xs text-muted-foreground ml-1">(estimado)</span>
-                                    )}
-                                  </span>
-                                </div>
-                              )}
-                              
-                              {stage.peso_depois !== null && stage.peso_antes === null && (
-                                <div className="flex items-center gap-2">
-                                  <Scale className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm">
-                                    Peso: {formatWeight(stage.peso_depois)}
+                                    Peso estimado: {formatWeight(stage.peso_depois)}
                                     {stage.data_estimada && (
                                       <span className="text-xs text-muted-foreground ml-1">(estimado)</span>
                                     )}

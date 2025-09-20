@@ -179,6 +179,7 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
       // === UNIFICAÇÃO E DEDUPLICAÇÃO ===
       const fotosUnificadas: any[] = [];
       const urlsProcessadas = new Set<string>();
+      const urlIndexMap = new Map<string, number>();
       let duplicatasDetectadas = 0;
 
       // Adicionar fotos de entregas
@@ -194,6 +195,7 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
             entrega_id: foto.entrega_id
           });
           urlsProcessadas.add(foto.foto_url);
+          urlIndexMap.set(foto.foto_url, fotosUnificadas.length - 1);
         } else {
           duplicatasDetectadas++;
         }
@@ -214,8 +216,15 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
             manejo_id: foto.manejo_id
           });
           urlsProcessadas.add(foto.foto_url);
+          urlIndexMap.set(foto.foto_url, fotosUnificadas.length - 1);
         } else {
           duplicatasDetectadas++;
+          const idx = urlIndexMap.get(foto.foto_url);
+          if (idx !== undefined && idx !== null) {
+            if (foto.manejo_id) {
+              (fotosUnificadas[idx] as any).manejo_id = foto.manejo_id;
+            }
+          }
         }
       });
 
@@ -232,8 +241,13 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
             manejo_id: manejo.id
           });
           urlsProcessadas.add(manejo.foto_url);
+          urlIndexMap.set(manejo.foto_url, fotosUnificadas.length - 1);
         } else if (manejo.foto_url) {
           duplicatasDetectadas++;
+          const idx = urlIndexMap.get(manejo.foto_url);
+          if (idx !== undefined && idx !== null) {
+            (fotosUnificadas[idx] as any).manejo_id = manejo.id;
+          }
         }
       });
 
@@ -292,10 +306,19 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
       const buildRealTimeline = (): TimelineStageEnhanced[] => {
         const timeline: TimelineStageEnhanced[] = [];
         
-        // 1. Início do Lote - Filter delivery photos by specific lote_id
-        const entregaFotosEspecificas = fotosUnificadas.filter(f => 
-          f.origem === 'entrega' && f.entrega_id && 
-          entregasProcessed.some(e => e.id === f.entrega_id)
+        // Helpers
+        const sameDay = (d1: string, d2: string) => new Date(d1).toDateString() === new Date(d2).toDateString();
+        const getEstimatedWeightForDate = (dateStr: string) => {
+          const start = new Date(lote.data_inicio).getTime();
+          const current = new Date(dateStr).getTime();
+          const days = Math.max(0, Math.floor((current - start) / (1000 * 60 * 60 * 24)));
+          const weeks = Math.floor(days / 7);
+          return lote.peso_inicial * Math.pow(0.9685, weeks);
+        };
+        
+        // 1. Início do Lote - only delivery photos from the same day of start and not linked to maintenance
+        const entregaFotosInicio = fotosUnificadas.filter(f => 
+          f.origem === 'entrega' && f.entrega_id && !f.manejo_id && sameDay(f.created_at, lote.data_inicio)
         );
         
         timeline.push({
@@ -305,14 +328,13 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
           tipo: 'entrega',
           caixa_origem: null,
           caixa_destino: null,
-          peso_antes: 0,
-          peso_depois: lote.peso_inicial,
-          observacoes: entregasProcessed.length > 0 ? 
-            `Iniciado com ${entregasProcessed.length} entregas` : '-',
+          peso_antes: undefined,
+          peso_depois: getEstimatedWeightForDate(lote.data_inicio),
+          observacoes: entregasProcessed.length > 0 ? `Iniciado com ${entregasProcessed.length} entregas` : '-',
           created_at: lote.data_inicio,
           usuario_nome: lote.criado_por_nome || '-',
-          data_estimada: false,
-          fotos: entregaFotosEspecificas.map(f => ({
+          data_estimada: true,
+          fotos: entregaFotosInicio.map(f => ({
             id: f.id,
             foto_url: f.foto_url,
             tipo_foto: f.tipo_foto,
@@ -321,14 +343,11 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
           integridade_validada: true
         });
         
-        // 2. Manutenções Reais - Only actual maintenance records with estimated weights
+        // 2. Manutenções Reais - associate photos by manejo_id and estimate weight by date
         (manejoData || []).forEach((manejo, index) => {
           const manutencaoFotos = fotosUnificadas.filter(f => f.manejo_id === manejo.id);
           const userProfile = userProfiles?.find(p => p.user_id === manejo.user_id);
-          
-          // Calculate estimated weight based on week number (index + 1)
-          const weekNumber = index + 1;
-          const estimatedWeight = lote.peso_inicial * Math.pow(0.9685, weekNumber);
+          const estimatedWeight = getEstimatedWeightForDate(manejo.created_at);
           
           timeline.push({
             id: manejo.id,
@@ -337,12 +356,12 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
             tipo: 'manutencao',
             caixa_origem: manejo.caixa_origem,
             caixa_destino: manejo.caixa_destino,
-            peso_antes: manejo.peso_antes || estimatedWeight,
-            peso_depois: manejo.peso_depois || estimatedWeight,
+            peso_antes: undefined,
+            peso_depois: estimatedWeight,
             observacoes: manejo.observacoes || '-',
             created_at: manejo.created_at,
             usuario_nome: userProfile?.full_name || '-',
-            data_estimada: !manejo.peso_antes && !manejo.peso_depois,
+            data_estimada: true,
             fotos: manutencaoFotos.map(f => ({
               id: f.id,
               foto_url: f.foto_url,
@@ -353,7 +372,7 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
           });
         });
         
-        // 3. Finalização - If lot is closed
+        // 3. Finalização - show estimated weight for the finalization date
         if (lote.status === 'encerrado' && lote.data_finalizacao) {
           timeline.push({
             id: `finalizacao-${lote.id}`,
@@ -362,12 +381,12 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
             tipo: 'finalizacao',
             caixa_origem: null,
             caixa_destino: null,
-            peso_antes: lote.peso_inicial,
-            peso_depois: lote.peso_final || 0,
+            peso_antes: undefined,
+            peso_depois: getEstimatedWeightForDate(lote.data_finalizacao),
             observacoes: '-',
             created_at: lote.data_finalizacao,
             usuario_nome: lote.criado_por_nome || '-',
-            data_estimada: false,
+            data_estimada: true,
             fotos: [],
             integridade_validada: true
           });
