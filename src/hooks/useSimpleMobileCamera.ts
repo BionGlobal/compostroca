@@ -57,9 +57,18 @@ export const useSimpleMobileCamera = () => {
 
   // Iniciar câmera com fallback progressivo
   const startCamera = useCallback(async (preferredFacingMode: 'user' | 'environment' = 'environment') => {
+    console.log('🔍 [useSimpleMobileCamera] startCamera chamado com facingMode:', preferredFacingMode);
+    
     try {
       setError(null);
-      setIsActive(true);
+      setIsActive(false); // Reset primeiro
+      
+      console.log('🔍 [useSimpleMobileCamera] Verificando suporte getUserMedia...');
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Navigator.mediaDevices não está disponível');
+      }
+      
+      console.log('🔍 [useSimpleMobileCamera] getUserMedia disponível, configurando constraints...');
 
       // Configurações progressivas do mais específico para o mais genérico
       const constraints = [
@@ -93,36 +102,51 @@ export const useSimpleMobileCamera = () => {
 
       let currentStream: MediaStream | null = null;
 
-      for (const constraint of constraints) {
+      for (const [index, constraint] of constraints.entries()) {
         try {
+          console.log(`🔍 [useSimpleMobileCamera] Tentando constraint ${index + 1}:`, constraint);
           currentStream = await navigator.mediaDevices.getUserMedia(constraint);
+          console.log(`✅ [useSimpleMobileCamera] Constraint ${index + 1} funcionou!`);
           break;
         } catch (err) {
-          console.log('Constraint failed, trying next:', err);
+          console.log(`❌ [useSimpleMobileCamera] Constraint ${index + 1} falhou:`, err);
           continue;
         }
       }
 
       if (!currentStream) {
-        throw new Error('Não foi possível acessar a câmera');
+        throw new Error('Não foi possível acessar a câmera com nenhuma configuração');
       }
 
+      console.log('🔍 [useSimpleMobileCamera] Stream obtido, configurando video element...');
       setStream(currentStream);
       setFacingMode(preferredFacingMode);
 
       if (videoRef.current) {
+        console.log('🔍 [useSimpleMobileCamera] Configurando srcObject no video element...');
         videoRef.current.srcObject = currentStream;
-        videoRef.current.play();
+        
+        // Aguardar o video estar pronto para reproduzir
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined) {
+          await playPromise;
+        }
+        
+        console.log('✅ [useSimpleMobileCamera] Video está reproduzindo!');
       }
+
+      setIsActive(true);
+      console.log('✅ [useSimpleMobileCamera] Câmera iniciada com sucesso!');
 
       return currentStream;
     } catch (error) {
-      console.error('Erro ao iniciar câmera:', error);
-      setError('Erro ao acessar câmera');
+      console.error('❌ [useSimpleMobileCamera] Erro ao iniciar câmera:', error);
+      setError(`Erro ao acessar câmera: ${error.message}`);
       setIsActive(false);
       
       // Mostrar instruções específicas para iOS se necessário
       if (deviceInfo?.isIOS && deviceInfo?.isInAppBrowser) {
+        console.log('🔍 [useSimpleMobileCamera] Mostrando instruções iOS...');
         showIOSInstructions();
       }
       
