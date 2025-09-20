@@ -60,26 +60,40 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
   const handleTestPhoto = async (dataUrl: string, metadata: any) => {
     console.log('📸 Foto de teste capturada:', {
       photoSize: dataUrl.length,
-      metadata
+      metadata,
+      step: currentTestStep
     });
     
     setTestPhotos(prev => [...prev, dataUrl]);
-    setIsTestingFlow(false); // Sair do teste após capturar uma foto
-    setActiveTab('results');
     
-    toast({
-      title: 'Foto Capturada!',
-      description: 'Teste da câmera realizado com sucesso',
-    });
+    // Simular múltiplas etapas de teste
+    if (currentTestStep < 3) {
+      setCurrentTestStep(prev => prev + 1);
+      toast({
+        title: `Foto ${currentTestStep} Capturada`,
+        description: `Agora capture a foto ${currentTestStep + 1} para continuar o teste`,
+      });
+    } else {
+      // Finalizar teste
+      setIsTestingFlow(false);
+      setCurrentTestStep(1);
+      setActiveTab('results');
+      toast({
+        title: 'Teste Completo!',
+        description: 'Todas as fotos de teste foram capturadas com sucesso',
+      });
+    }
   };
 
-  const handleStartSimpleTest = () => {
+  const handleStartFlowTest = () => {
+    setCurrentTestStep(1);
     setIsTestingFlow(true);
   };
 
-  const handleCancelTest = () => {
+  const handleCancelFlowTest = () => {
     setIsTestingFlow(false);
-    setActiveTab('test');
+    setCurrentTestStep(1);
+    setActiveTab('overview');
   };
 
   const handleRefreshPermissions = async () => {
@@ -100,18 +114,30 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
   const cameraStatus = getPermissionStatus(permissions.camera);
   const locationStatus = getPermissionStatus(permissions.geolocation);
 
-  // Se está testando, mostrar interface de câmera simples
+  // Se está testando o fluxo, mostrar a interface vertical completa
   if (isTestingFlow) {
+    const testInstructions = [
+      {
+        title: 'Foto de Teste 1',
+        description: 'Capture uma foto usando a câmera traseira para testar a qualidade'
+      },
+      {
+        title: 'Foto de Teste 2', 
+        description: 'Capture uma foto usando a câmera frontal (se disponível)'
+      },
+      {
+        title: 'Foto de Teste 3',
+        description: 'Capture uma foto final para verificar estabilidade da câmera'
+      }
+    ];
+
     return (
       <SimpleCameraCapture
         onPhotoCapture={handleTestPhoto}
-        onCancel={handleCancelTest}
-        currentStep={1}
-        totalSteps={1}
-        instruction={{
-          title: 'Teste Simples da Câmera',
-          description: 'Capture uma foto para testar se a câmera está funcionando'
-        }}
+        onCancel={handleCancelFlowTest}
+        currentStep={currentTestStep}
+        totalSteps={3}
+        instruction={testInstructions[currentTestStep - 1]}
         className="fixed inset-0 z-50 bg-background"
       />
     );
@@ -249,24 +275,24 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
           </TabsContent>
 
           <TabsContent value="test" className="space-y-4">
-            {/* Teste Simples da Câmera */}
+            {/* Teste do Fluxo Completo */}
             <Card>
               <CardContent className="p-4 space-y-4">
                 <h3 className="font-semibold flex items-center gap-2">
-                  <Camera className="h-4 w-4" />
-                  Teste Simples da Câmera
+                  <Eye className="h-4 w-4" />
+                  Teste da Interface de Entrega
                 </h3>
                 
                 <p className="text-sm text-muted-foreground">
-                  Abre a câmera, permite capturar uma foto e mostra o resultado. Teste rápido e direto.
+                  Teste completo usando a mesma interface vertical do processo de entrega com todos os recursos: câmera móvel, troca de câmeras, upload de arquivo e captura de metadados.
                 </p>
 
                 <Button
-                  onClick={handleStartSimpleTest}
+                  onClick={handleStartFlowTest}
                   className="w-full bg-gradient-primary text-primary-foreground"
                 >
                   <Camera className="h-4 w-4 mr-2" />
-                  Testar Câmera
+                  Iniciar Teste da Câmera
                 </Button>
               </CardContent>
             </Card>
@@ -334,7 +360,7 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
                   <div className="text-center text-muted-foreground py-8">
                     <Camera className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     <p>Nenhuma foto de teste capturada ainda</p>
-                    <p className="text-xs mt-1">Vá para a aba "Teste" e clique em "Testar Câmera"</p>
+                    <p className="text-xs mt-1">Vá para a aba "Teste" para começar</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -344,11 +370,11 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
                           <img
                             src={photo}
                             alt={`Teste ${index + 1}`}
-                            className="w-full h-40 object-cover rounded border"
+                            className="w-full h-32 object-cover rounded border"
                           />
                           <div className="absolute top-2 left-2">
                             <Badge variant="secondary">
-                              Teste {index + 1}
+                              Foto {index + 1}
                             </Badge>
                           </div>
                           <Button
@@ -399,12 +425,8 @@ export const MobileCameraTestModal: React.FC<MobileCameraTestModalProps> = ({
                     <div>
                       <span className="text-muted-foreground">Status:</span>
                       <Badge variant="default" className="ml-1">
-                        ✅ Câmera OK
+                        ✅ Sucesso
                       </Badge>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Última foto:</span>
-                      <div className="text-xs">{new Date().toLocaleTimeString()}</div>
                     </div>
                   </div>
                 </CardContent>
