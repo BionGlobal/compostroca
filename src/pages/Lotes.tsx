@@ -107,13 +107,23 @@ const Lotes = () => {
 
   // History handlers  
   const handleViewPhotos = (loteId: string, title: string, isLoteProng?: boolean, entregaId?: string, manejoId?: string) => {
-    setFotosModalData({
-      open: true,
-      loteId,
-      title,
-      entregaId,
-      manejoId
-    });
+    if (isLoteProng) {
+      // Para lotes prontos, usar o modal específico
+      setFotosLoteProntoModal({
+        open: true,
+        loteId,
+        title
+      });
+    } else {
+      // Para lotes em processamento, usar o modal padrão
+      setFotosModalData({
+        open: true,
+        loteId,
+        title,
+        entregaId,
+        manejoId
+      });
+    }
   };
 
   const handleViewLotePhotos = (lote: any) => {

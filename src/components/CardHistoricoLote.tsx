@@ -1,15 +1,17 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StarRating } from '@/components/StarRating';
-import { Camera, Download, Calendar, Users, Leaf, Weight, TrendingDown, Sprout, CheckCircle, MapPin } from 'lucide-react';
+import { Camera, Download, Calendar, Users, Leaf, Weight, TrendingDown, Sprout, CheckCircle, MapPin, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface LoteData {
   id: string;
   codigo: string;
+  codigo_unico?: string;
   status: string;
   caixa_atual: number;
   peso_inicial?: number | null;
@@ -180,15 +182,28 @@ export const CardHistoricoLote: React.FC<CardHistoricoLoteProps> = ({
             {isNovoLote ? 'Ver Fotos da Entrega' : 'Ver Todas as Fotos'}
           </Button>
           
-          <Button
-            size="sm"
-            onClick={onDownloadPDF}
-            disabled={loading}
-            className="flex-1 flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" />
-            {loading ? 'Gerando...' : 'Baixar PDF'}
-          </Button>
+          {isLoteProng ? (
+            <Button 
+              asChild
+              size="sm"
+              className="flex-1 flex items-center gap-2"
+            >
+              <Link to={`/lote/auditoria/${lote.codigo_unico || lote.codigo}`}>
+                <ExternalLink className="h-4 w-4" />
+                Ver Detalhes
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={onDownloadPDF}
+              disabled={loading}
+              className="flex-1 flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              {loading ? 'Gerando...' : 'Baixar PDF'}
+            </Button>
+          )}
         </div>
 
         {/* Validador */}

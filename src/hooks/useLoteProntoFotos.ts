@@ -76,6 +76,7 @@ export const useLoteProntoFotos = (loteId?: string) => {
           manejo_id
         `)
         .eq('lote_id', loteId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: true });
 
       if (lotePhotosError) {
