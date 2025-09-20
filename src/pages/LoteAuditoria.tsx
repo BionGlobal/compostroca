@@ -329,10 +329,7 @@ export default function LoteAuditoria() {
                                 <div className="flex items-center gap-2">
                                   <Scale className="h-4 w-4 text-muted-foreground" />
                                   <span className="text-sm">
-                                    Peso estimado: {formatWeight(stage.peso_depois)}
-                                    {stage.data_estimada && (
-                                      <span className="text-xs text-muted-foreground ml-1">(estimado)</span>
-                                    )}
+                                    Peso: {formatWeight(stage.peso_depois)}
                                   </span>
                                 </div>
                               )}
