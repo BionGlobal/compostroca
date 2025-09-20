@@ -13,6 +13,16 @@ export interface LoteHashData {
   voluntarios?: string[];
   entregas?: string[];
   fotos?: string[];
+  hash_anterior?: string | null;
+  indice_cadeia?: number;
+}
+
+export interface ChainValidationResult {
+  isValid: boolean;
+  brokenAtIndex?: number;
+  brokenLoteId?: string;
+  totalLotes: number;
+  validatedChainLength: number;
 }
 
 export const generateLoteHash = (data: LoteHashData): string => {
@@ -30,6 +40,33 @@ export const generateLoteHash = (data: LoteHashData): string => {
     voluntarios: data.voluntarios?.sort() || [],
     entregas: data.entregas?.sort() || [],
     fotos: data.fotos?.sort() || []
+  };
+
+  // Converter para string JSON ordenada
+  const dataString = JSON.stringify(hashData, Object.keys(hashData).sort());
+  
+  // Gerar hash SHA256
+  return SHA256(dataString).toString();
+};
+
+// Gerar hash com cadeia blockchain-like
+export const generateChainedLoteHash = (data: LoteHashData, previousHash: string | null = null): string => {
+  // Criar um objeto ordenado e determinístico para o hash com cadeia
+  const hashData = {
+    codigo: data.codigo,
+    unidade: data.unidade,
+    data_inicio: data.data_inicio,
+    data_encerramento: data.data_encerramento,
+    peso_inicial: Number(data.peso_inicial),
+    peso_atual: Number(data.peso_atual),
+    latitude: data.latitude ? Number(data.latitude) : null,
+    longitude: data.longitude ? Number(data.longitude) : null,
+    criado_por: data.criado_por,
+    voluntarios: data.voluntarios?.sort() || [],
+    entregas: data.entregas?.sort() || [],
+    fotos: data.fotos?.sort() || [],
+    hash_anterior: previousHash || 'GENESIS',
+    indice_cadeia: data.indice_cadeia || 0
   };
 
   // Converter para string JSON ordenada

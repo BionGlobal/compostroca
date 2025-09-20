@@ -37,6 +37,7 @@ import { ManutencaoCardFlip } from '@/components/ManutencaoCardFlip';
 import { LoteProntoCard } from '@/components/LoteProntoCard';
 import { FotosGalleryModal } from '@/components/FotosGalleryModal';
 import { FotosLoteProntoModal } from '@/components/FotosLoteProntoModal';
+import { ChainIntegrityMonitor } from '@/components/ChainIntegrityMonitor';
 
 
 const Lotes = () => {
@@ -238,6 +239,9 @@ const Lotes = () => {
 
         {/* Tab: Produção */}
         <TabsContent value="producao" className="space-y-6">
+          {/* Monitor de Integridade da Cadeia */}
+          <ChainIntegrityMonitor unidade="CWB001" />
+          
           {/* Card de Manutenção Semanal - Simplificado */}
           <Card className="border-emerald-200/50 bg-gradient-to-r from-emerald-500/10 to-green-500/10 shadow-lg hover:shadow-emerald-200/20 transition-all duration-300">
             <CardHeader>

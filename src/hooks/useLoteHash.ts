@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { generateLoteHash, validateLoteHash, type LoteHashData } from '@/lib/hashUtils';
+import { generateLoteHash, generateChainedLoteHash, validateLoteHash, type LoteHashData } from '@/lib/hashUtils';
 
 export const useLoteHash = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const generateAndSaveHash = async (loteId: string, loteData?: Partial<LoteHashData>) => {
+  const generateAndSaveHash = async (loteId: string, loteData?: Partial<LoteHashData>, useChain: boolean = true) => {
     try {
       setLoading(true);
       
@@ -58,22 +58,62 @@ export const useLoteHash = () => {
           criado_por: lote.criado_por,
           voluntarios: [...new Set(voluntarios?.map(v => v.voluntario_id) || [])],
           entregas: entregas?.map(e => e.id) || [],
-          fotos: fotos?.map(f => f.foto_url) || []
+          fotos: fotos?.map(f => f.foto_url) || [],
+          hash_anterior: lote.hash_anterior,
+          indice_cadeia: lote.indice_cadeia
         };
       }
       
-      const hash = generateLoteHash(completeData as LoteHashData);
-      
-      const { error } = await supabase
-        .from('lotes')
-        .update({ hash_integridade: hash })
-        .eq('id', loteId);
+      let hash: string;
+      let previousHash: string | null = null;
+      let chainIndex: number = 0;
 
-      if (error) throw error;
+      if (useChain) {
+        // Buscar o último hash da cadeia para esta unidade
+        const { data: lastHashData } = await supabase
+          .rpc('get_last_chain_hash', { unit_code: completeData.unidade });
+        
+        previousHash = lastHashData;
+
+        // Buscar o próximo índice da cadeia
+        const { data: nextIndexData } = await supabase
+          .rpc('get_next_chain_index');
+        
+        chainIndex = nextIndexData || 0;
+
+        // Atualizar os dados com as informações da cadeia
+        completeData.hash_anterior = previousHash;
+        completeData.indice_cadeia = chainIndex;
+
+        hash = generateChainedLoteHash(completeData as LoteHashData, previousHash);
+
+        // Salvar com informações da cadeia
+        const { error } = await supabase
+          .from('lotes')
+          .update({ 
+            hash_integridade: hash,
+            hash_anterior: previousHash,
+            indice_cadeia: chainIndex
+          })
+          .eq('id', loteId);
+
+        if (error) throw error;
+      } else {
+        hash = generateLoteHash(completeData as LoteHashData);
+        
+        const { error } = await supabase
+          .from('lotes')
+          .update({ hash_integridade: hash })
+          .eq('id', loteId);
+
+        if (error) throw error;
+      }
 
       toast({
         title: "Hash gerado",
-        description: "Hash de integridade criado com sucesso",
+        description: useChain ? 
+          `Hash da cadeia criado (índice ${chainIndex})` : 
+          "Hash de integridade criado com sucesso",
       });
 
       return hash;
