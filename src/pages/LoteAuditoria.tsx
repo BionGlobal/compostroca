@@ -270,10 +270,7 @@ export default function LoteAuditoria() {
             {/* Timeline Adaptativa */}
             <Card>
               <CardHeader>
-                <CardTitle>Linha do Tempo - Processo de Compostagem (49 dias)</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Timeline natural de 8 etapas do processo de compostagem
-                </p>
+                <CardTitle>Linha do Tempo</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
