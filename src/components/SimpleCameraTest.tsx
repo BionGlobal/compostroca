@@ -27,7 +27,6 @@ export const SimpleCameraTest: React.FC<SimpleCameraTestProps> = ({
   const [showUploadOption, setShowUploadOption] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [localError, setLocalError] = useState<string | null>(null);
 
   const {
     isActive,
@@ -50,22 +49,17 @@ export const SimpleCameraTest: React.FC<SimpleCameraTestProps> = ({
   // Inicializar câmera automaticamente
   useEffect(() => {
     const initializeCamera = async () => {
-      console.log('🔍 [SimpleCameraTest] Iniciando câmera...');
-      console.log('🔍 [SimpleCameraTest] DeviceInfo:', deviceInfo);
       setIsInitializing(true);
       
       try {
         // Solicitar permissões primeiro se estiver no iOS
         if (deviceInfo?.isIOS) {
-          console.log('🔍 [SimpleCameraTest] iOS detectado, solicitando permissões...');
           await requestCameraAccess();
         }
         
-        console.log('🔍 [SimpleCameraTest] Iniciando câmera ambiente...');
         await startCamera('environment');
-        console.log('🔍 [SimpleCameraTest] Câmera iniciada com sucesso!');
       } catch (error) {
-        console.error('❌ [SimpleCameraTest] Erro ao iniciar câmera:', error);
+        console.log('Fallback para upload:', error);
         setShowUploadOption(true);
       } finally {
         setIsInitializing(false);
@@ -73,10 +67,7 @@ export const SimpleCameraTest: React.FC<SimpleCameraTestProps> = ({
     };
 
     if (deviceInfo) {
-      console.log('🔍 [SimpleCameraTest] DeviceInfo disponível, inicializando...');
       initializeCamera();
-    } else {
-      console.log('🔍 [SimpleCameraTest] Aguardando deviceInfo...');
     }
   }, [deviceInfo, startCamera, requestCameraAccess]);
 
@@ -142,7 +133,7 @@ export const SimpleCameraTest: React.FC<SimpleCameraTestProps> = ({
 
       {/* Área principal de captura */}
       <div className="flex-1 flex flex-col p-4">
-        <Card className="flex-1 overflow-hidden relative min-h-[400px]">
+        <Card className="flex-1 glass overflow-hidden relative">
           {/* Visualização da câmera ou imagem capturada */}
           {capturedImage ? (
             <div className="h-full flex flex-col">
@@ -191,22 +182,17 @@ export const SimpleCameraTest: React.FC<SimpleCameraTestProps> = ({
                   </div>
                 </>
               ) : (
-                <div className="flex-1 flex items-center justify-center bg-muted/20 min-h-[300px]">
+                <div className="flex-1 flex items-center justify-center bg-muted/20">
                   {isInitializing ? (
                     <div className="text-center">
                       <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-primary" />
                       <p className="text-sm text-muted-foreground">Iniciando câmera...</p>
-                      <p className="text-xs text-muted-foreground/60 mt-1">
-                        Estado: {isActive ? 'Ativa' : 'Inativa'} | 
-                        Erro: {error || localError ? 'Sim' : 'Não'} | 
-                        Upload: {showUploadOption ? 'Disponível' : 'Não'}
-                      </p>
                     </div>
                   ) : error || showUploadOption ? (
                     <div className="text-center p-6">
                       <AlertCircle className="w-12 h-12 mx-auto mb-4 text-warning" />
                       <p className="text-sm text-muted-foreground mb-4">
-                        {error || localError || 'Câmera não disponível'}
+                        {error || 'Câmera não disponível'}
                       </p>
                       
                       {/* Upload de arquivo */}
@@ -230,31 +216,12 @@ export const SimpleCameraTest: React.FC<SimpleCameraTestProps> = ({
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => {
-                            console.log('🔄 [SimpleCameraTest] Tentando reiniciar câmera...');
-                            setShowUploadOption(false);
-                            setLocalError(null);
-                            startCamera('environment');
-                          }}
+                          onClick={() => startCamera('environment')}
                           className="w-full"
                         >
                           Tentar Câmera Novamente
                         </Button>
                       </div>
-                    </div>
-                  ) : !isActive && !isInitializing ? (
-                    <div className="text-center p-6">
-                      <Camera className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Câmera não está ativa
-                      </p>
-                      <Button 
-                        onClick={() => startCamera('environment')}
-                        className="bg-gradient-primary text-primary-foreground"
-                      >
-                        <Camera className="w-4 h-4 mr-2" />
-                        Iniciar Câmera
-                      </Button>
                     </div>
                   ) : null}
                 </div>
