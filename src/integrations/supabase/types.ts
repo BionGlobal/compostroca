@@ -173,8 +173,10 @@ export type Database = {
           data_inicio: string
           data_proxima_transferencia: string | null
           deleted_at: string | null
+          hash_anterior: string | null
           hash_integridade: string | null
           id: string
+          indice_cadeia: number | null
           iot_data: Json | null
           latitude: number | null
           linha_producao: string
@@ -198,8 +200,10 @@ export type Database = {
           data_inicio?: string
           data_proxima_transferencia?: string | null
           deleted_at?: string | null
+          hash_anterior?: string | null
           hash_integridade?: string | null
           id?: string
+          indice_cadeia?: number | null
           iot_data?: Json | null
           latitude?: number | null
           linha_producao?: string
@@ -223,8 +227,10 @@ export type Database = {
           data_inicio?: string
           data_proxima_transferencia?: string | null
           deleted_at?: string | null
+          hash_anterior?: string | null
           hash_integridade?: string | null
           id?: string
+          indice_cadeia?: number | null
           iot_data?: Json | null
           latitude?: number | null
           linha_producao?: string
@@ -433,6 +439,14 @@ export type Database = {
       can_modify_data: {
         Args: { user_id?: string }
         Returns: boolean
+      }
+      get_last_chain_hash: {
+        Args: { unit_code: string }
+        Returns: string
+      }
+      get_next_chain_index: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       has_unit_access: {
         Args: { unit_code: string; user_id?: string }
