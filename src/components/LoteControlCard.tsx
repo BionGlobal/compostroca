@@ -1,35 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Package, 
-  Plus, 
-  Scale, 
-  Users, 
-  Calendar, 
-  MapPin, 
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  Loader2,
-  X,
-  Target
-} from 'lucide-react';
+import { MapPin, Calendar, User } from 'lucide-react';
 import { useLotes } from '@/hooks/useLotes';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganizationData } from '@/hooks/useOrganizationData';
-import { formatPesoDisplay } from '@/lib/organizationUtils';
+import { formatLocation } from '@/lib/organizationUtils';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 export const LoteControlCard = () => {
-  const [isCreating, setIsCreating] = useState(false);
-  const [isCanceling, setIsCanceling] = useState(false);
-  const [isFinalizing, setIsFinalizing] = useState(false);
-  
-  const { loteAtivoCaixa01, voluntariosCount, loading, criarNovoLote, cancelarLote, encerrarLote } = useLotes();
+  const { loteAtivoCaixa01, criarNovoLote, cancelarLote, encerrarLote } = useLotes();
   const { profile, user } = useAuth();
   const orgData = useOrganizationData();
   const { toast } = useToast();
@@ -42,11 +22,8 @@ export const LoteControlCard = () => {
     l.caixa_atual >= 1 && l.caixa_atual <= 7
   ) || [];
   const isProductionBeltFull = lotesAtivos.length >= 7;
-  
-  // Verifica se o lote está na caixa 7 (pronto para finalização)
-  const isLoteReadyForFinalization = loteAtivoCaixa01?.caixa_atual === 7;
 
-  const handleCriarLote = async () => {
+  const handleIniciarLote = async () => {
     if (!canCreateLote) {
       toast({
         title: "Sem permissão",
@@ -65,53 +42,49 @@ export const LoteControlCard = () => {
       return;
     }
 
-    setIsCreating(true);
     try {
       await criarNovoLote();
       toast({
-        title: "Lote criado",
-        description: "Novo lote iniciado na Caixa 01",
+        title: "Sucesso",
+        description: "Novo lote criado com sucesso!",
       });
     } catch (error) {
       console.error('Erro ao criar lote:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível criar o novo lote",
+        description: "Não foi possível criar o lote",
         variant: "destructive",
       });
-    } finally {
-      setIsCreating(false);
     }
   };
 
   const handleCancelarLote = async () => {
     if (!loteAtivoCaixa01) return;
-
-    setIsCanceling(true);
+    
     try {
-      const success = await cancelarLote(loteAtivoCaixa01.id);
-      if (success) {
-        toast({
-          title: "Lote cancelado",
-          description: "Lote e todas as entregas foram removidos",
-        });
-      }
+      await cancelarLote(loteAtivoCaixa01.id);
+      toast({
+        title: "Sucesso",
+        description: "Lote cancelado e apagado com sucesso!",
+      });
     } catch (error) {
       console.error('Erro ao cancelar lote:', error);
-    } finally {
-      setIsCanceling(false);
+      toast({
+        title: "Erro",
+        description: "Não foi possível cancelar o lote",
+        variant: "destructive",
+      });
     }
   };
 
   const handleFinalizarLote = async () => {
     if (!loteAtivoCaixa01) return;
-
-    setIsFinalizing(true);
+    
     try {
       await encerrarLote(loteAtivoCaixa01.id);
       toast({
-        title: "Lote finalizado",
-        description: "Lote encerrado e adicionado à esteira de produção",
+        title: "Sucesso",
+        description: "Lote finalizado e enviado para a caixa 1 da esteira!",
       });
     } catch (error) {
       console.error('Erro ao finalizar lote:', error);
@@ -120,236 +93,100 @@ export const LoteControlCard = () => {
         description: "Não foi possível finalizar o lote",
         variant: "destructive",
       });
-    } finally {
-      setIsFinalizing(false);
     }
   };
 
-  if (loading) {
-    return (
-      <Card className="border-l-4 border-l-primary">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-center">
-            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            <span className="ml-2 text-sm text-muted-foreground">Carregando...</span>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!user || !profile) {
-    return (
-      <Card className="border-l-4 border-l-destructive">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-destructive" />
-            <span className="text-sm text-destructive">
-              Usuário não autenticado
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-    );
+  // Se não pode criar lote ou esteira está completa, não mostrar o card
+  if (!canCreateLote || (isProductionBeltFull && !loteAtivoCaixa01)) {
+    return null;
   }
 
   return (
-    <Card className="border-l-4 border-l-primary">
+    <Card className="w-full bg-card border-border">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between text-lg">
-          <div className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-primary" />
-            <span>Controle de Lote</span>
-          </div>
-          {loteAtivoCaixa01 ? (
-            <Badge variant="default" className="bg-success text-success-foreground">
-              <CheckCircle className="h-3 w-3 mr-1" />
-              Ativo
-            </Badge>
-          ) : (
-            <Badge variant="secondary">
-              <AlertCircle className="h-3 w-3 mr-1" />
-              Inativo
-            </Badge>
-          )}
+        <CardTitle className="text-base font-medium text-foreground">
+          Novo Lote
         </CardTitle>
       </CardHeader>
       
       <CardContent className="space-y-4">
-        {loteAtivoCaixa01 ? (
-          <>
-            {/* Informações do Lote Ativo */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">{loteAtivoCaixa01.codigo}</h3>
-                <Badge variant="outline" className="font-mono text-xs">
-                  Caixa {loteAtivoCaixa01.caixa_atual}
-                </Badge>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <Scale className="h-3 w-3 text-muted-foreground" />
-                  <div>
-                    <span className="text-muted-foreground">Peso:</span>
-                    <div className="font-medium text-xs">
-                      {formatPesoDisplay(loteAtivoCaixa01.peso_atual)}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Users className="h-3 w-3 text-muted-foreground" />
-                  <div>
-                    <span className="text-muted-foreground">Voluntários:</span>
-                    <div className="font-medium">{voluntariosCount}</div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-3 w-3 text-muted-foreground" />
-                  <div>
-                    <span className="text-muted-foreground">Iniciado:</span>
-                    <div className="font-medium text-xs">
-                      {format(new Date(loteAtivoCaixa01.data_inicio), 'dd/MM', { locale: ptBR })}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Clock className="h-3 w-3 text-muted-foreground" />
-                  <div>
-                    <span className="text-muted-foreground">Semana:</span>
-                    <div className="font-medium">{loteAtivoCaixa01.semana_atual}/8</div>
-                  </div>
-                </div>
-              </div>
-
-              {loteAtivoCaixa01.latitude && loteAtivoCaixa01.longitude && (
-                <div className="flex items-start gap-2 text-xs">
-                  <MapPin className="h-3 w-3 text-muted-foreground mt-0.5" />
-                  <div className="break-all">
-                    <span className="text-muted-foreground">Localização:</span>
-                    <div className="font-mono">
-                      {Number(loteAtivoCaixa01.latitude).toFixed(4)}, {Number(loteAtivoCaixa01.longitude).toFixed(4)}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Controles do Lote */}
-            {canCreateLote && (
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleCancelarLote}
-                  disabled={isCanceling}
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                >
-                  {isCanceling ? (
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  ) : (
-                    <X className="h-3 w-3 mr-1" />
-                  )}
-                  Cancelar
-                </Button>
-                
-                {isLoteReadyForFinalization && (
-                  <Button 
-                    onClick={handleFinalizarLote}
-                    disabled={isFinalizing}
-                    size="sm"
-                    className="flex-1"
-                  >
-                    {isFinalizing ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : (
-                      <Target className="h-3 w-3 mr-1" />
-                    )}
-                    Finalizar
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {/* Status do lote */}
-            <div className="p-2 bg-success/10 rounded-md border border-success/20">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-3 w-3 text-success" />
-                <span className="text-success text-xs font-medium">
-                  {isLoteReadyForFinalization 
-                    ? 'Lote pronto para finalização' 
-                    : 'Lote ativo e recebendo entregas'
-                  }
-                </span>
-              </div>
-            </div>
-          </>
+        {!loteAtivoCaixa01 ? (
+          // Estado inicial - apenas botão "Iniciar Lote"
+          <Button
+            onClick={handleIniciarLote}
+            className="w-full"
+            size="sm"
+          >
+            Iniciar Lote
+          </Button>
         ) : (
-          <>
-            {/* Sem Lote Ativo */}
-            <div className="text-center space-y-3">
-              <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center">
-                <Package className="h-6 w-6 text-muted-foreground" />
+          // Estado expandido - mostrar informações do lote e controles
+          <div className="space-y-4">
+            {/* Informações do lote */}
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-xs">Código</span>
+                <p className="font-medium text-foreground">{loteAtivoCaixa01.codigo}</p>
               </div>
               
-              <div>
-                <h4 className="font-semibold text-muted-foreground">
-                  Sistema Inativo
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Nenhum lote ativo na Caixa 01
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-xs flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  Criado em
+                </span>
+                <p className="font-medium text-foreground text-xs">
+                  {new Date(loteAtivoCaixa01.data_inicio).toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
                 </p>
               </div>
-
-              {/* Status da esteira */}
-              <div className="p-2 bg-muted/50 rounded-md">
-                <div className="text-xs text-muted-foreground">
-                  Esteira: {lotesAtivos.length}/7 caixas ocupadas
-                  {isProductionBeltFull && (
-                    <div className="text-destructive font-medium mt-1">
-                      Esteira completa - Finalize um lote primeiro
-                    </div>
-                  )}
-                </div>
+              
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-xs flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  Localização
+                </span>
+                <p className="font-medium text-foreground text-xs">
+                  {formatLocation(loteAtivoCaixa01.latitude, loteAtivoCaixa01.longitude)}
+                </p>
               </div>
-
-              {/* Botão de criar lote */}
-              {canCreateLote && !isProductionBeltFull && (
-                <Button 
-                  onClick={handleCriarLote}
-                  disabled={isCreating}
-                  className="w-full"
-                  size="sm"
-                >
-                  {isCreating ? (
-                    <>
-                      <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-                      Criando...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-3 w-3 mr-2" />
-                      Iniciar Lote
-                    </>
-                  )}
-                </Button>
-              )}
-
-              {!canCreateLote && (
-                <div className="p-2 bg-destructive/10 rounded-md border border-destructive/20">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="h-3 w-3 text-destructive" />
-                    <span className="text-destructive text-xs">
-                      Apenas administradores podem criar lotes
-                    </span>
-                  </div>
-                </div>
-              )}
+              
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-xs flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  Criador
+                </span>
+                <p className="font-medium text-foreground text-xs">
+                  {loteAtivoCaixa01.criado_por_nome}
+                </p>
+              </div>
             </div>
-          </>
+
+            {/* Botões de controle */}
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelarLote}
+                className="flex-1"
+              >
+                Cancelar Lote
+              </Button>
+              
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleFinalizarLote}
+                className="flex-1"
+              >
+                Finalizar Lote
+              </Button>
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>
