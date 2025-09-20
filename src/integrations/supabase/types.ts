@@ -542,6 +542,40 @@ export type Database = {
           unidade_nome: string
         }[]
       }
+      buscar_lotes_por_status: {
+        Args: {
+          data_fim?: string
+          data_inicio?: string
+          pagina?: number
+          status_filter?: string
+          termo_busca?: string
+          unidade_filter?: string
+          validador_filter?: string
+        }
+        Returns: {
+          caixa_atual: number
+          co2eq_evitado: number
+          codigo: string
+          codigo_unico: string
+          criado_por_nome: string
+          data_finalizacao: string
+          data_inicio: string
+          hash_integridade: string
+          id: string
+          peso_atual: number
+          peso_final: number
+          peso_inicial: number
+          progresso_percent: number
+          semana_atual: number
+          status: string
+          total_count: number
+          total_entregas: number
+          total_fotos: number
+          total_manutencoes: number
+          unidade_codigo: string
+          unidade_nome: string
+        }[]
+      }
       calcular_impacto_lote: {
         Args: { lote_id_param: string }
         Returns: {
