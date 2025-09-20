@@ -12,6 +12,7 @@ interface FilterState {
   dataInicio: string;
   dataFim: string;
   validador: string;
+  status: string;
 }
 
 interface AdvancedSearchFiltersProps {
@@ -54,13 +55,20 @@ export const AdvancedSearchFilters = ({
       unidade: '',
       dataInicio: '',
       dataFim: '',
-      validador: ''
+      validador: '',
+      status: 'todos'
     };
     onFiltersChange(emptyFilters);
   };
 
-  const hasActiveFilters = Object.values(filters).some(value => value !== '');
-  const activeFilterCount = Object.values(filters).filter(value => value !== '').length;
+  const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
+    if (key === 'status') return value !== 'todos';
+    return value !== '';
+  });
+  const activeFilterCount = Object.entries(filters).filter(([key, value]) => {
+    if (key === 'status') return value !== 'todos';
+    return value !== '';
+  }).length;
 
   return (
     <Card>
@@ -106,7 +114,7 @@ export const AdvancedSearchFilters = ({
         {/* Advanced Filters */}
         <Collapsible open={showFilters} onOpenChange={setShowFilters}>
           <CollapsibleContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 p-4 bg-muted/30 rounded-lg">
               {/* Unidade Filter */}
               <div className="space-y-2">
                 <Label htmlFor="unidade-filter">Unidade</Label>
@@ -159,6 +167,26 @@ export const AdvancedSearchFilters = ({
                   value={filters.validador}
                   onChange={(e) => handleFilterChange('validador', e.target.value)}
                 />
+              </div>
+
+              {/* Status do Lote */}
+              <div className="space-y-2">
+                <Label htmlFor="status-filter">Status do Lote</Label>
+                <Select
+                  value={filters.status}
+                  onValueChange={(value) => handleFilterChange('status', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os lotes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os lotes</SelectItem>
+                    <SelectItem value="finalizados">Lotes Finalizados</SelectItem>
+                    <SelectItem value="ativos">Lotes Ativos</SelectItem>
+                    <SelectItem value="ativo">Somente Ativos</SelectItem>
+                    <SelectItem value="em_processamento">Somente em Processamento</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

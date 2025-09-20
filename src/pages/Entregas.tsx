@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { StarRating } from '@/components/StarRating';
-import { EntregaFotosCaptureEnhanced } from '@/components/EntregaFotosCaptureEnhanced';
+import { EntregaFotosUpload } from '@/components/EntregaFotosUpload';
 import { EntregaFotosGaleria } from '@/components/EntregaFotosGaleria';
 import { EditEntregaModal } from '@/components/EditEntregaModal';
 import { useEntregaFotos } from '@/hooks/useEntregaFotos';
@@ -196,18 +196,12 @@ const Entregas = () => {
   };
 
   if (showCamera && tempEntregaId) {
-    const selectedVoluntarioData = voluntarios.find(v => v.id === selectedVoluntario);
-    
     return (
       <div className="p-4">
-        <EntregaFotosCaptureEnhanced 
+        <EntregaFotosUpload 
           entregaId={tempEntregaId}
           onComplete={handleFotosComplete}
           onCancel={handleCancelFotos}
-          voluntarioNome={selectedVoluntarioData?.nome || 'Voluntário'}
-          numeroBalde={selectedVoluntarioData?.numero_balde || 0}
-          peso={parseFloat(peso)}
-          qualidadeResiduo={qualidadeResiduo}
         />
       </div>
     );

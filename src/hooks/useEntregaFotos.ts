@@ -45,16 +45,7 @@ export const useEntregaFotos = (entregaId?: string) => {
   const uploadFoto = async (
     arquivo: File, 
     tipo: 'conteudo' | 'pesagem' | 'destino', 
-    entregaIdParam: string,
-    metadata?: {
-      cameraType?: 'front' | 'back' | 'unknown';
-      deviceOrientation?: 'portrait' | 'landscape' | 'unknown';
-      gpsCoords?: { latitude: number; longitude: number };
-      captureTimestamp?: Date;
-      deviceInfo?: any;
-      imageQuality?: number;
-      additionalMetadata?: any;
-    }
+    entregaIdParam: string
   ) => {
     try {
       setUploading(true);
@@ -70,43 +61,14 @@ export const useEntregaFotos = (entregaId?: string) => {
 
       if (uploadError) throw uploadError;
 
-      // Preparar dados para o banco incluindo metadados
-      const dbData: any = {
-        entrega_id: entregaIdParam,
-        tipo_foto: tipo,
-        foto_url: fileName,
-      };
-
-      // Adicionar metadados se fornecidos
-      if (metadata) {
-        if (metadata.cameraType) {
-          dbData.camera_type = metadata.cameraType;
-        }
-        if (metadata.deviceOrientation) {
-          dbData.device_orientation = metadata.deviceOrientation;
-        }
-        if (metadata.gpsCoords) {
-          // Postgres POINT format: (longitude, latitude)
-          dbData.gps_coords = `(${metadata.gpsCoords.longitude},${metadata.gpsCoords.latitude})`;
-        }
-        if (metadata.captureTimestamp) {
-          dbData.capture_timestamp = metadata.captureTimestamp.toISOString();
-        }
-        if (metadata.deviceInfo) {
-          dbData.device_info = metadata.deviceInfo;
-        }
-        if (metadata.imageQuality !== undefined) {
-          dbData.image_quality = metadata.imageQuality;
-        }
-        if (metadata.additionalMetadata) {
-          dbData.metadata = metadata.additionalMetadata;
-        }
-      }
-
       // Salvar referência no banco de dados
       const { error: dbError } = await supabase
         .from('entrega_fotos')
-        .upsert(dbData);
+        .upsert({
+          entrega_id: entregaIdParam,
+          tipo_foto: tipo,
+          foto_url: fileName,
+        });
 
       if (dbError) throw dbError;
 

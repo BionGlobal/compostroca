@@ -171,13 +171,31 @@ export default function AuditoriaGeral() {
 
           <Card>
             <CardContent className="space-y-6 pt-6">
+              {/* Title with dynamic content */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">
+                  {filters.status === 'todos' && 'Auditoria de Lotes'}
+                  {filters.status === 'finalizados' && 'Lotes Finalizados'}
+                  {filters.status === 'ativos' && 'Lotes Ativos'}
+                  {filters.status === 'ativo' && 'Lotes Ativos'}
+                  {filters.status === 'em_processamento' && 'Lotes em Processamento'}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {filters.status === 'todos' && 'Visualize todos os lotes do sistema'}
+                  {filters.status === 'finalizados' && 'Lotes com compostagem finalizada'}
+                  {filters.status === 'ativos' && 'Lotes em andamento na esteira de produção'}
+                  {filters.status === 'ativo' && 'Lotes ativos aguardando processamento'}
+                  {filters.status === 'em_processamento' && 'Lotes sendo processados atualmente'}
+                </p>
+              </div>
+
               {/* Results */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-muted-foreground">
-                      {searchTerm || Object.values(filters).some(v => v) ? 
-                        'Resultados da busca' : 'Últimos Lotes'}
+                      {searchTerm || Object.values(filters).some(v => v !== '' && v !== 'todos') ? 
+                        'Resultados da busca' : 'Lotes encontrados'}
                     </span>
                     {totalCount > 0 && (
                       <Badge variant="secondary">
