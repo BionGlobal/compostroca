@@ -288,38 +288,26 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
         };
       });
 
-      // Build enhanced timeline with unified photos
-      const buildEnhancedTimeline = (): TimelineStageEnhanced[] => {
+      // Build real timeline based only on actual data
+      const buildRealTimeline = (): TimelineStageEnhanced[] => {
         const timeline: TimelineStageEnhanced[] = [];
-        const dataInicio = new Date(lote.data_inicio);
         
-        const getEstimatedDate = (weekIndex: number) => {
-          const date = new Date(dataInicio);
-          date.setDate(date.getDate() + (weekIndex * 7));
-          return date;
-        };
-        
-        const getEstimatedWeight = (initialWeight: number, weekIndex: number) => {
-          return initialWeight * Math.pow(0.9685, weekIndex);
-        };
-        
-        // 1. Etapa 1: Recebimento e Entregas
+        // 1. Início do Lote - Always first event
         const entregaFotos = fotosUnificadas.filter(f => f.origem === 'entrega');
-        const primeiraManutencao = manejoData?.[0];
-        
         timeline.push({
-          id: primeiraManutencao?.id || `entrega-${lote.id}`,
+          id: `inicio-${lote.id}`,
           etapa: 1,
-          titulo: 'Recebimento e Entregas',
+          titulo: 'Início do Lote',
           tipo: 'entrega',
-          caixa_origem: 0,
-          caixa_destino: 1,
+          caixa_origem: null,
+          caixa_destino: null,
           peso_antes: 0,
-          peso_depois: primeiraManutencao?.peso_depois || lote.peso_inicial,
-          observacoes: primeiraManutencao?.observacoes || `Lote iniciado com ${entregasProcessed.length || 0} entregas`,
-          created_at: primeiraManutencao?.created_at || lote.data_inicio,
-          usuario_nome: primeiraManutencao ? userProfiles?.find(p => p.user_id === primeiraManutencao.user_id)?.full_name : lote.criado_por_nome,
-          data_estimada: !primeiraManutencao,
+          peso_depois: lote.peso_inicial,
+          observacoes: entregasProcessed.length > 0 ? 
+            `Iniciado com ${entregasProcessed.length} entregas` : '-',
+          created_at: lote.data_inicio,
+          usuario_nome: lote.criado_por_nome || '-',
+          data_estimada: false,
           fotos: entregaFotos.map(f => ({
             id: f.id,
             foto_url: f.foto_url,
@@ -329,72 +317,58 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
           integridade_validada: true
         });
         
-        // 2-7. Etapas 2-7: Manutenções Semanais
-        for (let caixa = 2; caixa <= 7; caixa++) {
-          const etapa = caixa;
-          const manutencaoReal = manejoData?.find(m => m.caixa_destino === caixa);
-          const isDataReal = !!manutencaoReal;
-          
-          // Get unified photos for this maintenance
-          const manutencaoFotos = manutencaoReal ? 
-            fotosUnificadas.filter(f => f.manejo_id === manutencaoReal.id) : [];
-          
-          const pesoAnterior = timeline[etapa - 2]?.peso_depois || lote.peso_inicial;
-          const pesoEstimado = getEstimatedWeight(lote.peso_inicial, etapa - 1);
+        // 2. Manutenções Reais - Only actual maintenance records
+        (manejoData || []).forEach((manejo, index) => {
+          const manutencaoFotos = fotosUnificadas.filter(f => f.manejo_id === manejo.id);
+          const userProfile = userProfiles?.find(p => p.user_id === manejo.user_id);
           
           timeline.push({
-            id: manutencaoReal?.id || `estimada-${etapa}-${lote.id}`,
-            etapa,
-            titulo: `Manutenção Semanal - Caixa ${caixa}`,
+            id: manejo.id,
+            etapa: index + 2,
+            titulo: `Manutenção ${index + 1}`,
             tipo: 'manutencao',
-            caixa_origem: caixa - 1,
-            caixa_destino: caixa,
-            peso_antes: manutencaoReal?.peso_antes || pesoAnterior,
-            peso_depois: manutencaoReal?.peso_depois || pesoEstimado,
-            observacoes: manutencaoReal?.observacoes || `Transferência para caixa ${caixa} (dados estimados)`,
-            created_at: manutencaoReal?.created_at || getEstimatedDate(etapa - 1).toISOString(),
-            usuario_nome: manutencaoReal ? userProfiles?.find(p => p.user_id === manutencaoReal.user_id)?.full_name : 'Sistema',
-            data_estimada: !isDataReal,
+            caixa_origem: manejo.caixa_origem,
+            caixa_destino: manejo.caixa_destino,
+            peso_antes: manejo.peso_antes,
+            peso_depois: manejo.peso_depois,
+            observacoes: manejo.observacoes || '-',
+            created_at: manejo.created_at,
+            usuario_nome: userProfile?.full_name || '-',
+            data_estimada: false,
             fotos: manutencaoFotos.map(f => ({
               id: f.id,
               foto_url: f.foto_url,
               tipo_foto: f.tipo_foto,
               origem: f.fonte_dados as any
             })),
-            integridade_validada: manutencaoFotos.length > 0 || !isDataReal
+            integridade_validada: true
+          });
+        });
+        
+        // 3. Finalização - If lot is closed
+        if (lote.status === 'encerrado' && lote.data_finalizacao) {
+          timeline.push({
+            id: `finalizacao-${lote.id}`,
+            etapa: timeline.length + 1,
+            titulo: 'Finalização do Lote',
+            tipo: 'finalizacao',
+            caixa_origem: null,
+            caixa_destino: null,
+            peso_antes: lote.peso_inicial,
+            peso_depois: lote.peso_final || 0,
+            observacoes: '-',
+            created_at: lote.data_finalizacao,
+            usuario_nome: lote.criado_por_nome || '-',
+            data_estimada: false,
+            fotos: [],
+            integridade_validada: true
           });
         }
         
-        // 8. Etapa 8: Finalização
-        const ultimaManutencao = manejoData?.find(m => !m.caixa_destino) || manejoData?.[manejoData.length - 1];
-        const finalizacaoFotos = ultimaManutencao ? 
-          fotosUnificadas.filter(f => f.manejo_id === ultimaManutencao.id) : [];
-        
-        timeline.push({
-          id: ultimaManutencao?.id || `finalizacao-${lote.id}`,
-          etapa: 8,
-          titulo: 'Finalização e Distribuição',
-          tipo: 'finalizacao',
-          caixa_origem: 7,
-          peso_antes: timeline[6]?.peso_depois || getEstimatedWeight(lote.peso_inicial, 6),
-          peso_depois: lote.peso_final,
-          observacoes: ultimaManutencao?.observacoes || 'Composto finalizado e pronto para distribuição',
-          created_at: lote.data_finalizacao || ultimaManutencao?.created_at || getEstimatedDate(7).toISOString(),
-          usuario_nome: ultimaManutencao ? userProfiles?.find(p => p.user_id === ultimaManutencao.user_id)?.full_name : lote.criado_por_nome,
-          data_estimada: !lote.data_finalizacao && !ultimaManutencao,
-          fotos: finalizacaoFotos.map(f => ({
-            id: f.id,
-            foto_url: f.foto_url,
-            tipo_foto: f.tipo_foto,
-            origem: f.fonte_dados as any
-          })),
-          integridade_validada: true
-        });
-        
-        return timeline;
+        return timeline.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       };
-      
-      const timeline = buildEnhancedTimeline();
+
+      const timeline = buildRealTimeline();
 
       // Sort unified photos by creation date
       const todasFotosOrdenadas = fotosUnificadas.sort((a, b) => 
