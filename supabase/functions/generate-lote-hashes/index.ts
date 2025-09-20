@@ -1,5 +1,14 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
-import { SHA256 } from 'https://deno.land/x/crypto@v0.10.0/mod.ts';
+
+// Use built-in Web Crypto API for hashing
+const generateSHA256 = async (data: string): Promise<string> => {
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(data);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+};
 
 interface LoteHashData {
   codigo: string;
@@ -23,7 +32,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const generateChainedLoteHash = (data: LoteHashData, previousHash: string | null = null): string => {
+const generateChainedLoteHash = async (data: LoteHashData, previousHash: string | null = null): Promise<string> => {
   const hashData = {
     codigo: data.codigo,
     unidade: data.unidade,
@@ -42,7 +51,7 @@ const generateChainedLoteHash = (data: LoteHashData, previousHash: string | null
   };
 
   const dataString = JSON.stringify(hashData, Object.keys(hashData).sort());
-  return SHA256(dataString, "hex").toString();
+  return await generateSHA256(dataString);
 };
 
 Deno.serve(async (req) => {
@@ -122,7 +131,7 @@ Deno.serve(async (req) => {
         };
 
         // Gerar hash
-        const novoHash = generateChainedLoteHash(hashData, previousHash);
+        const novoHash = await generateChainedLoteHash(hashData, previousHash);
 
         // Atualizar lote com o hash
         const { error: updateError } = await supabase

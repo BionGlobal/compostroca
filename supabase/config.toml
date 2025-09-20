@@ -1,1 +1,4 @@
 project_id = "yfcxdbhrtjdmwyifgptf"
+
+[functions.generate-lote-hashes]
+verify_jwt = false
