@@ -16,29 +16,50 @@ export type Database = {
     Tables: {
       entrega_fotos: {
         Row: {
+          camera_type: string | null
+          capture_timestamp: string | null
           created_at: string
           deleted_at: string | null
+          device_info: Json | null
+          device_orientation: string | null
           entrega_id: string
           foto_url: string
+          gps_coords: unknown | null
           id: string
+          image_quality: number | null
+          metadata: Json | null
           tipo_foto: string
           updated_at: string
         }
         Insert: {
+          camera_type?: string | null
+          capture_timestamp?: string | null
           created_at?: string
           deleted_at?: string | null
+          device_info?: Json | null
+          device_orientation?: string | null
           entrega_id: string
           foto_url: string
+          gps_coords?: unknown | null
           id?: string
+          image_quality?: number | null
+          metadata?: Json | null
           tipo_foto: string
           updated_at?: string
         }
         Update: {
+          camera_type?: string | null
+          capture_timestamp?: string | null
           created_at?: string
           deleted_at?: string | null
+          device_info?: Json | null
+          device_orientation?: string | null
           entrega_id?: string
           foto_url?: string
+          gps_coords?: unknown | null
           id?: string
+          image_quality?: number | null
+          metadata?: Json | null
           tipo_foto?: string
           updated_at?: string
         }
@@ -539,6 +560,50 @@ export type Database = {
           peso_inicial: number
           total_count: number
           unidade_codigo: string
+          unidade_nome: string
+        }[]
+      }
+      buscar_lotes_por_status: {
+        Args: {
+          data_fim?: string
+          data_inicio?: string
+          pagina?: number
+          status_filter?: string
+          termo_busca?: string
+          unidade_filter?: string
+          validador_filter?: string
+        }
+        Returns: {
+          caixa_atual: number
+          co2eq_evitado: number
+          codigo: string
+          codigo_unico: string
+          criado_por_nome: string
+          data_finalizacao: string
+          data_inicio: string
+          hash_integridade: string
+          id: string
+          peso_atual: number
+          peso_final: number
+          peso_inicial: number
+          progresso_percent: number
+          semana_atual: number
+          status: string
+          total_count: number
+          total_entregas: number
+          total_fotos: number
+          total_manutencoes: number
+          unidade_codigo: string
+          unidade_nome: string
+        }[]
+      }
+      buscar_lotes_por_status_debug: {
+        Args: { status_filter?: string }
+        Returns: {
+          codigo: string
+          id: string
+          status: string
+          total_count: number
           unidade_nome: string
         }[]
       }
