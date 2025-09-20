@@ -194,6 +194,7 @@ export type Database = {
           semana_atual: number
           status: string
           unidade: string
+          unidade_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -225,6 +226,7 @@ export type Database = {
           semana_atual?: number
           status?: string
           unidade?: string
+          unidade_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -256,9 +258,18 @@ export type Database = {
           semana_atual?: number
           status?: string
           unidade?: string
+          unidade_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_lotes_unidade"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "unidades"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lotes_manutencoes: {
         Row: {
@@ -386,6 +397,30 @@ export type Database = {
         }
         Relationships: []
       }
+      unidades: {
+        Row: {
+          codigo_unidade: string
+          created_at: string
+          id: string
+          localizacao: string
+          nome: string
+        }
+        Insert: {
+          codigo_unidade: string
+          created_at?: string
+          id?: string
+          localizacao: string
+          nome: string
+        }
+        Update: {
+          codigo_unidade?: string
+          created_at?: string
+          id?: string
+          localizacao?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       user_activity_logs: {
         Row: {
           action_description: string
@@ -478,6 +513,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      buscar_lotes_finalizados: {
+        Args: { pagina?: number; termo_busca?: string }
+        Returns: {
+          co2eq_evitado: number
+          codigo: string
+          codigo_unico: string
+          data_finalizacao: string
+          hash_integridade: string
+          id: string
+          peso_final: number
+          peso_inicial: number
+          total_count: number
+          unidade_codigo: string
+          unidade_nome: string
+        }[]
+      }
       calcular_impacto_lote: {
         Args: { lote_id_param: string }
         Returns: {
@@ -496,6 +547,18 @@ export type Database = {
       get_next_chain_index: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      get_todas_unidades: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          codigo_unidade: string
+          id: string
+          localizacao: string
+          lotes_ativos: number
+          lotes_finalizados: number
+          nome: string
+          total_lotes: number
+        }[]
       }
       has_unit_access: {
         Args: { unit_code: string; user_id?: string }
