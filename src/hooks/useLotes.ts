@@ -66,13 +66,17 @@ export const useLotes = () => {
 
   const fetchLoteAtivoCaixa01 = async () => {
     if (!user || !profile) {
-      console.log('❌ Usuário ou perfil não disponível');
+      console.log('❌ Usuário ou perfil não disponível para buscar lote ativo');
+      console.log('🔍 Debug - user:', user ? 'presente' : 'ausente');
+      console.log('🔍 Debug - profile:', profile ? { organization_code: profile.organization_code, user_role: profile.user_role, status: profile.status } : 'ausente');
+      setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
       console.log('🔄 Buscando lote ativo da organização:', profile.organization_code);
+      console.log('🔍 Critérios de busca: unidade =', profile.organization_code, ', caixa_atual = 1, status = ativo, deleted_at IS NULL');
       
       const { data, error } = await supabase
         .from('lotes')
@@ -84,22 +88,38 @@ export const useLotes = () => {
         .single();
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Erro ao buscar lote:', error);
+        console.error('❌ Erro ao buscar lote ativo:', error);
         throw error;
       }
 
-      console.log('📦 Lote encontrado:', data);
+      if (error && error.code === 'PGRST116') {
+        console.log('ℹ️ Nenhum lote ativo encontrado na busca (PGRST116)');
+      }
+
+      console.log('📦 Resultado da busca de lote ativo:', data ? 'Lote encontrado' : 'Nenhum lote ativo');
+      if (data) {
+        console.log('📦 Detalhes do lote:', {
+          id: data.id,
+          codigo: data.codigo,
+          unidade: data.unidade,
+          status: data.status,
+          caixa_atual: data.caixa_atual,
+          peso_atual: data.peso_atual
+        });
+      }
       setLoteAtivoCaixa01(data ? data as Lote : null);
       
       // Se há um lote ativo, buscar contagem de voluntários
       if (data) {
         await fetchVoluntariosCount(data.codigo);
       } else {
-        console.log('ℹ️ Nenhum lote ativo encontrado');
+        console.log('ℹ️ Nenhum lote ativo encontrado - zerando contador de voluntários');
         setVoluntariosCount(0);
       }
     } catch (error) {
-      console.error('Erro ao buscar lote ativo na caixa 01:', error);
+      console.error('❌ Erro fatal ao buscar lote ativo na caixa 01:', error);
+      setLoteAtivoCaixa01(null);
+      setVoluntariosCount(0);
       toast({
         title: "Erro",
         description: "Não foi possível carregar informações do lote ativo",

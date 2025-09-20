@@ -24,8 +24,17 @@ import { ptBR } from 'date-fns/locale';
 export const LoteActiveCard = () => {
   const [isCreating, setIsCreating] = useState(false);
   const { loteAtivoCaixa01, voluntariosCount, loading, criarNovoLote } = useLotes();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { toast } = useToast();
+
+  // Debug logs
+  console.log('🔍 LoteActiveCard - Debug Info:', {
+    loading,
+    loteAtivoCaixa01,
+    voluntariosCount,
+    profile: profile ? { user_role: profile.user_role, organization_code: profile.organization_code } : null,
+    user: user ? { id: user.id } : null
+  });
 
   const canCreateLote = profile?.user_role === 'super_admin' || profile?.user_role === 'local_admin';
 
@@ -65,6 +74,22 @@ export const LoteActiveCard = () => {
           <div className="flex items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
             <span className="ml-2 text-muted-foreground">Carregando lote ativo...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Se não há usuário ou perfil, mostrar aviso
+  if (!user || !profile) {
+    return (
+      <Card className="border-l-4 border-l-red-500">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+            <span className="text-red-800">
+              Usuário não autenticado. Faça login para acessar o sistema de lotes.
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -169,41 +194,56 @@ export const LoteActiveCard = () => {
                 <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <h4 className="font-medium text-orange-800 dark:text-orange-200 mb-1">
-                    Nenhum lote ativo na Caixa 01
+                    🚨 SISTEMA PRONTO - Nenhum lote ativo na Caixa 01
                   </h4>
-                  <p className="text-sm text-orange-700 dark:text-orange-300">
+                  <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">
                     É necessário iniciar um novo lote para começar a receber entregas de resíduos orgânicos.
                   </p>
+                  <div className="text-xs text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 p-2 rounded border">
+                    <strong>Status do Sistema:</strong><br/>
+                    • Organização: {profile?.organization_code}<br/>
+                    • Usuário: {profile?.full_name}<br/>
+                    • Permissão: {profile?.user_role} ({profile?.status})<br/>
+                    • Pode criar lote: {canCreateLote ? '✅ Sim' : '❌ Não'}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Botão para Criar Novo Lote */}
             {canCreateLote && (
-              <Button 
-                onClick={handleCriarLote}
-                disabled={isCreating}
-                className="w-full"
-                size="lg"
-              >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Criando Lote...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Iniciar Novo Lote
-                  </>
-                )}
-              </Button>
+              <div className="space-y-2">
+                <Button 
+                  onClick={handleCriarLote}
+                  disabled={isCreating}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
+                  size="lg"
+                >
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Criando Novo Lote...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-5 w-5 mr-2" />
+                      🚀 INICIAR NOVO LOTE
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  Clique para criar um novo lote e liberar o sistema de entregas
+                </p>
+              </div>
             )}
 
             {!canCreateLote && (
               <div className="text-center p-3 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground">
                   Apenas administradores podem criar novos lotes
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Seu perfil: {profile?.user_role || 'Não definido'} | Status: {profile?.status || 'Não definido'}
                 </p>
               </div>
             )}
