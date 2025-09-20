@@ -174,7 +174,7 @@ export default function AuditoriaGeral() {
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-muted-foreground">
                       {searchTerm || Object.values(filters).some(v => v) ? 
-                        'Resultados da busca' : 'Todos os lotes finalizados'}
+                        'Resultados da busca' : 'Últimos 10 lotes finalizados'}
                     </span>
                     {totalCount > 0 && (
                       <Badge variant="secondary">
