@@ -514,7 +514,16 @@ export type Database = {
     }
     Functions: {
       buscar_lotes_finalizados: {
-        Args: { pagina?: number; termo_busca?: string }
+        Args:
+          | {
+              data_fim?: string
+              data_inicio?: string
+              pagina?: number
+              termo_busca?: string
+              unidade_filter?: string
+              validador_filter?: string
+            }
+          | { pagina?: number; termo_busca?: string }
         Returns: {
           co2eq_evitado: number
           codigo: string

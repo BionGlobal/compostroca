@@ -23,7 +23,17 @@ interface LoteFinalizadoResult {
   hash_integridade: string | null;
   peso_inicial: number | null;
   peso_final: number | null;
+  criado_por_nome: string | null;
+  total_fotos: number;
+  total_entregas: number;
   total_count: number;
+}
+
+interface FilterState {
+  unidade: string;
+  dataInicio: string;
+  dataFim: string;
+  validador: string;
 }
 
 export const useAuditoriaGeral = () => {
@@ -34,6 +44,12 @@ export const useAuditoriaGeral = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [filters, setFilters] = useState<FilterState>({
+    unidade: '',
+    dataInicio: '',
+    dataFim: '',
+    validador: ''
+  });
   const { toast } = useToast();
 
   const fetchUnidades = async () => {
@@ -64,12 +80,17 @@ export const useAuditoriaGeral = () => {
     }
   };
 
-  const fetchLotesFinalizados = async (page: number = 1, term: string = '') => {
+  const fetchLotesFinalizados = async (page: number = 1, term: string = '', filterState?: FilterState) => {
     try {
       setLoadingLotes(true);
+      const currentFilters = filterState || filters;
       const { data, error } = await supabase.rpc('buscar_lotes_finalizados', {
         pagina: page,
-        termo_busca: term
+        termo_busca: term,
+        unidade_filter: currentFilters.unidade,
+        data_inicio: currentFilters.dataInicio || null,
+        data_fim: currentFilters.dataFim || null,
+        validador_filter: currentFilters.validador
       });
       
       if (error) {
@@ -82,10 +103,28 @@ export const useAuditoriaGeral = () => {
         return;
       }
 
-      setLotesFinalizados(data || []);
+      // Garantir que os dados tenham as propriedades corretas
+      const formattedData = (data || []).map((lote: any) => ({
+        id: lote.id,
+        codigo_unico: lote.codigo_unico,
+        codigo: lote.codigo,
+        unidade_nome: lote.unidade_nome,
+        unidade_codigo: lote.unidade_codigo,
+        data_finalizacao: lote.data_finalizacao,
+        co2eq_evitado: lote.co2eq_evitado,
+        hash_integridade: lote.hash_integridade,
+        peso_inicial: lote.peso_inicial,
+        peso_final: lote.peso_final,
+        criado_por_nome: lote.criado_por_nome || null,
+        total_fotos: lote.total_fotos || 0,
+        total_entregas: lote.total_entregas || 0,
+        total_count: lote.total_count
+      }));
+
+      setLotesFinalizados(formattedData);
       
-      if (data && data.length > 0) {
-        setTotalCount(data[0].total_count);
+      if (formattedData && formattedData.length > 0) {
+        setTotalCount(formattedData[0].total_count);
       } else {
         setTotalCount(0);
       }
@@ -104,12 +143,18 @@ export const useAuditoriaGeral = () => {
   const handleSearch = (term: string) => {
     setSearchTerm(term);
     setCurrentPage(1);
-    fetchLotesFinalizados(1, term);
+    fetchLotesFinalizados(1, term, filters);
+  };
+
+  const handleFiltersChange = (newFilters: FilterState) => {
+    setFilters(newFilters);
+    setCurrentPage(1);
+    fetchLotesFinalizados(1, searchTerm, newFilters);
   };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    fetchLotesFinalizados(page, searchTerm);
+    fetchLotesFinalizados(page, searchTerm, filters);
   };
 
   useEffect(() => {
@@ -128,9 +173,11 @@ export const useAuditoriaGeral = () => {
     currentPage,
     totalPages,
     totalCount,
+    filters,
     handleSearch,
+    handleFiltersChange,
     handlePageChange,
     refetchUnidades: fetchUnidades,
-    refetchLotes: () => fetchLotesFinalizados(currentPage, searchTerm)
+    refetchLotes: () => fetchLotesFinalizados(currentPage, searchTerm, filters)
   };
 };

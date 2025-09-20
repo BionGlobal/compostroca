@@ -416,6 +416,21 @@ export default function LoteAuditoria() {
         }))}
         title="Documentação Fotográfica do Lote"
       />
+      {/* Footer com "Powered by Bion" */}
+      <footer className="border-t bg-card/50 py-6">
+        <div className="container mx-auto px-4 text-center">
+          <div className="flex items-center justify-center space-x-4">
+            <img 
+              src="/lovable-uploads/powered-by-bion.png" 
+              alt="Powered by Bion" 
+              className="h-8"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Auditoria individual de lote - Sistema Compostroca
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

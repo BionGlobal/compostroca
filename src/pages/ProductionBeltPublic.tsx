@@ -196,20 +196,20 @@ export default function ProductionBeltPublic() {
           <PublicProductionBelt lotesAtivos={data.lotesAtivos} />
         </section>
 
-        {/* Footer Informativo */}
-        <footer className="text-center py-8 text-sm text-muted-foreground space-y-2">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <img src={compostrocaIcon} alt="Compostroca" className="h-5 w-5" />
-            <span className="font-semibold">CompostRoca</span>
+        {/* Footer com "Powered by Bion" */}
+        <footer className="border-t bg-card/50 py-6">
+          <div className="container mx-auto px-4 text-center">
+            <div className="flex items-center justify-center space-x-4">
+              <img 
+                src="/lovable-uploads/powered-by-bion.png" 
+                alt="Powered by Bion" 
+                className="h-8"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Esteira pública de produção - Sistema Compostroca
+            </p>
           </div>
-          <p>Sistema de Gestão de Compostagem Urbana</p>
-          <div className="flex items-center justify-center gap-2 text-xs">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span>Dados atualizados em tempo real</span>
-          </div>
-          <p className="flex items-center justify-center gap-1 text-xs">
-            Powered by <span className="font-semibold text-primary">Bion</span>
-          </p>
         </footer>
       </main>
     </div>

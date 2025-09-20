@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -13,10 +11,12 @@ import {
   PaginationNext, 
   PaginationPrevious 
 } from '@/components/ui/pagination';
-import { Search, Shield, Building2, FileCheck, TrendingUp } from 'lucide-react';
+import { Shield, Building2, FileCheck, TrendingUp, Scale, Leaf, Users } from 'lucide-react';
 import { useAuditoriaGeral } from '@/hooks/useAuditoriaGeral';
 import { UnidadeCard } from '@/components/UnidadeCard';
 import { LoteSearchTable } from '@/components/LoteSearchTable';
+import { AdvancedSearchFilters } from '@/components/AdvancedSearchFilters';
+import { ChainIntegrityMonitor } from '@/components/ChainIntegrityMonitor';
 
 export default function AuditoriaGeral() {
   const {
@@ -28,26 +28,27 @@ export default function AuditoriaGeral() {
     currentPage,
     totalPages,
     totalCount,
+    filters,
     handleSearch,
+    handleFiltersChange,
     handlePageChange
   } = useAuditoriaGeral();
 
   const [searchInput, setSearchInput] = useState('');
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSearch(searchInput);
-  };
 
   const getTotalStats = () => {
     const totalLotes = unidades.reduce((acc, u) => acc + u.total_lotes, 0);
     const totalAtivos = unidades.reduce((acc, u) => acc + u.lotes_ativos, 0);
     const totalFinalizados = unidades.reduce((acc, u) => acc + u.lotes_finalizados, 0);
     
-    return { totalLotes, totalAtivos, totalFinalizados };
+    // Calcular totais de CO2e e peso a partir dos lotes finalizados
+    const totalCO2e = lotesFinalizados.reduce((acc, lote) => acc + (lote.co2eq_evitado || 0), 0);
+    const totalPeso = lotesFinalizados.reduce((acc, lote) => acc + (lote.peso_inicial || 0), 0);
+    
+    return { totalLotes, totalAtivos, totalFinalizados, totalCO2e, totalPeso };
   };
 
-  const { totalLotes, totalAtivos, totalFinalizados } = getTotalStats();
+  const { totalLotes, totalAtivos, totalFinalizados, totalCO2e, totalPeso } = getTotalStats();
 
   return (
     <div className="min-h-screen bg-background">
@@ -65,33 +66,47 @@ export default function AuditoriaGeral() {
             </p>
             
             {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-6">
               <Card>
                 <CardContent className="p-4 text-center">
                   <Building2 className="h-6 w-6 mx-auto mb-2 text-blue-500" />
-                  <div className="text-2xl font-bold">{unidades.length}</div>
-                  <div className="text-sm text-muted-foreground">Unidades</div>
+                  <div className="text-xl font-bold">{unidades.length}</div>
+                  <div className="text-xs text-muted-foreground">Unidades</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
                   <FileCheck className="h-6 w-6 mx-auto mb-2 text-green-500" />
-                  <div className="text-2xl font-bold">{totalLotes}</div>
-                  <div className="text-sm text-muted-foreground">Total de Lotes</div>
+                  <div className="text-xl font-bold">{totalLotes}</div>
+                  <div className="text-xs text-muted-foreground">Total Lotes</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
                   <TrendingUp className="h-6 w-6 mx-auto mb-2 text-orange-500" />
-                  <div className="text-2xl font-bold">{totalAtivos}</div>
-                  <div className="text-sm text-muted-foreground">Lotes Ativos</div>
+                  <div className="text-xl font-bold">{totalAtivos}</div>
+                  <div className="text-xs text-muted-foreground">Ativos</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
                   <Shield className="h-6 w-6 mx-auto mb-2 text-primary" />
-                  <div className="text-2xl font-bold">{totalFinalizados}</div>
-                  <div className="text-sm text-muted-foreground">Lotes Finalizados</div>
+                  <div className="text-xl font-bold">{totalFinalizados}</div>
+                  <div className="text-xs text-muted-foreground">Finalizados</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <Scale className="h-6 w-6 mx-auto mb-2 text-purple-500" />
+                  <div className="text-xl font-bold">{totalPeso.toFixed(0)}kg</div>
+                  <div className="text-xs text-muted-foreground">Peso Total</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <Leaf className="h-6 w-6 mx-auto mb-2 text-emerald-500" />
+                  <div className="text-xl font-bold">{totalCO2e.toFixed(0)}kg</div>
+                  <div className="text-xs text-muted-foreground">CO2e Evitado</div>
                 </CardContent>
               </Card>
             </div>
@@ -100,6 +115,11 @@ export default function AuditoriaGeral() {
       </div>
 
       <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Monitor de Integridade da Cadeia */}
+        <section>
+          <ChainIntegrityMonitor autoValidate={true} />
+        </section>
+
         {/* Seção de Unidades */}
         <section>
           <CardHeader className="px-0">
@@ -135,38 +155,26 @@ export default function AuditoriaGeral() {
         </section>
 
         {/* Seção de Auditoria de Lotes */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Search className="mr-2 h-5 w-5" />
-                Auditoria de Lotes Finalizados
-              </CardTitle>
-              <CardDescription>
-                Busque e verifique qualquer lote finalizado por código único ou hash de integridade
-              </CardDescription>
-            </CardHeader>
-            
-            <CardContent className="space-y-6">
-              {/* Search Form */}
-              <form onSubmit={handleSearchSubmit} className="flex gap-2">
-                <Input
-                  placeholder="Buscar por código do lote ou hash..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  className="flex-1"
-                />
-                <Button type="submit" disabled={loadingLotes}>
-                  <Search className="h-4 w-4" />
-                </Button>
-              </form>
+        <section className="space-y-6">
+          <AdvancedSearchFilters
+            searchTerm={searchInput}
+            setSearchTerm={setSearchInput}
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            onSearch={handleSearch}
+            loading={loadingLotes}
+            unidades={unidades}
+          />
 
+          <Card>
+            <CardContent className="space-y-6 pt-6">
               {/* Results */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-muted-foreground">
-                      {searchTerm ? `Resultados para "${searchTerm}"` : 'Todos os lotes finalizados'}
+                      {searchTerm || Object.values(filters).some(v => v) ? 
+                        'Resultados da busca' : 'Todos os lotes finalizados'}
                     </span>
                     {totalCount > 0 && (
                       <Badge variant="secondary">
@@ -226,6 +234,22 @@ export default function AuditoriaGeral() {
           </Card>
         </section>
       </div>
+
+      {/* Footer com "Powered by Bion" */}
+      <footer className="border-t bg-card/50 py-6">
+        <div className="container mx-auto px-4 text-center">
+          <div className="flex items-center justify-center space-x-4">
+            <img 
+              src="/lovable-uploads/powered-by-bion.png" 
+              alt="Powered by Bion" 
+              className="h-8"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Sistema de auditoria e transparência do projeto Compostroca
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

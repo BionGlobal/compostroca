@@ -57,12 +57,18 @@ export const UnidadeCard = ({
       </CardContent>
       
       <CardFooter>
-        <Button asChild className="w-full">
-          <Link to={`/${codigo_unidade}`}>
-            <Eye className="mr-2 h-4 w-4" />
-            Ver Esteira de Produção
-          </Link>
-        </Button>
+        {total_lotes > 0 ? (
+          <Button asChild className="w-full">
+            <Link to={`/${codigo_unidade}`}>
+              <Eye className="mr-2 h-4 w-4" />
+              Ver Esteira de Produção
+            </Link>
+          </Button>
+        ) : (
+          <Button disabled className="w-full" variant="outline">
+            Em Preparação
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );

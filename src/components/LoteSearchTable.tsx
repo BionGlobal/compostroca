@@ -2,7 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ExternalLink, Hash } from 'lucide-react';
+import { ExternalLink, Hash, Camera, Users, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
@@ -18,6 +18,9 @@ interface LoteFinalizadoResult {
   hash_integridade: string | null;
   peso_inicial: number | null;
   peso_final: number | null;
+  criado_por_nome: string | null;
+  total_fotos: number;
+  total_entregas: number;
   total_count: number;
 }
 
@@ -74,10 +77,12 @@ export const LoteSearchTable = ({ lotes, loading }: LoteSearchTableProps) => {
         <TableHeader>
           <TableRow>
             <TableHead>Unidade</TableHead>
-            <TableHead>Cód. do Lote</TableHead>
-            <TableHead>Data de Finalização</TableHead>
-            <TableHead>Impacto (CO2e)</TableHead>
-            <TableHead>Hash</TableHead>
+            <TableHead>Código do Lote</TableHead>
+            <TableHead className="hidden md:table-cell">Validador</TableHead>
+            <TableHead className="hidden lg:table-cell">Data Finalização</TableHead>
+            <TableHead className="hidden lg:table-cell">Impacto (CO2e)</TableHead>
+            <TableHead className="hidden md:table-cell">Dados</TableHead>
+            <TableHead className="hidden xl:table-cell">Hash</TableHead>
             <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
@@ -86,24 +91,50 @@ export const LoteSearchTable = ({ lotes, loading }: LoteSearchTableProps) => {
             <TableRow key={lote.id}>
               <TableCell>
                 <div>
-                  <div className="font-medium">{lote.unidade_nome}</div>
+                  <div className="font-medium text-sm">{lote.unidade_nome}</div>
                   <Badge variant="secondary" className="text-xs">
                     {lote.unidade_codigo}
                   </Badge>
                 </div>
               </TableCell>
               <TableCell>
-                <div className="font-mono text-sm">
-                  {lote.codigo_unico || lote.codigo}
+                <div>
+                  <div className="font-mono text-sm font-medium">
+                    {lote.codigo_unico || lote.codigo}
+                  </div>
+                  <div className="text-xs text-muted-foreground md:hidden">
+                    {lote.criado_por_nome && `Por: ${lote.criado_por_nome}`}
+                  </div>
                 </div>
               </TableCell>
-              <TableCell>{formatDate(lote.data_finalizacao)}</TableCell>
-              <TableCell>
+              <TableCell className="hidden md:table-cell">
+                <div className="text-sm">
+                  {lote.criado_por_nome || 'Não informado'}
+                </div>
+              </TableCell>
+              <TableCell className="hidden lg:table-cell">
+                <div className="text-sm">
+                  {formatDate(lote.data_finalizacao)}
+                </div>
+              </TableCell>
+              <TableCell className="hidden lg:table-cell">
                 <Badge variant="outline" className="text-green-600">
                   {formatCO2(lote.co2eq_evitado)}
                 </Badge>
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden md:table-cell">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Camera className="mr-1 h-3 w-3" />
+                    {lote.total_fotos} fotos
+                  </div>
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <FileText className="mr-1 h-3 w-3" />
+                    {lote.total_entregas} entregas
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell className="hidden xl:table-cell">
                 <div className="flex items-center">
                   <Hash className="mr-1 h-3 w-3 text-muted-foreground" />
                   <span className="font-mono text-xs">
@@ -115,7 +146,8 @@ export const LoteSearchTable = ({ lotes, loading }: LoteSearchTableProps) => {
                 <Button asChild variant="outline" size="sm">
                   <Link to={`/lote/auditoria/${lote.codigo_unico}`}>
                     <ExternalLink className="mr-2 h-4 w-4" />
-                    Verificar
+                    <span className="hidden sm:inline">Verificar</span>
+                    <span className="sm:hidden">Ver</span>
                   </Link>
                 </Button>
               </TableCell>
