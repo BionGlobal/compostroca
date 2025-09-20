@@ -61,14 +61,8 @@ export const AdvancedSearchFilters = ({
     onFiltersChange(emptyFilters);
   };
 
-  const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
-    if (key === 'status') return value !== 'todos';
-    return value !== '';
-  });
-  const activeFilterCount = Object.entries(filters).filter(([key, value]) => {
-    if (key === 'status') return value !== 'todos';
-    return value !== '';
-  }).length;
+  const hasActiveFilters = Object.values(filters).some(value => value !== '');
+  const activeFilterCount = Object.values(filters).filter(value => value !== '').length;
 
   return (
     <Card>
@@ -114,7 +108,7 @@ export const AdvancedSearchFilters = ({
         {/* Advanced Filters */}
         <Collapsible open={showFilters} onOpenChange={setShowFilters}>
           <CollapsibleContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 p-4 bg-muted/30 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
               {/* Unidade Filter */}
               <div className="space-y-2">
                 <Label htmlFor="unidade-filter">Unidade</Label>
