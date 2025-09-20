@@ -16,29 +16,50 @@ export type Database = {
     Tables: {
       entrega_fotos: {
         Row: {
+          camera_type: string | null
+          capture_timestamp: string | null
           created_at: string
           deleted_at: string | null
+          device_info: Json | null
+          device_orientation: string | null
           entrega_id: string
           foto_url: string
+          gps_coords: unknown | null
           id: string
+          image_quality: number | null
+          metadata: Json | null
           tipo_foto: string
           updated_at: string
         }
         Insert: {
+          camera_type?: string | null
+          capture_timestamp?: string | null
           created_at?: string
           deleted_at?: string | null
+          device_info?: Json | null
+          device_orientation?: string | null
           entrega_id: string
           foto_url: string
+          gps_coords?: unknown | null
           id?: string
+          image_quality?: number | null
+          metadata?: Json | null
           tipo_foto: string
           updated_at?: string
         }
         Update: {
+          camera_type?: string | null
+          capture_timestamp?: string | null
           created_at?: string
           deleted_at?: string | null
+          device_info?: Json | null
+          device_orientation?: string | null
           entrega_id?: string
           foto_url?: string
+          gps_coords?: unknown | null
           id?: string
+          image_quality?: number | null
+          metadata?: Json | null
           tipo_foto?: string
           updated_at?: string
         }

@@ -13,12 +13,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { StarRating } from '@/components/StarRating';
-import { EntregaFotosUpload } from '@/components/EntregaFotosUpload';
+import { EnhancedMobilePhotoFlow } from '@/components/EnhancedMobilePhotoFlow';
 import { EntregaFotosGaleria } from '@/components/EntregaFotosGaleria';
 import { EditEntregaModal } from '@/components/EditEntregaModal';
 import { useEntregaFotos } from '@/hooks/useEntregaFotos';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LoteCard } from '@/components/LoteCard';
+import { LoteActiveCard } from '@/components/LoteActiveCard';
 import { useLotes } from '@/hooks/useLotes';
 import { formatPesoDisplay } from '@/lib/organizationUtils';
 import { useIOSPermissions } from '@/hooks/useIOSPermissions';
@@ -196,12 +196,20 @@ const Entregas = () => {
   };
 
   if (showCamera && tempEntregaId) {
+    const selectedVoluntarioData = voluntarios.find(v => v.id === selectedVoluntario);
+    
     return (
       <div className="p-4">
-        <EntregaFotosUpload 
+        <EnhancedMobilePhotoFlow 
           entregaId={tempEntregaId}
           onComplete={handleFotosComplete}
           onCancel={handleCancelFotos}
+          entregaData={{
+            voluntarioNome: selectedVoluntarioData?.nome || 'Voluntário',
+            numeroComposteira: selectedVoluntarioData?.numero_balde || 0,
+            peso: parseFloat(peso),
+            qualidadeResiduo: qualidadeResiduo
+          }}
         />
       </div>
     );
@@ -211,7 +219,7 @@ const Entregas = () => {
     <div className="p-4 space-y-6">
       <IOSPermissionsAlert showOnlyWhenNeeded compact />
       
-      <LoteCard />
+      <LoteActiveCard />
       
       <Card>
         <CardHeader>

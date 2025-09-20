@@ -16,7 +16,6 @@ interface LoteFinalizadoResult {
   id: string;
   codigo_unico: string;
   codigo: string;
-  status: string;
   unidade_nome: string;
   unidade_codigo: string;
   data_finalizacao: string | null;
@@ -24,15 +23,9 @@ interface LoteFinalizadoResult {
   hash_integridade: string | null;
   peso_inicial: number | null;
   peso_final: number | null;
-  peso_atual: number | null;
   criado_por_nome: string | null;
-  data_inicio: string | null;
-  semana_atual: number | null;
-  caixa_atual: number | null;
-  progresso_percent: number | null;
   total_fotos: number;
   total_entregas: number;
-  total_manutencoes: number | null;
   total_count: number;
 }
 
@@ -41,7 +34,6 @@ interface FilterState {
   dataInicio: string;
   dataFim: string;
   validador: string;
-  status: string;
 }
 
 export const useAuditoriaGeral = () => {
@@ -56,8 +48,7 @@ export const useAuditoriaGeral = () => {
     unidade: '',
     dataInicio: '',
     dataFim: '',
-    validador: '',
-    status: 'todos'
+    validador: ''
   });
   const { toast } = useToast();
 
@@ -98,14 +89,13 @@ export const useAuditoriaGeral = () => {
       const dataInicio = currentFilters.dataInicio ? new Date(currentFilters.dataInicio).toISOString().split('T')[0] : null;
       const dataFim = currentFilters.dataFim ? new Date(currentFilters.dataFim).toISOString().split('T')[0] : null;
       
-      const { data, error } = await supabase.rpc('buscar_lotes_por_status', {
+      const { data, error } = await supabase.rpc('buscar_lotes_finalizados', {
         pagina: page,
         termo_busca: term,
         unidade_filter: currentFilters.unidade || '',
         data_inicio: dataInicio,
         data_fim: dataFim,
-        validador_filter: currentFilters.validador || '',
-        status_filter: currentFilters.status || 'todos'
+        validador_filter: currentFilters.validador || ''
       });
       
       if (error) {
@@ -123,7 +113,6 @@ export const useAuditoriaGeral = () => {
         id: lote.id,
         codigo_unico: lote.codigo_unico,
         codigo: lote.codigo,
-        status: lote.status,
         unidade_nome: lote.unidade_nome,
         unidade_codigo: lote.unidade_codigo,
         data_finalizacao: lote.data_finalizacao,
@@ -131,15 +120,9 @@ export const useAuditoriaGeral = () => {
         hash_integridade: lote.hash_integridade,
         peso_inicial: lote.peso_inicial,
         peso_final: lote.peso_final,
-        peso_atual: lote.peso_atual,
         criado_por_nome: lote.criado_por_nome || null,
-        data_inicio: lote.data_inicio,
-        semana_atual: lote.semana_atual,
-        caixa_atual: lote.caixa_atual,
-        progresso_percent: lote.progresso_percent,
         total_fotos: lote.total_fotos || 0,
         total_entregas: lote.total_entregas || 0,
-        total_manutencoes: lote.total_manutencoes || 0,
         total_count: lote.total_count
       }));
 
@@ -186,8 +169,7 @@ export const useAuditoriaGeral = () => {
       unidade: '',
       dataInicio: '',
       dataFim: '',
-      validador: '',
-      status: 'todos'
+      validador: ''
     });
   }, []);
 

@@ -5,7 +5,6 @@ interface LoteFinalizadoResult {
   id: string;
   codigo_unico: string;
   codigo: string;
-  status: string;
   unidade_nome: string;
   unidade_codigo: string;
   data_finalizacao: string | null;
@@ -13,15 +12,9 @@ interface LoteFinalizadoResult {
   hash_integridade: string | null;
   peso_inicial: number | null;
   peso_final: number | null;
-  peso_atual: number | null;
   criado_por_nome: string | null;
-  data_inicio: string | null;
-  semana_atual: number | null;
-  caixa_atual: number | null;
-  progresso_percent: number | null;
   total_fotos: number;
   total_entregas: number;
-  total_manutencoes: number | null;
   total_count: number;
 }
 
@@ -65,7 +58,7 @@ export const LoteCardList = ({ lotes, loading }: LoteCardListProps) => {
   if (lotes.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Nenhum lote encontrado.</p>
+        <p className="text-muted-foreground">Nenhum lote finalizado encontrado.</p>
       </div>
     );
   }
