@@ -219,7 +219,10 @@ const Entregas = () => {
     <div className="p-4 space-y-6">
       <IOSPermissionsAlert showOnlyWhenNeeded compact />
       
-      <LoteActiveCard />
+      {/* SISTEMA DE LOTES - POSIÇÃO DESTAQUE */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pt-2 pb-4 -mx-4 px-4 shadow-sm">
+        <LoteActiveCard />
+      </div>
       
       <Card>
         <CardHeader>
