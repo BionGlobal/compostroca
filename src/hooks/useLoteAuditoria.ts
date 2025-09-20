@@ -47,6 +47,7 @@ export interface LoteAuditoria {
     peso_antes: number;
     peso_depois: number;
     observacoes: string;
+    acao_tipo: string;
     created_at: string;
     usuario_nome: string;
     fotos: Array<{
@@ -121,24 +122,14 @@ export const useLoteAuditoria = (codigoUnico?: string) => {
         console.error('Erro ao buscar fotos de entregas:', entregaFotosError);
       }
 
-      // Get manutencoes through lotes_manutencoes junction table
-      const { data: loteManutencoes, error: manutencoesError } = await supabase
-        .from('lotes_manutencoes')
-        .select(`
-          semana_numero,
-          manejo_id
-        `)
-        .eq('lote_id', lote.id)
-        .order('semana_numero');
-
-      // Get manejo_semanal data separately
-      const manejoIds = loteManutencoes?.map(lm => lm.manejo_id) || [];
+      // Get manejo_semanal data directly (bypass lotes_manutencoes which is empty)
       const { data: manejoData, error: manejoError } = await supabase
         .from('manejo_semanal')
         .select(`
-          id, peso_antes, peso_depois, observacoes, created_at, user_id
+          id, peso_antes, peso_depois, observacoes, created_at, user_id, caixa_origem, caixa_destino
         `)
-        .in('id', manejoIds);
+        .eq('lote_id', lote.id)
+        .order('created_at');
 
       // Get user profiles for manejo
       const userIds = manejoData?.map(m => m.user_id).filter(Boolean) || [];
@@ -147,9 +138,6 @@ export const useLoteAuditoria = (codigoUnico?: string) => {
         .select('user_id, full_name')
         .in('user_id', userIds);
 
-      if (manutencoesError) {
-        console.error('Erro ao buscar manutenções:', manutencoesError);
-      }
 
       if (manejoError) {
         console.error('Erro ao buscar dados de manejo:', manejoError);
@@ -220,19 +208,27 @@ export const useLoteAuditoria = (codigoUnico?: string) => {
         };
       });
 
-      // Process manutencoes with fotos
-      const manutencoesProcessed = (loteManutencoes || []).map(lm => {
-        const manejo = manejoData?.find(m => m.id === lm.manejo_id);
-        const userProfile = userProfiles?.find(p => p.user_id === manejo?.user_id);
-        const manejoFotos = (lotefotos || []).filter(foto => foto.manejo_id === manejo?.id);
+      // Process manutencoes with fotos - directly from manejo_semanal
+      const manutencoesProcessed = (manejoData || []).map((manejo, index) => {
+        const userProfile = userProfiles?.find(p => p.user_id === manejo.user_id);
+        const manejoFotos = (lotefotos || []).filter(foto => foto.manejo_id === manejo.id);
+        
+        // Determine action type based on caixa_destino
+        let acaoTipo = '';
+        if (manejo.caixa_destino) {
+          acaoTipo = `TRANSFERÊNCIA ${manejo.caixa_origem} → ${manejo.caixa_destino}`;
+        } else {
+          acaoTipo = 'FINALIZAÇÃO';
+        }
         
         return {
-          id: manejo?.id || '',
-          semana_numero: lm.semana_numero,
-          peso_antes: manejo?.peso_antes || 0,
-          peso_depois: manejo?.peso_depois || 0,
-          observacoes: manejo?.observacoes || '',
-          created_at: manejo?.created_at || '',
+          id: manejo.id,
+          semana_numero: index + 1, // Sequential numbering since we order by created_at
+          peso_antes: manejo.peso_antes,
+          peso_depois: manejo.peso_depois,
+          observacoes: manejo.observacoes || '',
+          acao_tipo: acaoTipo,
+          created_at: manejo.created_at,
           usuario_nome: userProfile?.full_name || 'Usuário Desconhecido',
           fotos: manejoFotos.map(foto => ({
             id: foto.id,

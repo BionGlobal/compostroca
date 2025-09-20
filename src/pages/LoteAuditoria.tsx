@@ -280,13 +280,30 @@ export default function LoteAuditoria() {
                           {manutencao.semana_numero}
                         </div>
                         <div className="flex-1 bg-muted p-4 rounded-lg">
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-medium">Semana {manutencao.semana_numero}</h4>
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <h4 className="font-medium">{manutencao.acao_tipo}</h4>
+                              <span className="text-xs text-muted-foreground">Etapa {manutencao.semana_numero}</span>
+                            </div>
                             <span className="text-sm text-muted-foreground">
-                              {new Date(manutencao.created_at).toLocaleDateString('pt-BR')}
+                              {new Date(manutencao.created_at).toLocaleDateString('pt-BR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
                             </span>
                           </div>
-                          <div className="grid grid-cols-2 gap-4 mb-2">
+                          
+                          {manutencao.observacoes && (
+                            <div className="mb-3 p-3 bg-background rounded border-l-4 border-primary">
+                              <p className="text-sm font-medium text-primary mb-1">Observações do Administrador:</p>
+                              <p className="text-sm">{manutencao.observacoes}</p>
+                            </div>
+                          )}
+                          
+                          <div className="grid grid-cols-2 gap-4 mb-3">
                             <div>
                               <span className="text-sm text-muted-foreground">Peso antes:</span>
                               <p className="font-medium">{formatWeight(manutencao.peso_antes)}</p>
@@ -296,17 +313,20 @@ export default function LoteAuditoria() {
                               <p className="font-medium">{formatWeight(manutencao.peso_depois)}</p>
                             </div>
                           </div>
-                          {manutencao.observacoes && (
-                            <p className="text-sm text-muted-foreground mb-2">{manutencao.observacoes}</p>
-                          )}
-                          <p className="text-sm text-muted-foreground">
-                            Responsável: {manutencao.usuario_nome}
-                          </p>
-                          {manutencao.fotos.length > 0 && (
-                            <p className="text-sm text-primary mt-2">
-                              📸 {manutencao.fotos.length} foto(s) registrada(s)
+                          
+                          <div className="flex justify-between items-center">
+                            <p className="text-sm text-muted-foreground">
+                              Responsável: {manutencao.usuario_nome}
                             </p>
-                          )}
+                            {manutencao.fotos.length > 0 && (
+                              <button
+                                onClick={() => setShowPhotos(true)}
+                                className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
+                              >
+                                📸 {manutencao.fotos.length} foto(s)
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
