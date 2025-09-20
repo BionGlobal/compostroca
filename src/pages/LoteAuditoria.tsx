@@ -423,7 +423,7 @@ export default function LoteAuditoria() {
             <img 
               src="/lovable-uploads/powered-by-bion.png" 
               alt="Powered by Bion" 
-              className="h-8"
+              className="h-16 opacity-80 hover:opacity-100 transition-opacity"
             />
           </div>
           <p className="text-xs text-muted-foreground mt-2">
