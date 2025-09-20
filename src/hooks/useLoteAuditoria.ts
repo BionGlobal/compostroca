@@ -2,6 +2,26 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+export interface TimelineStage {
+  id: string;
+  etapa: number;
+  titulo: string;
+  tipo: 'entrega' | 'manutencao' | 'finalizacao';
+  caixa_origem?: number;
+  caixa_destino?: number;
+  peso_antes?: number;
+  peso_depois: number;
+  observacoes?: string;
+  created_at: string;
+  usuario_nome?: string;
+  data_estimada: boolean;
+  fotos: Array<{
+    id: string;
+    foto_url: string;
+    tipo_foto: string;
+  }>;
+}
+
 export interface LoteAuditoria {
   id: string;
   codigo: string;
@@ -41,21 +61,7 @@ export interface LoteAuditoria {
       tipo_foto: string;
     }>;
   }>;
-  manutencoes: Array<{
-    id: string;
-    semana_numero: number;
-    peso_antes: number;
-    peso_depois: number;
-    observacoes: string;
-    acao_tipo: string;
-    created_at: string;
-    usuario_nome: string;
-    fotos: Array<{
-      id: string;
-      foto_url: string;
-      tipo_foto: string;
-    }>;
-  }>;
+  timeline: TimelineStage[];
   todasFotos: Array<{
     id: string;
     foto_url: string;
@@ -198,48 +204,110 @@ export const useLoteAuditoria = (codigoUnico?: string) => {
         };
       });
 
-      // Process manutencoes with fotos - directly from manejo_semanal
-      const manutencoesProcessed = (manejoData || []).map((manejo, index) => {
-        const userProfile = userProfiles?.find(p => p.user_id === manejo.user_id);
+      // Build adaptive timeline based on real data
+      const buildAdaptiveTimeline = (): TimelineStage[] => {
+        const timeline: TimelineStage[] = [];
+        const dataInicio = new Date(lote.data_inicio);
+        const dataFinalizacao = lote.data_finalizacao ? new Date(lote.data_finalizacao) : new Date();
         
-        // Get photos specifically associated with this manejo_id and time period
-        const manejoFotos = (lotefotos || []).filter(foto => {
-          // For first week (semana 1), get delivery photos from the initial period
-          if (index === 0) {
-            return foto.entrega_id !== null;
-          }
-          // For other weeks, get maintenance photos specific to this manejo
-          return foto.manejo_id === manejo.id && foto.entrega_id === null;
+        // Calculate estimated weekly dates (7 days apart)
+        const getEstimatedDate = (weekIndex: number) => {
+          const date = new Date(dataInicio);
+          date.setDate(date.getDate() + (weekIndex * 7));
+          return date;
+        };
+        
+        // Calculate estimated weight reduction (3.15% per week)
+        const getEstimatedWeight = (initialWeight: number, weekIndex: number) => {
+          return initialWeight * Math.pow(0.9685, weekIndex);
+        };
+        
+        // 1. Etapa 1: Recebimento e Entregas (Caixa 1)
+        const entregaFotos = (lotefotos || []).filter(f => f.entrega_id !== null);
+        const primeiraManutencao = manejoData?.[0];
+        
+        timeline.push({
+          id: primeiraManutencao?.id || `entrega-${lote.id}`,
+          etapa: 1,
+          titulo: 'Recebimento e Entregas',
+          tipo: 'entrega',
+          caixa_origem: 0,
+          caixa_destino: 1,
+          peso_antes: 0,
+          peso_depois: primeiraManutencao?.peso_depois || lote.peso_inicial,
+          observacoes: primeiraManutencao?.observacoes || `Lote iniciado com ${entregasProcessed.length || 0} entregas de voluntários`,
+          created_at: primeiraManutencao?.created_at || lote.data_inicio,
+          usuario_nome: primeiraManutencao ? userProfiles?.find(p => p.user_id === primeiraManutencao.user_id)?.full_name : lote.criado_por_nome,
+          data_estimada: !primeiraManutencao,
+          fotos: entregaFotos.map(f => ({
+            id: f.id,
+            foto_url: f.foto_url,
+            tipo_foto: f.tipo_foto
+          }))
         });
         
-        // Determine action type based on caixa_destino and index
-        let acaoTipo = '';
-        const semanaNumero = index + 1;
-        
-        if (semanaNumero === 1) {
-          acaoTipo = 'INÍCIO DO LOTE - Entregas de Voluntários';
-        } else if (manejo.caixa_destino) {
-          acaoTipo = `MANUTENÇÃO - Transferência Caixa ${manejo.caixa_origem} → ${manejo.caixa_destino}`;
-        } else {
-          acaoTipo = 'FINALIZAÇÃO DO LOTE';
+        // 2-7. Etapas 2-7: Manutenções Semanais (Caixas 2-7)
+        for (let caixa = 2; caixa <= 7; caixa++) {
+          const etapa = caixa;
+          const manutencaoReal = manejoData?.find(m => m.caixa_destino === caixa);
+          const isDataReal = !!manutencaoReal;
+          
+          // Get photos for this specific maintenance
+          const manutencaoFotos = manutencaoReal ? 
+            (lotefotos || []).filter(f => f.manejo_id === manutencaoReal.id) : [];
+          
+          const pesoAnterior = timeline[etapa - 2]?.peso_depois || lote.peso_inicial;
+          const pesoEstimado = getEstimatedWeight(lote.peso_inicial, etapa - 1);
+          
+          timeline.push({
+            id: manutencaoReal?.id || `estimada-${etapa}-${lote.id}`,
+            etapa,
+            titulo: `Manutenção Semanal - Caixa ${caixa}`,
+            tipo: 'manutencao',
+            caixa_origem: caixa - 1,
+            caixa_destino: caixa,
+            peso_antes: manutencaoReal?.peso_antes || pesoAnterior,
+            peso_depois: manutencaoReal?.peso_depois || pesoEstimado,
+            observacoes: manutencaoReal?.observacoes || `Transferência para caixa ${caixa} (dados estimados)`,
+            created_at: manutencaoReal?.created_at || getEstimatedDate(etapa - 1).toISOString(),
+            usuario_nome: manutencaoReal ? userProfiles?.find(p => p.user_id === manutencaoReal.user_id)?.full_name : 'Sistema',
+            data_estimada: !isDataReal,
+            fotos: manutencaoFotos.map(f => ({
+              id: f.id,
+              foto_url: f.foto_url,
+              tipo_foto: f.tipo_foto
+            }))
+          });
         }
         
-        return {
-          id: manejo.id,
-          semana_numero: semanaNumero,
-          peso_antes: manejo.peso_antes,
-          peso_depois: manejo.peso_depois,
-          observacoes: manejo.observacoes || '',
-          acao_tipo: acaoTipo,
-          created_at: manejo.created_at,
-          usuario_nome: userProfile?.full_name || 'Usuário Desconhecido',
-          fotos: manejoFotos.map(foto => ({
-            id: foto.id,
-            foto_url: foto.foto_url,
-            tipo_foto: foto.tipo_foto
+        // 8. Etapa 8: Finalização e Distribuição
+        const ultimaManutencao = manejoData?.find(m => !m.caixa_destino) || manejoData?.[manejoData.length - 1];
+        const finalizacaoFotos = ultimaManutencao && !ultimaManutencao.caixa_destino ? 
+          (lotefotos || []).filter(f => f.manejo_id === ultimaManutencao.id) : [];
+        
+        timeline.push({
+          id: ultimaManutencao?.id || `finalizacao-${lote.id}`,
+          etapa: 8,
+          titulo: 'Finalização e Distribuição',
+          tipo: 'finalizacao',
+          caixa_origem: 7,
+          peso_antes: timeline[6]?.peso_depois || getEstimatedWeight(lote.peso_inicial, 6),
+          peso_depois: lote.peso_final,
+          observacoes: ultimaManutencao?.observacoes || 'Composto finalizado e pronto para distribuição',
+          created_at: lote.data_finalizacao || ultimaManutencao?.created_at || getEstimatedDate(7).toISOString(),
+          usuario_nome: ultimaManutencao ? userProfiles?.find(p => p.user_id === ultimaManutencao.user_id)?.full_name : lote.criado_por_nome,
+          data_estimada: !lote.data_finalizacao && !ultimaManutencao,
+          fotos: finalizacaoFotos.map(f => ({
+            id: f.id,
+            foto_url: f.foto_url,
+            tipo_foto: f.tipo_foto
           }))
-        };
-      });
+        });
+        
+        return timeline;
+      };
+      
+      const timeline = buildAdaptiveTimeline();
 
       // Combine all photos with origin
       const todasFotos = (lotefotos || []).map(foto => {
@@ -278,7 +346,7 @@ export const useLoteAuditoria = (codigoUnico?: string) => {
         longitude: lote.longitude,
         voluntarios,
         entregas: entregasProcessed,
-        manutencoes: manutencoesProcessed,
+        timeline,
         todasFotos
       };
 

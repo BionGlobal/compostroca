@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MapPin, Calendar, Weight, Leaf, FileText, Download, QrCode, Shield, Hash, MessageSquare, Scale, User, Camera } from 'lucide-react';
+import { MapPin, Calendar, Weight, Leaf, FileText, Download, QrCode, Shield, Hash, MessageSquare, Scale, User, Camera, Package, ArrowRight, CheckCircle, RefreshCw, Clock } from 'lucide-react';
 import { useState } from 'react';
 import { PublicFotosGalleryModal } from '@/components/PublicFotosGalleryModal';
 import { formatWeight, getOrganizationName } from '@/lib/organizationUtils';
@@ -49,13 +49,13 @@ export default function LoteAuditoria() {
         voluntario_nome: e.voluntario_nome,
         fotos: e.fotos
       })),
-      manejo_fotos: loteAuditoria.manutencoes.flatMap(m => 
-        m.fotos.map(f => ({
+      manejo_fotos: loteAuditoria.timeline.flatMap(stage => 
+        stage.fotos.map(f => ({
           id: f.id,
           foto_url: f.foto_url,
-          created_at: m.created_at,
-          caixa_origem: m.semana_numero,
-          caixa_destino: m.semana_numero + 1
+          created_at: stage.created_at,
+          caixa_origem: stage.caixa_origem || 0,
+          caixa_destino: stage.caixa_destino || 0
         }))
       )
     };
@@ -267,75 +267,143 @@ export default function LoteAuditoria() {
               </CardContent>
             </Card>
 
-            {/* Timeline de Manutenções */}
+            {/* Timeline Adaptativa */}
             <Card>
               <CardHeader>
-                <CardTitle>Linha do Tempo - Processo de Compostagem</CardTitle>
+                <CardTitle>Linha do Tempo - Processo de Compostagem (49 dias)</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Timeline natural de 8 etapas do processo de compostagem
+                </p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {loteAuditoria.manutencoes
+                  {loteAuditoria.timeline
                     .slice()
                     .reverse()
-                    .map((manutencao, index) => {
-                      const etapaNumber = loteAuditoria.manutencoes.length - index;
+                    .map((stage, index) => {
                       const isFirst = index === 0;
-                      const isLast = index === loteAuditoria.manutencoes.length - 1;
+                      const isLast = index === loteAuditoria.timeline.length - 1;
                       
-                      // For first week, show delivery photos; for other weeks, show maintenance photos
-                      const fotosParaMostrar = etapaNumber === 1 ? 
-                        loteAuditoria.todasFotos.filter(f => f.origem === 'entrega') :
-                        manutencao.fotos;
+                      // Icon selection based on stage type
+                      const getStageIcon = () => {
+                        if (stage.tipo === 'entrega') return Package;
+                        if (stage.tipo === 'finalizacao') return CheckCircle;
+                        return ArrowRight;
+                      };
+                      
+                      const StageIcon = getStageIcon();
                       
                       return (
-                        <div key={manutencao.id} className="relative">
+                        <div key={stage.id} className="relative">
                           {!isLast && (
-                            <div className="absolute left-5 top-12 bottom-0 w-0.5 bg-gradient-to-b from-primary to-primary/20"></div>
+                            <div className="absolute left-6 top-16 bottom-0 w-0.5 bg-gradient-to-b from-primary to-primary/20"></div>
                           )}
                           <div className="flex gap-4">
-                            <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg ${
-                              etapaNumber === 7 ? 'bg-green-500' :
-                              etapaNumber >= 5 ? 'bg-blue-500' :
-                              etapaNumber >= 3 ? 'bg-yellow-500' : 'bg-primary'
-                            }`}>
-                              {etapaNumber}
+                            <div className="flex-shrink-0 flex flex-col items-center">
+                              <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg ${
+                                stage.tipo === 'finalizacao' ? 'bg-green-500' :
+                                stage.tipo === 'entrega' ? 'bg-blue-500' :
+                                stage.etapa >= 6 ? 'bg-orange-500' :
+                                stage.etapa >= 4 ? 'bg-yellow-500' : 'bg-primary'
+                              }`}>
+                                <StageIcon className="h-5 w-5" />
+                              </div>
+                              <span className="mt-1 text-xs font-medium text-muted-foreground">
+                                Etapa {stage.etapa}
+                              </span>
                             </div>
-                            <div className="flex-1 bg-card border border-border rounded-lg p-4 shadow-sm">
+                            
+                            <div className={`flex-1 rounded-lg p-4 shadow-sm ${
+                              stage.data_estimada ? 'bg-muted/50 border border-dashed border-muted-foreground/30' : 'bg-card border border-border'
+                            }`}>
                               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3 gap-2">
-                                <div>
-                                  <h4 className="font-semibold text-lg">{manutencao.acao_tipo}</h4>
-                                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md bg-primary/10 text-primary">
-                                    Etapa {etapaNumber}
-                                  </span>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h4 className="font-semibold text-lg">{stage.titulo}</h4>
+                                    {stage.data_estimada && (
+                                      <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                                        <Clock className="h-3 w-3" />
+                                        Estimado
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  {stage.caixa_origem !== undefined && stage.caixa_destino && (
+                                    <p className="text-sm text-muted-foreground">
+                                      {stage.tipo === 'entrega' ? 'Início → Caixa 1' : 
+                                       stage.tipo === 'finalizacao' ? 'Caixa 7 → Finalização' :
+                                       `Caixa ${stage.caixa_origem} → Caixa ${stage.caixa_destino}`}
+                                    </p>
+                                  )}
                                 </div>
-                                <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded">
-                                  {new Date(manutencao.created_at).toLocaleDateString('pt-BR', {
+                                
+                                <span className={`text-sm px-2 py-1 rounded whitespace-nowrap ${
+                                  stage.data_estimada ? 
+                                  'bg-muted text-muted-foreground' : 
+                                  'bg-primary/10 text-primary'
+                                }`}>
+                                  {new Date(stage.created_at).toLocaleDateString('pt-BR', {
                                     day: '2-digit',
                                     month: 'short',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
+                                    year: 'numeric'
                                   })}
                                 </span>
                               </div>
                               
-                              {manutencao.observacoes && (
-                                <div className="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
+                              {stage.observacoes && (
+                                <div className={`mb-4 p-3 rounded border-l-4 ${
+                                  stage.data_estimada ? 
+                                  'bg-muted/50 border-muted-foreground/30' : 
+                                  'bg-blue-50 border-blue-400'
+                                }`}>
                                   <div className="flex items-center gap-2 mb-1">
-                                    <MessageSquare className="h-4 w-4 text-blue-600" />
-                                    <p className="text-sm font-medium text-blue-800">Observações:</p>
+                                    <MessageSquare className={`h-4 w-4 ${
+                                      stage.data_estimada ? 'text-muted-foreground' : 'text-blue-600'
+                                    }`} />
+                                    <p className={`text-sm font-medium ${
+                                      stage.data_estimada ? 'text-muted-foreground' : 'text-blue-800'
+                                    }`}>
+                                      {stage.data_estimada ? 'Observações (estimadas):' : 'Observações:'}
+                                    </p>
                                   </div>
-                                  <p className="text-sm text-blue-700">{manutencao.observacoes}</p>
+                                  <p className={`text-sm ${
+                                    stage.data_estimada ? 'text-muted-foreground' : 'text-blue-700'
+                                  }`}>
+                                    {stage.observacoes}
+                                  </p>
                                 </div>
                               )}
                               
                               <div className="mb-4">
-                                <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                                  <div className="flex items-center gap-2">
-                                    <Scale className="h-4 w-4 text-green-600" />
-                                    <span className="text-sm text-green-600 font-medium">Peso da Etapa:</span>
+                                <div className={`p-3 rounded-lg border ${
+                                  stage.data_estimada ? 
+                                  'bg-muted/30 border-muted-foreground/20' : 
+                                  'bg-green-50 border-green-200'
+                                }`}>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Scale className={`h-4 w-4 ${
+                                      stage.data_estimada ? 'text-muted-foreground' : 'text-green-600'
+                                    }`} />
+                                    <span className={`text-sm font-medium ${
+                                      stage.data_estimada ? 'text-muted-foreground' : 'text-green-600'
+                                    }`}>
+                                      Peso da Etapa:
+                                    </span>
+                                    {stage.data_estimada && (
+                                      <span className="text-xs text-muted-foreground">(estimado)</span>
+                                    )}
                                   </div>
-                                  <p className="font-bold text-green-700 text-lg">{formatWeight(manutencao.peso_depois)}</p>
+                                  <p className={`font-bold text-lg ${
+                                    stage.data_estimada ? 'text-muted-foreground' : 'text-green-700'
+                                  }`}>
+                                    {formatWeight(stage.peso_depois)}
+                                  </p>
+                                  
+                                  {stage.peso_antes && stage.peso_antes !== stage.peso_depois && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Redução: {formatWeight(stage.peso_antes - stage.peso_depois)} ({((stage.peso_antes - stage.peso_depois) / stage.peso_antes * 100).toFixed(1)}%)
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                               
@@ -343,19 +411,17 @@ export default function LoteAuditoria() {
                                 <div className="flex items-center gap-2">
                                   <User className="h-4 w-4 text-muted-foreground" />
                                   <p className="text-sm text-muted-foreground">
-                                    Responsável: <span className="font-medium">{manutencao.usuario_nome}</span>
+                                    Responsável: <span className="font-medium">{stage.usuario_nome || 'N/A'}</span>
                                   </p>
                                 </div>
-                                {fotosParaMostrar.length > 0 && (
+                                
+                                {stage.fotos.length > 0 && (
                                   <button
                                     onClick={() => setShowPhotos(true)}
                                     className="text-sm text-primary hover:text-primary/80 flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-full hover:bg-primary/20 transition-colors"
                                   >
                                     <Camera className="h-4 w-4" />
-                                    {fotosParaMostrar.length} foto(s)
-                                    {etapaNumber === 1 && (
-                                      <span className="text-xs ml-1">(entregas)</span>
-                                    )}
+                                    {stage.fotos.length} foto(s)
                                   </button>
                                 )}
                               </div>
