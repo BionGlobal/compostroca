@@ -12,6 +12,7 @@ export const PublicFotosLote = () => {
   const { toast } = useToast();
   
   const [lote, setLote] = useState<any>(null);
+  const [fotos, setFotos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -20,13 +21,14 @@ export const PublicFotosLote = () => {
       if (!loteId) return;
 
       try {
-        const { data, error } = await supabase
+        // Fetch lote data
+        const { data: loteData, error: loteError } = await supabase
           .from('lotes')
           .select('id, codigo, unidade')
           .eq('id', loteId)
           .single();
 
-        if (error || !data) {
+        if (loteError || !loteData) {
           toast({
             title: 'Lote não encontrado',
             description: 'O lote solicitado não foi encontrado ou não está disponível.',
@@ -36,7 +38,19 @@ export const PublicFotosLote = () => {
           return;
         }
 
-        setLote(data);
+        // Fetch lote photos
+        const { data: fotosData, error: fotosError } = await supabase
+          .from('lote_fotos')
+          .select('id, foto_url, tipo_foto, created_at')
+          .eq('lote_id', loteId)
+          .order('created_at', { ascending: true });
+
+        if (fotosError) {
+          console.error('Erro ao buscar fotos:', fotosError);
+        }
+
+        setLote(loteData);
+        setFotos(fotosData || []);
         setModalOpen(true);
       } catch (error) {
         console.error('Erro ao buscar lote:', error);
@@ -89,7 +103,7 @@ export const PublicFotosLote = () => {
       <PublicFotosGalleryModal
         isOpen={modalOpen}
         onClose={handleModalClose}
-        loteId={loteId!}
+        fotos={fotos}
         title={`Fotos do Lote ${lote.codigo}`}
       />
       
