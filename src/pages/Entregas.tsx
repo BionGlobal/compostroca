@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { StarRating } from '@/components/StarRating';
-import { EnhancedMobilePhotoFlow } from '@/components/EnhancedMobilePhotoFlow';
+import { EntregaFotosCaptureEnhanced } from '@/components/EntregaFotosCaptureEnhanced';
 import { EntregaFotosGaleria } from '@/components/EntregaFotosGaleria';
 import { EditEntregaModal } from '@/components/EditEntregaModal';
 import { useEntregaFotos } from '@/hooks/useEntregaFotos';
@@ -200,16 +200,14 @@ const Entregas = () => {
     
     return (
       <div className="p-4">
-        <EnhancedMobilePhotoFlow 
+        <EntregaFotosCaptureEnhanced 
           entregaId={tempEntregaId}
           onComplete={handleFotosComplete}
           onCancel={handleCancelFotos}
-          entregaData={{
-            voluntarioNome: selectedVoluntarioData?.nome || 'Voluntário',
-            numeroComposteira: selectedVoluntarioData?.numero_balde || 0,
-            peso: parseFloat(peso),
-            qualidadeResiduo: qualidadeResiduo
-          }}
+          voluntarioNome={selectedVoluntarioData?.nome || 'Voluntário'}
+          numeroBalde={selectedVoluntarioData?.numero_balde || 0}
+          peso={parseFloat(peso)}
+          qualidadeResiduo={qualidadeResiduo}
         />
       </div>
     );
