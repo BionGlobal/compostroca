@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
 import { Link } from 'react-router-dom';
-import { DeviceTestModalEnhanced } from './DeviceTestModalEnhanced';
+import { MobileCameraTestModal } from './MobileCameraTestModal';
 
 const getRoleBadgeVariant = (role: string) => {
   switch (role) {
@@ -151,7 +151,7 @@ export const HamburgerMenu = () => {
         </SheetContent>
       </Sheet>
       
-      <DeviceTestModalEnhanced 
+      <MobileCameraTestModal 
         open={deviceTestOpen} 
         onOpenChange={setDeviceTestOpen} 
       />
