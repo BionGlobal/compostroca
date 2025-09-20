@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MapPin, Calendar, Weight, Leaf, FileText, Download, QrCode, Shield, Hash } from 'lucide-react';
+import { MapPin, Calendar, Weight, Leaf, FileText, Download, QrCode, Shield, Hash, MessageSquare, Scale, User, Camera } from 'lucide-react';
 import { useState } from 'react';
 import { PublicFotosGalleryModal } from '@/components/PublicFotosGalleryModal';
 import { formatWeight, getOrganizationName } from '@/lib/organizationUtils';
@@ -258,7 +258,7 @@ export default function LoteAuditoria() {
                       <div className="text-right">
                         <p className="font-medium">{formatWeight(voluntario.peso_total)}</p>
                         <p className="text-sm text-muted-foreground">
-                          {voluntario.entregas_count || '-'} entregas • ★{voluntario.qualidade_media > 0 ? voluntario.qualidade_media.toFixed(1) : '-'}
+                          {voluntario.entregas_count > 0 ? voluntario.entregas_count : '-'} entregas • ★{voluntario.qualidade_media > 0 ? voluntario.qualidade_media.toFixed(1) : '-'}
                         </p>
                       </div>
                     </div>
@@ -321,32 +321,38 @@ export default function LoteAuditoria() {
                               
                               {manutencao.observacoes && (
                                 <div className="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
-                                  <p className="text-sm font-medium text-blue-800 mb-1">💬 Observações:</p>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <MessageSquare className="h-4 w-4 text-blue-600" />
+                                    <p className="text-sm font-medium text-blue-800">Observações:</p>
+                                  </div>
                                   <p className="text-sm text-blue-700">{manutencao.observacoes}</p>
                                 </div>
                               )}
                               
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                                <div className="bg-red-50 p-3 rounded-lg border border-red-200">
-                                  <span className="text-sm text-red-600 font-medium">⚖️ Peso inicial:</span>
-                                  <p className="font-bold text-red-700 text-lg">{formatWeight(manutencao.peso_antes)}</p>
-                                </div>
+                              <div className="mb-4">
                                 <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                                  <span className="text-sm text-green-600 font-medium">⚖️ Peso final:</span>
+                                  <div className="flex items-center gap-2">
+                                    <Scale className="h-4 w-4 text-green-600" />
+                                    <span className="text-sm text-green-600 font-medium">Peso da Etapa:</span>
+                                  </div>
                                   <p className="font-bold text-green-700 text-lg">{formatWeight(manutencao.peso_depois)}</p>
                                 </div>
                               </div>
                               
                               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                                <p className="text-sm text-muted-foreground">
-                                  👤 Responsável: <span className="font-medium">{manutencao.usuario_nome}</span>
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <User className="h-4 w-4 text-muted-foreground" />
+                                  <p className="text-sm text-muted-foreground">
+                                    Responsável: <span className="font-medium">{manutencao.usuario_nome}</span>
+                                  </p>
+                                </div>
                                 {fotosParaMostrar.length > 0 && (
                                   <button
                                     onClick={() => setShowPhotos(true)}
-                                    className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 bg-primary/10 px-3 py-1 rounded-full hover:bg-primary/20 transition-colors"
+                                    className="text-sm text-primary hover:text-primary/80 flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-full hover:bg-primary/20 transition-colors"
                                   >
-                                    📸 {fotosParaMostrar.length} foto(s)
+                                    <Camera className="h-4 w-4" />
+                                    {fotosParaMostrar.length} foto(s)
                                     {etapaNumber === 1 && (
                                       <span className="text-xs ml-1">(entregas)</span>
                                     )}
@@ -463,18 +469,21 @@ export default function LoteAuditoria() {
         }))}
         title="Documentação Fotográfica do Lote"
       />
-      {/* Footer com "Powered by Bion" */}
+      {/* Footer */}
       <footer className="border-t bg-card/50 py-6">
         <div className="container mx-auto px-4 text-center">
-          <div className="flex items-center justify-center space-x-4">
-            <a href="https://www.bion.global" target="_blank" rel="noopener noreferrer">
-              <img 
-                src="/lovable-uploads/powered-by-bion.png" 
-                alt="Powered by Bion" 
-                className="h-12 opacity-80 hover:opacity-100 transition-opacity"
-              />
-            </a>
-          </div>
+          <a 
+            href="https://www.bion.global" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-block hover:opacity-80 transition-opacity"
+          >
+            <img 
+              src="/lovable-uploads/powered-by-bion.png" 
+              alt="Powered by Bion" 
+              className="h-9"
+            />
+          </a>
         </div>
       </footer>
     </div>

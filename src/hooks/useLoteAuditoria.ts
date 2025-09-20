@@ -202,10 +202,15 @@ export const useLoteAuditoria = (codigoUnico?: string) => {
       const manutencoesProcessed = (manejoData || []).map((manejo, index) => {
         const userProfile = userProfiles?.find(p => p.user_id === manejo.user_id);
         
-        // Get only photos specifically associated with this manejo_id
-        const manejoFotos = (lotefotos || []).filter(foto => 
-          foto.manejo_id === manejo.id && foto.entrega_id === null
-        );
+        // Get photos specifically associated with this manejo_id and time period
+        const manejoFotos = (lotefotos || []).filter(foto => {
+          // For first week (semana 1), get delivery photos from the initial period
+          if (index === 0) {
+            return foto.entrega_id !== null;
+          }
+          // For other weeks, get maintenance photos specific to this manejo
+          return foto.manejo_id === manejo.id && foto.entrega_id === null;
+        });
         
         // Determine action type based on caixa_destino and index
         let acaoTipo = '';
