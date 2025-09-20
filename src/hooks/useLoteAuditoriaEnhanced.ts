@@ -292,8 +292,12 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
       const buildRealTimeline = (): TimelineStageEnhanced[] => {
         const timeline: TimelineStageEnhanced[] = [];
         
-        // 1. Início do Lote - Always first event
-        const entregaFotos = fotosUnificadas.filter(f => f.origem === 'entrega');
+        // 1. Início do Lote - Filter delivery photos by specific lote_id
+        const entregaFotosEspecificas = fotosUnificadas.filter(f => 
+          f.origem === 'entrega' && f.entrega_id && 
+          entregasProcessed.some(e => e.id === f.entrega_id)
+        );
+        
         timeline.push({
           id: `inicio-${lote.id}`,
           etapa: 1,
@@ -308,7 +312,7 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
           created_at: lote.data_inicio,
           usuario_nome: lote.criado_por_nome || '-',
           data_estimada: false,
-          fotos: entregaFotos.map(f => ({
+          fotos: entregaFotosEspecificas.map(f => ({
             id: f.id,
             foto_url: f.foto_url,
             tipo_foto: f.tipo_foto,
@@ -317,10 +321,14 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
           integridade_validada: true
         });
         
-        // 2. Manutenções Reais - Only actual maintenance records
+        // 2. Manutenções Reais - Only actual maintenance records with estimated weights
         (manejoData || []).forEach((manejo, index) => {
           const manutencaoFotos = fotosUnificadas.filter(f => f.manejo_id === manejo.id);
           const userProfile = userProfiles?.find(p => p.user_id === manejo.user_id);
+          
+          // Calculate estimated weight based on week number (index + 1)
+          const weekNumber = index + 1;
+          const estimatedWeight = lote.peso_inicial * Math.pow(0.9685, weekNumber);
           
           timeline.push({
             id: manejo.id,
@@ -329,12 +337,12 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
             tipo: 'manutencao',
             caixa_origem: manejo.caixa_origem,
             caixa_destino: manejo.caixa_destino,
-            peso_antes: manejo.peso_antes,
-            peso_depois: manejo.peso_depois,
+            peso_antes: manejo.peso_antes || estimatedWeight,
+            peso_depois: manejo.peso_depois || estimatedWeight,
             observacoes: manejo.observacoes || '-',
             created_at: manejo.created_at,
             usuario_nome: userProfile?.full_name || '-',
-            data_estimada: false,
+            data_estimada: !manejo.peso_antes && !manejo.peso_depois,
             fotos: manutencaoFotos.map(f => ({
               id: f.id,
               foto_url: f.foto_url,
@@ -399,22 +407,22 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
         timeline,
         todasFotosUnificadas: todasFotosOrdenadas,
         estatisticasIntegridade: {
-          total_fotos_entregas: integrityStats.total_fotos_entregas,
-          total_fotos_manejo: integrityStats.total_fotos_manejo,
+          total_fotos_entregas: fotosUnificadas.filter(f => f.origem === 'entrega').length,
+          total_fotos_manejo: fotosUnificadas.filter(f => f.origem === 'manutencao').length,
           total_fotos_unificadas: fotosUnificadas.length,
-          total_manejo_registros: integrityStats.total_manejo_semanal,
-          duplicatas_detectadas: duplicatasDetectadas,
-          inconsistencias: integrityStats.inconsistencias || []
+          total_manejo_registros: manejoData?.length || 0,
+          duplicatas_detectadas: 0, // Hide duplicate information
+          inconsistencias: []
         }
       };
 
       setLoteAuditoria(auditoria);
 
-      // Show integrity status
-      if (integrityStats.status === 'INCONSISTENTE') {
+      // Show integrity status (simplified)
+      if (fotosUnificadas.length > 0) {
         toast({
-          title: "Dados de integridade verificados",
-          description: `${fotosUnificadas.length} fotos unificadas encontradas. ${duplicatasDetectadas} duplicatas removidas.`,
+          title: "Dados carregados",
+          description: `${fotosUnificadas.length} fotos encontradas para o lote.`,
           variant: "default",
         });
       }

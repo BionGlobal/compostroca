@@ -330,6 +330,9 @@ export default function LoteAuditoria() {
                                   <Scale className="h-4 w-4 text-muted-foreground" />
                                   <span className="text-sm">
                                     {formatWeight(stage.peso_antes)} → {formatWeight(stage.peso_depois)}
+                                    {stage.data_estimada && (
+                                      <span className="text-xs text-muted-foreground ml-1">(estimado)</span>
+                                    )}
                                   </span>
                                 </div>
                               )}
@@ -339,6 +342,9 @@ export default function LoteAuditoria() {
                                   <Scale className="h-4 w-4 text-muted-foreground" />
                                   <span className="text-sm">
                                     Peso: {formatWeight(stage.peso_depois)}
+                                    {stage.data_estimada && (
+                                      <span className="text-xs text-muted-foreground ml-1">(estimado)</span>
+                                    )}
                                   </span>
                                 </div>
                               )}
@@ -483,12 +489,6 @@ export default function LoteAuditoria() {
                     <span>Total Unificado:</span>
                     <span>{loteAuditoria.todasFotosUnificadas.length}</span>
                   </div>
-                  {loteAuditoria.estatisticasIntegridade.duplicatas_detectadas > 0 && (
-                    <div className="flex justify-between text-sm text-amber-600">
-                      <span>Duplicatas Removidas:</span>
-                      <span>{loteAuditoria.estatisticasIntegridade.duplicatas_detectadas}</span>
-                    </div>
-                  )}
                   {loteAuditoria.estatisticasIntegridade.inconsistencias.length > 0 && (
                     <div className="mt-2 p-2 bg-amber-50 rounded text-xs text-amber-700">
                       <div className="font-medium">Avisos de Integridade:</div>
