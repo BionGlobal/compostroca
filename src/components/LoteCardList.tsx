@@ -26,7 +26,7 @@ interface LoteCardListProps {
 export const LoteCardList = ({ lotes, loading }: LoteCardListProps) => {
   if (loading) {
     return (
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
         {Array.from({ length: 10 }).map((_, i) => (
           <div key={i} className="p-4 border rounded-lg space-y-3">
             <div className="flex justify-between items-start">
@@ -64,7 +64,7 @@ export const LoteCardList = ({ lotes, loading }: LoteCardListProps) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
       {lotes.map((lote) => (
         <LoteAuditoriaCard key={lote.id} lote={lote} />
       ))}

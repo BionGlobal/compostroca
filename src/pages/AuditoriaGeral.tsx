@@ -56,13 +56,16 @@ export default function AuditoriaGeral() {
       <div className="border-b bg-card/50">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-4">
-            <div className="flex items-center justify-center space-x-2">
-              <Shield className="h-8 w-8 text-primary" />
-              <h1 className="text-3xl font-bold">Portal de Auditoria Geral</h1>
+            <div className="flex flex-col items-center space-y-4">
+              <img 
+                src="/lovable-uploads/compostroca-app-logo.png" 
+                alt="Compostroca" 
+                className="h-16 w-auto"
+              />
+              <h1 className="text-3xl font-bold">Portal de Transparência Compostroca</h1>
             </div>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Transparência total do projeto Compostroca. Verifique a integridade e rastreabilidade 
-              de todos os lotes de compostagem em todas as nossas unidades.
+              Verifique a integridade e rastreabilidade da produção e impacto dos lotes de composto finalizados.
             </p>
             
             {/* Stats Overview */}
@@ -174,7 +177,7 @@ export default function AuditoriaGeral() {
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-muted-foreground">
                       {searchTerm || Object.values(filters).some(v => v) ? 
-                        'Resultados da busca' : 'Últimos 10 lotes finalizados'}
+                        'Resultados da busca' : 'Últimos Lotes'}
                     </span>
                     {totalCount > 0 && (
                       <Badge variant="secondary">
@@ -239,15 +242,14 @@ export default function AuditoriaGeral() {
       <footer className="border-t bg-card/50 py-6">
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center space-x-4">
-            <img 
-              src="/lovable-uploads/powered-by-bion.png" 
-              alt="Powered by Bion" 
-              className="h-16 opacity-80 hover:opacity-100 transition-opacity"
-            />
+            <a href="https://www.bion.global" target="_blank" rel="noopener noreferrer">
+              <img 
+                src="/lovable-uploads/powered-by-bion.png" 
+                alt="Powered by Bion" 
+                className="h-12 opacity-80 hover:opacity-100 transition-opacity"
+              />
+            </a>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Sistema de auditoria e transparência do projeto Compostroca
-          </p>
         </div>
       </footer>
     </div>
