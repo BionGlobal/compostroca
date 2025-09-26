@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { PublicFotosGalleryModal } from '@/components/PublicFotosGalleryModal';
+import { FotosGalleryModal } from '@/components/FotosGalleryModal';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -101,11 +101,12 @@ export const PublicFotosLote = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/30">
-      <PublicFotosGalleryModal
+      <FotosGalleryModal
         isOpen={modalOpen}
         onClose={handleModalClose}
-        fotos={fotos}
+        loteId={loteId!}
         title={`Fotos do Lote ${lote.codigo}`}
+        isLoteProng={true}
       />
       
       {/* Fallback se modal não abrir */}

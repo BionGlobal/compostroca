@@ -161,7 +161,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+      <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 sm:max-w-4xl sm:max-h-[90vh]">
         <DialogHeader className="p-4 pb-2 border-b">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">{title}</h3>
@@ -260,7 +260,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
           ) : (
             /* Vista individual */
             <>
-              <div className="relative h-[60vh] bg-muted flex items-center justify-center">
+              <div className="relative min-h-[40vh] max-h-[70vh] h-[60vh] sm:h-[60vh] bg-muted flex items-center justify-center overflow-hidden">
                 {imageError ? (
                   <div className="flex flex-col items-center text-center p-4">
                     <AlertCircle className="h-12 w-12 text-destructive mb-2" />
@@ -287,7 +287,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                     <img
                       src={currentFoto.foto_url}
                       alt={`Foto ${TIPO_FOTO_LABELS[currentFoto.tipo_foto as keyof typeof TIPO_FOTO_LABELS]}`}
-                      className="max-h-full max-w-full object-contain"
+                      className="max-h-full max-w-full object-contain w-full h-full"
                       onLoad={handleImageLoad}
                       onError={handleImageError}
                       style={{ display: imageError ? 'none' : 'block' }}
@@ -303,9 +303,9 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                       size="icon"
                       onClick={prevFoto}
                       disabled={currentIndex === 0}
-                      className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white w-12 h-12"
+                      className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white w-10 h-10 sm:w-12 sm:h-12 z-10"
                     >
-                      <ChevronLeft className="h-5 w-5" />
+                      <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                     </Button>
                     
                     <Button
@@ -313,9 +313,9 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                       size="icon"
                       onClick={nextFoto}
                       disabled={currentIndex === filteredFotos.length - 1}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white w-12 h-12"
+                      className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white w-10 h-10 sm:w-12 sm:h-12 z-10"
                     >
-                      <ChevronRight className="h-5 w-5" />
+                      <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
                     </Button>
                   </>
                 )}

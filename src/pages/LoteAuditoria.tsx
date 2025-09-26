@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MapPin, Calendar, Weight, Leaf, FileText, Download, QrCode, Shield, Hash, MessageSquare, Scale, User, Camera, Package, ArrowRight, CheckCircle, RefreshCw, Clock, Play } from 'lucide-react';
 import { useState } from 'react';
-import { PublicFotosGalleryModal } from '@/components/PublicFotosGalleryModal';
+import { FotosGalleryModal } from '@/components/FotosGalleryModal';
 import { formatWeight, getOrganizationName } from '@/lib/organizationUtils';
 import { formatHashDisplay } from '@/lib/hashUtils';
 
@@ -490,16 +490,12 @@ export default function LoteAuditoria() {
       </main>
 
       {/* Modal de Fotos */}
-      <PublicFotosGalleryModal
+      <FotosGalleryModal
         isOpen={showPhotos}
         onClose={() => setShowPhotos(false)}
-        fotos={loteAuditoria.todasFotosUnificadas.map(foto => ({
-          id: foto.id,
-          foto_url: foto.foto_url,
-          tipo_foto: foto.tipo_foto,
-          created_at: foto.created_at
-        }))}
+        loteId={loteAuditoria.id}
         title="Documentação Fotográfica do Lote"
+        isLoteProng={true}
       />
       {/* Footer */}
       <footer className="border-t bg-card/50 py-6">
