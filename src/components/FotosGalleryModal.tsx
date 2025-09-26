@@ -161,20 +161,21 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] max-h-[90vh] sm:max-h-[95vh] p-0 sm:max-w-4xl">
-        <DialogHeader className="p-2 pb-1 sm:p-4 sm:pb-2 border-b">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm sm:text-lg font-semibold truncate pr-2">{title}</h3>
-            <div className="flex items-center gap-1 sm:gap-2">
+      <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] max-h-[95vh] p-0 flex flex-col sm:max-w-5xl sm:h-auto sm:max-h-[90vh]">
+        {/* Header com controles - fixo no topo */}
+        <div className="flex-shrink-0 p-3 sm:p-4 border-b bg-background">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-base sm:text-lg font-semibold truncate flex-1 pr-2">{title}</h3>
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               {viewMode === 'single' && (
-                <Badge variant="secondary" className="text-xs">
-                  {currentIndex + 1} de {filteredFotos.length}
+                <Badge variant="secondary" className="text-xs px-2 py-1">
+                  {currentIndex + 1}/{filteredFotos.length}
                 </Badge>
               )}
               {viewMode === 'single' && (
-                <Button variant="outline" size="sm" onClick={handleDownload} className="px-2 sm:px-3">
-                  <Download className="h-3 w-3 sm:mr-1" />
-                  <span className="hidden sm:inline">Baixar</span>
+                <Button variant="outline" size="sm" onClick={handleDownload} className="h-8 w-8 p-0 sm:w-auto sm:px-3">
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline sm:ml-1">Baixar</span>
                 </Button>
               )}
               <Button 
@@ -182,28 +183,30 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                 size="sm" 
                 onClick={handleDownloadZip}
                 disabled={zipLoading}
-                className="px-2 sm:px-3"
+                className="h-8 w-8 p-0 sm:w-auto sm:px-3"
               >
-                <Archive className="h-3 w-3 sm:mr-1" />
-                <span className="hidden sm:inline">{zipLoading ? 'Gerando...' : 'ZIP'}</span>
+                <Archive className="h-4 w-4" />
+                <span className="hidden sm:inline sm:ml-1">{zipLoading ? 'Gerando...' : 'ZIP'}</span>
               </Button>
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={() => setViewMode(viewMode === 'grid' ? 'single' : 'grid')}
-                className="px-2 sm:px-3"
+                className="h-8 w-8 p-0 sm:w-auto sm:px-3"
               >
-                {viewMode === 'grid' ? <Eye className="h-3 w-3" /> : <Grid className="h-3 w-3" />}
+                {viewMode === 'grid' ? <Eye className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
+                <span className="hidden sm:inline sm:ml-1">{viewMode === 'grid' ? 'Visualizar' : 'Grade'}</span>
               </Button>
             </div>
           </div>
-        </DialogHeader>
+        </div>
 
-        <div className="relative flex-1">
+        {/* Conteúdo principal - scrollável */}
+        <div className="flex-1 overflow-hidden">
           {viewMode === 'grid' ? (
-            /* Vista em grade - Mobile First */
-            <div className="p-4 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            /* Vista em grade */
+            <div className="h-full overflow-y-auto p-3 sm:p-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
                 {filteredFotos.map((foto, index) => (
                   <div
                     key={foto.id}
@@ -220,8 +223,8 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                       }}
                     />
                     
-                    {/* Overlay com informações */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    {/* Overlay com informações - apenas hover em desktop */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
                       <div className="absolute bottom-0 left-0 right-0 p-2 text-white">
                         <div className="text-xs font-medium mb-1 truncate">
                           {TIPO_FOTO_LABELS[foto.tipo_foto as keyof typeof TIPO_FOTO_LABELS] || foto.tipo_foto}
@@ -249,9 +252,9 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                       </div>
                     </div>
                     
-                    {/* Badge de tipo de foto */}
-                    <div className="absolute top-2 left-2">
-                      <Badge variant="secondary" className="text-xs px-2 py-1 bg-white/90 text-black">
+                    {/* Badge de número - sempre visível */}
+                    <div className="absolute top-1 left-1 sm:top-2 sm:left-2">
+                      <Badge variant="secondary" className="text-xs px-1.5 py-0.5 sm:px-2 sm:py-1 bg-white/95 text-black font-medium">
                         {index + 1}
                       </Badge>
                     </div>
@@ -260,9 +263,10 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
               </div>
             </div>
           ) : (
-            /* Vista individual */
-            <>
-              <div className="relative min-h-[35vh] max-h-[50vh] h-[45vh] sm:min-h-[40vh] sm:max-h-[65vh] sm:h-[55vh] bg-muted flex items-center justify-center overflow-hidden">
+            /* Vista individual - layout mobile otimizado */
+            <div className="h-full flex flex-col">
+              {/* Container da imagem principal */}
+              <div className="relative flex-1 bg-muted flex items-center justify-center min-h-0">
                 {imageError ? (
                   <div className="flex flex-col items-center text-center p-4">
                     <AlertCircle className="h-12 w-12 text-destructive mb-2" />
@@ -289,7 +293,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                     <img
                       src={currentFoto.foto_url}
                       alt={`Foto ${TIPO_FOTO_LABELS[currentFoto.tipo_foto as keyof typeof TIPO_FOTO_LABELS]}`}
-                      className="max-h-full max-w-full object-contain w-full h-full"
+                      className="max-h-full max-w-full object-contain"
                       onLoad={handleImageLoad}
                       onError={handleImageError}
                       style={{ display: imageError ? 'none' : 'block' }}
@@ -297,7 +301,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                   </>
                 )}
 
-                {/* Controles de navegação */}
+                {/* Controles de navegação - mobile otimizado */}
                 {filteredFotos.length > 1 && (
                   <>
                     <Button
@@ -305,9 +309,9 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                       size="icon"
                       onClick={prevFoto}
                       disabled={currentIndex === 0}
-                      className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white w-10 h-10 sm:w-12 sm:h-12 z-10"
+                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/95 hover:bg-white border border-white/20 h-10 w-10 rounded-full shadow-lg"
                     >
-                      <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <ChevronLeft className="h-5 w-5" />
                     </Button>
                     
                     <Button
@@ -315,25 +319,25 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                       size="icon"
                       onClick={nextFoto}
                       disabled={currentIndex === filteredFotos.length - 1}
-                      className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white w-10 h-10 sm:w-12 sm:h-12 z-10"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/95 hover:bg-white border border-white/20 h-10 w-10 rounded-full shadow-lg"
                     >
-                      <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <ChevronRight className="h-5 w-5" />
                     </Button>
                   </>
                 )}
               </div>
 
-              {/* Informações da foto */}
-              <div className="p-2 sm:p-4 border-t bg-background">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <Badge variant="outline" className="flex items-center gap-1 text-xs">
-                      <Camera className="h-2 w-2 sm:h-3 sm:w-3" />
-                      <span className="truncate max-w-[120px] sm:max-w-none">
+              {/* Informações da foto - compactas */}
+              <div className="flex-shrink-0 p-3 border-t bg-background">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <Badge variant="outline" className="inline-flex items-center gap-1 text-xs mb-1">
+                      <Camera className="h-3 w-3" />
+                      <span className="truncate">
                         {TIPO_FOTO_LABELS[currentFoto.tipo_foto as keyof typeof TIPO_FOTO_LABELS] || currentFoto.tipo_foto}
                       </span>
                     </Badge>
-                    {/* Exibir dados baseado no tipo de foto */}
+                    {/* Dados da foto baseado no tipo */}
                     {isLoteProng && 'entrega_data' in currentFoto && currentFoto.entrega_data && (
                       <p className="text-xs text-muted-foreground truncate">
                         Entrega: {currentFoto.entrega_data.peso.toFixed(1)}kg - {currentFoto.entrega_data.voluntario.nome}
@@ -350,24 +354,22 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-2 w-2 sm:h-3 sm:w-3" />
-                      <span className="hidden sm:inline">
-                        {format(new Date(currentFoto.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                      </span>
-                      <span className="sm:hidden">
-                        {format(new Date(currentFoto.created_at), 'dd/MM/yy', { locale: ptBR })}
-                      </span>
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    <span className="hidden sm:inline">
+                      {format(new Date(currentFoto.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                    </span>
+                    <span className="sm:hidden">
+                      {format(new Date(currentFoto.created_at), 'dd/MM', { locale: ptBR })}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Miniaturas */}
+              {/* Miniaturas - compactas no mobile */}
               {filteredFotos.length > 1 && (
-                <div className="p-2 sm:p-4 border-t bg-background">
-                  <div className="flex gap-1 sm:gap-2 overflow-x-auto pb-1 sm:pb-2">
+                <div className="flex-shrink-0 p-2 sm:p-3 border-t bg-background/50">
+                  <div className="flex gap-1 sm:gap-2 overflow-x-auto scrollbar-thin">
                     {filteredFotos.map((foto, index) => (
                       <button
                         key={foto.id}
@@ -378,14 +380,14 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                         }}
                         className={`flex-shrink-0 relative border-2 rounded overflow-hidden transition-all ${
                           index === currentIndex 
-                            ? 'border-primary' 
+                            ? 'border-primary ring-1 ring-primary/20' 
                             : 'border-border hover:border-primary/50'
                         }`}
                       >
                         <img
                           src={foto.foto_url}
                           alt={`Miniatura ${index + 1}`}
-                          className="w-10 h-10 sm:w-16 sm:h-16 object-cover"
+                          className="w-12 h-12 sm:w-16 sm:h-16 object-cover"
                           onError={(e) => {
                             console.warn(`Erro ao carregar miniatura ${index}:`, foto.foto_url);
                             e.currentTarget.style.opacity = '0.5';
@@ -396,7 +398,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </DialogContent>
