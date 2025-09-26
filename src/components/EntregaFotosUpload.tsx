@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Camera, RotateCcw, Check, X, AlertTriangle, Upload, ImageIcon } from 'lucide-react';
+import { Camera, RotateCcw, Check, X, AlertTriangle, Upload, ImageIcon, RotateCw } from 'lucide-react';
 import { useEntregaFotos } from '@/hooks/useEntregaFotos';
 import { useIOSPermissions } from '@/hooks/useIOSPermissions';
 import { cn } from '@/lib/utils';
@@ -46,6 +46,7 @@ export const EntregaFotosUpload: React.FC<EntregaFotosUploadProps> = ({
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [useFrontCamera, setUseFrontCamera] = useState(false);
 
   const { uploadFoto, uploading } = useEntregaFotos(entregaId);
   const { 
@@ -73,8 +74,8 @@ export const EntregaFotosUpload: React.FC<EntregaFotosUploadProps> = ({
         return;
       }
       
-      console.log('📷 Solicitando acesso à câmera...');
-      const mediaStream = await requestCameraAccess();
+      console.log('📷 Solicitando acesso à câmera...', useFrontCamera ? 'frontal' : 'traseira');
+      const mediaStream = await requestCameraAccess(0, useFrontCamera);
       
       if (mediaStream) {
         console.log('📷 Stream obtida com sucesso');
@@ -318,6 +319,17 @@ export const EntregaFotosUpload: React.FC<EntregaFotosUploadProps> = ({
     onCancel();
   };
 
+  const switchCamera = async () => {
+    console.log('📷 Trocando câmera...');
+    setUseFrontCamera(!useFrontCamera);
+    setCameraActive(false);
+    setCameraError(null);
+    
+    setTimeout(() => {
+      startCamera();
+    }, 100);
+  };
+
   const switchToCamera = () => {
     console.log('📷 Mudando para modo câmera...');
     setCaptureMode('camera');
@@ -406,7 +418,7 @@ export const EntregaFotosUpload: React.FC<EntregaFotosUploadProps> = ({
           </Button>
         </div>
 
-        <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+        <div className="relative aspect-[3/4] bg-black rounded-lg overflow-hidden">
           {captureMode === 'camera' ? (
             // Camera Mode
             cameraError ? (
@@ -452,6 +464,17 @@ export const EntregaFotosUpload: React.FC<EntregaFotosUploadProps> = ({
                   muted
                   className={`w-full h-full object-cover ${!cameraActive ? 'opacity-0' : 'opacity-100'} transition-opacity duration-500`}
                 />
+                
+                {/* Camera Switch Button */}
+                {cameraActive && !capturedImage && (
+                  <button
+                    onClick={switchCamera}
+                    className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/70 transition-colors"
+                    title={useFrontCamera ? "Trocar para câmera traseira" : "Trocar para câmera frontal"}
+                  >
+                    <RotateCw className="h-4 w-4" />
+                  </button>
+                )}
               </>
             ) : (
               <img
