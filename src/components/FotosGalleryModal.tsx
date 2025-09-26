@@ -164,7 +164,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
       <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] max-h-[95vh] p-0 flex flex-col sm:max-w-5xl sm:h-auto sm:max-h-[90vh]">
         {/* Header com controles - fixo no topo */}
         <div className="flex-shrink-0 p-3 sm:p-4 border-b bg-background">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 mr-12 sm:mr-16">
             <h3 className="text-base sm:text-lg font-semibold truncate flex-1 pr-2">{title}</h3>
             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               {viewMode === 'single' && (
