@@ -161,20 +161,20 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 sm:max-w-4xl sm:max-h-[90vh]">
-        <DialogHeader className="p-4 pb-2 border-b">
+      <DialogContent className="max-w-[95vw] max-h-[90vh] sm:max-h-[95vh] p-0 sm:max-w-4xl">
+        <DialogHeader className="p-2 pb-1 sm:p-4 sm:pb-2 border-b">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">{title}</h3>
-            <div className="flex items-center gap-2">
+            <h3 className="text-sm sm:text-lg font-semibold truncate pr-2">{title}</h3>
+            <div className="flex items-center gap-1 sm:gap-2">
               {viewMode === 'single' && (
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="text-xs">
                   {currentIndex + 1} de {filteredFotos.length}
                 </Badge>
               )}
               {viewMode === 'single' && (
-                <Button variant="outline" size="sm" onClick={handleDownload}>
-                  <Download className="h-3 w-3 mr-1" />
-                  Baixar
+                <Button variant="outline" size="sm" onClick={handleDownload} className="px-2 sm:px-3">
+                  <Download className="h-3 w-3 sm:mr-1" />
+                  <span className="hidden sm:inline">Baixar</span>
                 </Button>
               )}
               <Button 
@@ -182,14 +182,16 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                 size="sm" 
                 onClick={handleDownloadZip}
                 disabled={zipLoading}
+                className="px-2 sm:px-3"
               >
-                <Archive className="h-3 w-3 mr-1" />
-                {zipLoading ? 'Gerando...' : 'Baixar ZIP'}
+                <Archive className="h-3 w-3 sm:mr-1" />
+                <span className="hidden sm:inline">{zipLoading ? 'Gerando...' : 'ZIP'}</span>
               </Button>
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={() => setViewMode(viewMode === 'grid' ? 'single' : 'grid')}
+                className="px-2 sm:px-3"
               >
                 {viewMode === 'grid' ? <Eye className="h-3 w-3" /> : <Grid className="h-3 w-3" />}
               </Button>
@@ -260,7 +262,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
           ) : (
             /* Vista individual */
             <>
-              <div className="relative min-h-[40vh] max-h-[70vh] h-[60vh] sm:h-[60vh] bg-muted flex items-center justify-center overflow-hidden">
+              <div className="relative min-h-[35vh] max-h-[50vh] h-[45vh] sm:min-h-[40vh] sm:max-h-[65vh] sm:h-[55vh] bg-muted flex items-center justify-center overflow-hidden">
                 {imageError ? (
                   <div className="flex flex-col items-center text-center p-4">
                     <AlertCircle className="h-12 w-12 text-destructive mb-2" />
@@ -322,34 +324,41 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
               </div>
 
               {/* Informações da foto */}
-              <div className="p-4 border-t bg-background">
+              <div className="p-2 sm:p-4 border-t bg-background">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      <Camera className="h-3 w-3" />
-                      {TIPO_FOTO_LABELS[currentFoto.tipo_foto as keyof typeof TIPO_FOTO_LABELS] || currentFoto.tipo_foto}
+                    <Badge variant="outline" className="flex items-center gap-1 text-xs">
+                      <Camera className="h-2 w-2 sm:h-3 sm:w-3" />
+                      <span className="truncate max-w-[120px] sm:max-w-none">
+                        {TIPO_FOTO_LABELS[currentFoto.tipo_foto as keyof typeof TIPO_FOTO_LABELS] || currentFoto.tipo_foto}
+                      </span>
                     </Badge>
                     {/* Exibir dados baseado no tipo de foto */}
                     {isLoteProng && 'entrega_data' in currentFoto && currentFoto.entrega_data && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground truncate">
                         Entrega: {currentFoto.entrega_data.peso.toFixed(1)}kg - {currentFoto.entrega_data.voluntario.nome}
                       </p>
                     )}
                     {isLoteProng && 'manejo_data' in currentFoto && currentFoto.manejo_data && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground truncate">
                         Manejo: Caixa {currentFoto.manejo_data.caixa_origem} → {currentFoto.manejo_data.caixa_destino || 'Final'}
                       </p>
                     )}
                     {!isLoteProng && (currentFoto as any).entregas?.voluntarios && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground truncate">
                         Balde #{(currentFoto as any).entregas.voluntarios.numero_balde} - {(currentFoto as any).entregas.peso ? `${(currentFoto as any).entregas.peso.toFixed(1)}kg` : 'Peso não informado'}
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {format(new Date(currentFoto.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                      <Calendar className="h-2 w-2 sm:h-3 sm:w-3" />
+                      <span className="hidden sm:inline">
+                        {format(new Date(currentFoto.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                      </span>
+                      <span className="sm:hidden">
+                        {format(new Date(currentFoto.created_at), 'dd/MM/yy', { locale: ptBR })}
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -357,8 +366,8 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
 
               {/* Miniaturas */}
               {filteredFotos.length > 1 && (
-                <div className="p-4 border-t bg-background">
-                  <div className="flex gap-2 overflow-x-auto pb-2">
+                <div className="p-2 sm:p-4 border-t bg-background">
+                  <div className="flex gap-1 sm:gap-2 overflow-x-auto pb-1 sm:pb-2">
                     {filteredFotos.map((foto, index) => (
                       <button
                         key={foto.id}
@@ -376,7 +385,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
                         <img
                           src={foto.foto_url}
                           alt={`Miniatura ${index + 1}`}
-                          className="w-16 h-16 object-cover"
+                          className="w-10 h-10 sm:w-16 sm:h-16 object-cover"
                           onError={(e) => {
                             console.warn(`Erro ao carregar miniatura ${index}:`, foto.foto_url);
                             e.currentTarget.style.opacity = '0.5';
