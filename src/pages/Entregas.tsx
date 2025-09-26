@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { MapPin, Star, Plus, Calendar, Camera, Eye, User, Clock, Package, Edit } from 'lucide-react';
+import { MapPin, Star, Plus, Calendar, Camera, Eye, User, Clock, Package, Edit, Trash2 } from 'lucide-react';
 import { useVoluntarios } from '@/hooks/useVoluntarios';
 import { useEntregas, Entrega } from '@/hooks/useEntregas';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,6 +23,7 @@ import { useLotes } from '@/hooks/useLotes';
 import { formatPesoDisplay } from '@/lib/organizationUtils';
 import { useIOSPermissions } from '@/hooks/useIOSPermissions';
 import { IOSPermissionsAlert } from '@/components/IOSPermissionsAlert';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const Entregas = () => {
   const [selectedVoluntario, setSelectedVoluntario] = useState<string>('');
@@ -33,9 +34,16 @@ const Entregas = () => {
   const [tempEntregaId, setTempEntregaId] = useState<string | null>(null);
   const [editingEntrega, setEditingEntrega] = useState<Entrega | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  
+  // Delete confirmation states
+  const [deletingEntrega, setDeletingEntrega] = useState<Entrega | null>(null);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { voluntarios } = useVoluntarios();
-  const { entregas, refetch: refetchEntregas } = useEntregas();
+  const { entregas, deleteEntrega, refetch: refetchEntregas } = useEntregas();
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const { loteAtivoCaixa01, atualizarPesoLote } = useLotes();
@@ -193,6 +201,37 @@ const Entregas = () => {
 
   const handleEditSuccess = () => {
     refetchEntregas();
+  };
+
+  const handleDeleteClick = (entrega: Entrega) => {
+    setDeletingEntrega(entrega);
+    setShowDeleteWarning(true);
+  };
+
+  const handleDeleteWarningConfirm = () => {
+    setShowDeleteWarning(false);
+    setShowDeleteConfirmation(true);
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteWarning(false);
+    setShowDeleteConfirmation(false);
+    setDeletingEntrega(null);
+    setDeleteConfirmText('');
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingEntrega || deleteConfirmText !== 'DELETAR') return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteEntrega(deletingEntrega.id);
+      handleDeleteCancel();
+    } catch (error) {
+      // Error is handled in the hook
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (showCamera && tempEntregaId) {
@@ -433,15 +472,26 @@ const Entregas = () => {
                     </EntregaFotosGaleria>
                     
                     {isSuperAdmin && (
-                      <Button
-                        variant="outline"
-                        size="default"
-                        className="w-full sm:w-auto px-6"
-                        onClick={() => handleEditEntrega(entrega)}
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar
-                      </Button>
+                      <>
+                        <Button
+                          variant="outline"
+                          size="default"
+                          className="w-full sm:w-auto px-6"
+                          onClick={() => handleEditEntrega(entrega)}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="default"
+                          className="w-full sm:w-auto px-6"
+                          onClick={() => handleDeleteClick(entrega)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Deletar
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -460,6 +510,88 @@ const Entregas = () => {
         }}
         onSuccess={handleEditSuccess}
       />
+
+      {/* Delete Warning Modal - Step 1 */}
+      <AlertDialog open={showDeleteWarning} onOpenChange={setShowDeleteWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Deletar Entrega
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                <strong>Atenção!</strong> Você está prestes a deletar permanentemente esta entrega:
+              </p>
+              {deletingEntrega && (
+                <div className="bg-muted p-3 rounded-lg space-y-1">
+                  <p><strong>Voluntário:</strong> {voluntarios.find(v => v.id === deletingEntrega.voluntario_id)?.nome || 'N/A'}</p>
+                  <p><strong>Peso:</strong> {formatPesoDisplay(Number(deletingEntrega.peso))}</p>
+                  <p><strong>Data:</strong> {new Date(deletingEntrega.created_at).toLocaleString('pt-BR')}</p>
+                  <p><strong>Lote:</strong> {deletingEntrega.lote_codigo || 'N/A'}</p>
+                </div>
+              )}
+              <p className="text-destructive font-medium">
+                ⚠️ Esta ação é irreversível e irá:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>Remover permanentemente a entrega do sistema</li>
+                <li>Recalcular automaticamente o peso total da Caixa 1</li>
+                <li>Manter as fotos da entrega para auditoria</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleDeleteCancel}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteWarningConfirm}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Continuar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Modal - Step 2 */}
+      <AlertDialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Confirmação Final
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              <p>
+                Para confirmar a exclusão, digite <strong>DELETAR</strong> no campo abaixo:
+              </p>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Digite DELETAR para confirmar"
+                className="text-center font-mono"
+              />
+              <p className="text-xs text-muted-foreground">
+                Esta é sua última chance de cancelar esta ação.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleDeleteCancel}>
+              Voltar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              disabled={deleteConfirmText !== 'DELETAR' || isDeleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deletando...' : 'Confirmar Exclusão'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

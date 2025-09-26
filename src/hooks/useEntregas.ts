@@ -85,6 +85,33 @@ export const useEntregas = (voluntarioId?: string) => {
     }
   }, [voluntarioId, user]);
 
+  const deleteEntrega = async (entregaId: string) => {
+    try {
+      const { error } = await supabase
+        .from('entregas')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', entregaId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Entrega deletada com sucesso",
+      });
+
+      // Recarregar entregas após exclusão
+      await fetchEntregas();
+    } catch (error) {
+      console.error('Erro ao deletar entrega:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível deletar a entrega",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   return {
     entregas,
     loading,
@@ -92,6 +119,7 @@ export const useEntregas = (voluntarioId?: string) => {
     getCountByVoluntario,
     hasDeliveredToday,
     hasDeliveredToCurrentLot,
+    deleteEntrega,
     refetch: fetchEntregas,
   };
 };
