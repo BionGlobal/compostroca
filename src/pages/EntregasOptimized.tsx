@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Star, Camera, Eye, Clock, Edit, AlertTriangle, Scale } from 'lucide-react';
+import { MapPin, Star, Camera, Eye, Clock, Edit, AlertTriangle, Scale, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,8 +20,19 @@ import { formatPesoDisplay } from '@/lib/organizationUtils';
 import { useIOSPermissions } from '@/hooks/useIOSPermissions';
 import { IOSPermissionsAlert } from '@/components/IOSPermissionsAlert';
 import { useOrganizationData } from '@/hooks/useOrganizationData';
+import { useEntregas } from '@/hooks/useEntregas';
 import { VoluntarioSkeletonLoader, LoteSkeletonLoader, EntregaSkeletonLoader } from '@/components/ui/skeleton-loader';
 import type { Entrega } from '@/hooks/useOrganizationData';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const EntregasOptimized = () => {
   const [selectedVoluntario, setSelectedVoluntario] = useState<string>('');
@@ -54,6 +65,13 @@ const EntregasOptimized = () => {
   const [tempEntregaId, setTempEntregaId] = useState<string | null>(null);
   const [editingEntrega, setEditingEntrega] = useState<Entrega | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  
+  // Estados para deletar entregas
+  const [deletingEntrega, setDeletingEntrega] = useState<Entrega | null>(null);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { 
     voluntarios, 
@@ -62,6 +80,8 @@ const EntregasOptimized = () => {
     loading: dataLoading,
     refetch 
   } = useOrganizationData();
+  
+  const { deleteEntrega } = useEntregas();
   
   const { user, profile } = useAuth();
   const { toast } = useToast();
@@ -296,6 +316,45 @@ const EntregasOptimized = () => {
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   };
 
+  // Funções para deletar entregas
+  const handleDeleteClick = (entrega: Entrega) => {
+    setDeletingEntrega(entrega);
+    setShowDeleteWarning(true);
+  };
+
+  const handleDeleteWarningConfirm = () => {
+    setShowDeleteWarning(false);
+    setShowDeleteConfirmation(true);
+  };
+
+  const handleDeleteCancel = () => {
+    setDeletingEntrega(null);
+    setShowDeleteWarning(false);
+    setShowDeleteConfirmation(false);
+    setDeleteConfirmText('');
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingEntrega || deleteConfirmText !== 'DELETAR') return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteEntrega(deletingEntrega.id);
+      
+      toast({
+        title: "Entrega Deletada",
+        description: "A entrega foi removida e o peso do lote foi recalculado.",
+      });
+      
+      handleDeleteCancel();
+      refetch();
+    } catch (error) {
+      console.error('Erro ao deletar entrega:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (showCamera && tempEntregaId) {
     return (
       <div className="p-4">
@@ -417,7 +476,10 @@ const EntregasOptimized = () => {
                           <Button variant="outline" size="sm" className="w-full sm:w-auto"><Eye className="h-3 w-3 mr-1" />Ver Fotos</Button>
                         </EntregaFotosGaleria>
                         {isSuperAdmin && (
-                          <Button variant="outline" size="sm" onClick={() => handleEditEntrega(entrega)} className="w-full sm:w-auto"><Edit className="h-3 w-3 mr-1" />Editar</Button>
+                          <>
+                            <Button variant="outline" size="sm" onClick={() => handleEditEntrega(entrega)} className="w-full sm:w-auto"><Edit className="h-3 w-3 mr-1" />Editar</Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(entrega)} className="w-full sm:w-auto"><Trash2 className="h-3 w-3 mr-1" />Deletar</Button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -432,6 +494,77 @@ const EntregasOptimized = () => {
       {editingEntrega && (
         <EditEntregaModal entrega={editingEntrega} isOpen={showEditModal} onClose={() => setShowEditModal(false)} onSuccess={handleEditSuccess} />
       )}
+
+      {/* Modal de Aviso - Etapa 1 */}
+      <AlertDialog open={showDeleteWarning} onOpenChange={setShowDeleteWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Confirmar Exclusão de Entrega
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                <strong>ATENÇÃO:</strong> Esta ação é irreversível e terá as seguintes consequências:
+              </p>
+              <div className="bg-muted p-3 rounded-lg">
+                <p><strong>Voluntário:</strong> {deletingEntrega && voluntarios.find(v => v.id === deletingEntrega.voluntario_id)?.nome}</p>
+                <p><strong>Peso:</strong> {deletingEntrega && formatPesoDisplay(Number(deletingEntrega.peso))}</p>
+                <p><strong>Data:</strong> {deletingEntrega && new Date(deletingEntrega.created_at).toLocaleString('pt-BR')}</p>
+              </div>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>A entrega será removida permanentemente do sistema</li>
+                <li>O peso total da caixa será recalculado automaticamente</li>
+                <li>As fotos da entrega serão mantidas para auditoria</li>
+                <li>Esta ação não pode ser desfeita</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleDeleteCancel}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteWarningConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Continuar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Modal de Confirmação Final - Etapa 2 */}
+      <AlertDialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Confirmação Final
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              <p>Para confirmar a exclusão desta entrega, digite <strong>DELETAR</strong> no campo abaixo:</p>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Digite DELETAR para confirmar"
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground">
+                Esta confirmação garante que a ação não seja executada acidentalmente.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleDeleteCancel}>Voltar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              disabled={deleteConfirmText !== 'DELETAR' || isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deletando...' : 'Confirmar Exclusão'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       </div>
     </PageErrorBoundary>
   );
