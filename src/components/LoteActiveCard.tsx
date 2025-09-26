@@ -143,9 +143,12 @@ export const LoteActiveCard = () => {
                 <div className="flex items-center gap-2">
                   <Scale className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <span className="text-muted-foreground">Peso:</span>
+                    <span className="text-muted-foreground">Peso Entregas:</span>
                     <div className="font-medium">
                       {formatPesoDisplay(loteAtivoCaixa01.peso_atual)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      (+ {formatPesoDisplay(loteAtivoCaixa01.peso_atual * 0.35)} cepilho ao finalizar)
                     </div>
                   </div>
                 </div>

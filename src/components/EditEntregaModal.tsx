@@ -58,6 +58,40 @@ export const EditEntregaModal = ({ entrega, isOpen, onClose, onSuccess }: EditEn
 
       if (error) throw error;
 
+      // Após salvar a edição, verificar se precisa sincronizar o peso da caixa 1
+      if (entrega.lote_codigo) {
+        console.log('⚖️ Entrega editada - sincronizando peso da caixa 1...');
+        
+        // Buscar o lote relacionado para atualizar peso
+        const { data: lote, error: loteError } = await supabase
+          .from('lotes')
+          .select('id, caixa_atual')
+          .eq('codigo', entrega.lote_codigo)
+          .eq('caixa_atual', 1) // Apenas para caixa 1
+          .single();
+
+        if (!loteError && lote) {
+          // Recalcular peso total das entregas
+          const { data: entregas, error: entregasError } = await supabase
+            .from('entregas')
+            .select('peso')
+            .eq('lote_codigo', entrega.lote_codigo)
+            .is('deleted_at', null);
+
+          if (!entregasError && entregas) {
+            const pesoTotalEntregas = entregas.reduce((acc, e) => acc + Number(e.peso), 0);
+            
+            // Atualizar peso do lote apenas com soma das entregas (sem cepilho)
+            await supabase
+              .from('lotes')
+              .update({ peso_atual: pesoTotalEntregas })
+              .eq('id', lote.id);
+              
+            console.log('✅ Peso da caixa 1 sincronizado após edição');
+          }
+        }
+      }
+
       toast({
         title: "Sucesso",
         description: "Entrega atualizada com sucesso!",

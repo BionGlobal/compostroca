@@ -274,6 +274,7 @@ export const useLotes = () => {
 
       console.log('📊 Peso das entregas:', pesoEntregas, 'kg');
       console.log('📊 Peso inicial total (com cepilho):', pesoInicialTotal, 'kg');
+      console.log('🎯 Finalizando entregas: peso final da caixa 1 será', pesoInicialTotal, 'kg');
 
       const { error } = await supabase
         .from('lotes')
@@ -281,7 +282,7 @@ export const useLotes = () => {
           status: 'em_processamento',
           data_encerramento: new Date().toISOString(),
           peso_inicial: pesoInicialTotal,
-          peso_atual: pesoInicialTotal,
+          peso_atual: pesoInicialTotal, // Peso final com cepilho na caixa 1
         })
         .eq('id', loteId);
 
@@ -296,7 +297,7 @@ export const useLotes = () => {
       
       toast({
         title: "Sucesso",
-        description: `Entregas finalizadas! Lote transferido para a esteira com ${pesoInicialTotal.toFixed(1)}kg (incluindo cepilho).`,
+        description: `Entregas finalizadas! Caixa 1 fechada com ${pesoInicialTotal.toFixed(1)}kg (${pesoEntregas.toFixed(1)}kg de resíduos + ${(pesoEntregas * 0.35).toFixed(1)}kg de cepilho).`,
       });
 
       return true;

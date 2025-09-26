@@ -76,6 +76,43 @@ const EntregasOptimized = () => {
     });
   };
 
+  // Função para sincronizar peso da caixa 1 com soma das entregas em tempo real
+  const syncCaixa1Weight = async (loteId: string, loteCodigo: string) => {
+    try {
+      console.log('⚖️ Sincronizando peso da caixa 1 com entregas...');
+      
+      // Buscar todas as entregas do lote
+      const { data: entregas, error: entregasError } = await supabase
+        .from('entregas')
+        .select('peso')
+        .eq('lote_codigo', loteCodigo)
+        .is('deleted_at', null);
+
+      if (entregasError) {
+        console.error('❌ Erro ao buscar entregas:', entregasError);
+        return;
+      }
+
+      // Calcular peso total das entregas
+      const pesoTotalEntregas = entregas?.reduce((acc, entrega) => acc + Number(entrega.peso), 0) || 0;
+      console.log(`📊 Peso total das entregas: ${pesoTotalEntregas}kg`);
+
+      // Atualizar peso atual do lote (apenas soma das entregas - sem cepilho ainda)
+      const { error: updateError } = await supabase
+        .from('lotes')
+        .update({ peso_atual: pesoTotalEntregas })
+        .eq('id', loteId);
+
+      if (updateError) {
+        console.error('❌ Erro ao atualizar peso do lote:', updateError);
+      } else {
+        console.log('✅ Peso da caixa 1 sincronizado com sucesso');
+      }
+    } catch (error) {
+      console.error('❌ Erro na sincronização de peso:', error);
+    }
+  };
+
   const handleFazerFotos = async () => {
     // Validações básicas
     if (!selectedVoluntario || !peso || !user || qualidadeResiduo === 0) {
@@ -200,20 +237,9 @@ const EntregasOptimized = () => {
       // Fechar câmera primeiro
       setShowCamera(false);
       
-      // Atualizar peso do lote se necessário
-      if (loteAtivoCaixa01 && peso) {
-        const novoPeso = (loteAtivoCaixa01.peso_atual || 0) + parseFloat(peso);
-        console.log(`⚖️ Atualizando peso do lote: ${loteAtivoCaixa01.peso_atual} + ${peso} = ${novoPeso}`);
-        
-        const { error: pesoError } = await supabase
-          .from('lotes')
-          .update({ peso_atual: novoPeso })
-          .eq('id', loteAtivoCaixa01.id);
-          
-        if (pesoError) {
-          console.error('❌ Erro ao atualizar peso:', pesoError);
-          // Não bloquear o processo por isso
-        }
+      // Recalcular peso total das entregas em tempo real
+      if (loteAtivoCaixa01) {
+        await syncCaixa1Weight(loteAtivoCaixa01.id, loteAtivoCaixa01.codigo);
       }
       
       // Limpar estado temporário
@@ -265,7 +291,11 @@ const EntregasOptimized = () => {
     setShowEditModal(true);
   };
 
-  const handleEditSuccess = () => {
+  const handleEditSuccess = async () => {
+    // Após edição, sincronizar peso da caixa 1
+    if (loteAtivoCaixa01) {
+      await syncCaixa1Weight(loteAtivoCaixa01.id, loteAtivoCaixa01.codigo);
+    }
     refetch();
   };
 
