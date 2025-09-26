@@ -31,7 +31,7 @@ export const formatWeight = (weight: number): string => {
 };
 
 export const formatPesoDisplay = (weight: number): string => {
-  return `${weight.toFixed(3).replace('.', ',')} kg`;
+  return `${weight.toFixed(1).replace('.', ',')} kg`;
 };
 
 export const calculateWeightReduction = (initial: number, final: number): number => {

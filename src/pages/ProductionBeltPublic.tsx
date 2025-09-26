@@ -231,15 +231,19 @@ export default function ProductionBeltPublic() {
         <footer className="border-t bg-card/50 py-6">
           <div className="container mx-auto px-4 text-center">
             <div className="flex items-center justify-center space-x-4">
-              <img 
-                src="/lovable-uploads/powered-by-bion.png" 
-                alt="Powered by Bion" 
-                className="h-16 opacity-80 hover:opacity-100 transition-opacity"
-              />
+              <a 
+                href="https://www.bion.global" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="transition-all duration-300 hover:scale-105"
+              >
+                <img 
+                  src="/lovable-uploads/powered-by-bion.png" 
+                  alt="Powered by Bion" 
+                  className="h-12 opacity-80 hover:opacity-100 transition-opacity"
+                />
+              </a>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Esteira pública de produção - Sistema Compostroca
-            </p>
           </div>
         </footer>
       </main>
