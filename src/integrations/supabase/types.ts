@@ -618,6 +618,14 @@ export type Database = {
         Args: { user_id?: string }
         Returns: boolean
       }
+      generate_missing_hashes: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          hash_generated: string
+          lote_codigo: string
+          lote_id: string
+        }[]
+      }
       get_last_chain_hash: {
         Args: { unit_code: string }
         Returns: string
