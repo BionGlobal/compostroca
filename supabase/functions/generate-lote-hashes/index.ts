@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
         const voluntarios = [...new Set(entregas?.map(e => e.voluntario_id) || [])];
 
         // Buscar IDs das entregas
-        const entregasIds = entregas?.map(e => e.id) || [];
+        const entregasIds = entregas?.map((e: any) => e.id) || [];
 
         // Buscar fotos do lote
         const { data: fotos } = await supabase
@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: (error as Error).message || 'Erro desconhecido' 
       }),
       { 
         status: 500, 

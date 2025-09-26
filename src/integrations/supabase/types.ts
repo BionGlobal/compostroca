@@ -638,6 +638,23 @@ export type Database = {
           total_lotes: number
         }[]
       }
+      get_users_with_emails: {
+        Args: { status_filter: string }
+        Returns: {
+          approved_at: string
+          approved_by: string
+          authorized_units: string[]
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          organization_code: string
+          status: Database["public"]["Enums"]["approval_status"]
+          updated_at: string
+          user_id: string
+          user_role: Database["public"]["Enums"]["user_role_enum"]
+        }[]
+      }
       has_unit_access: {
         Args: { unit_code: string; user_id?: string }
         Returns: boolean

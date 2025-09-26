@@ -42,15 +42,25 @@ export const useUserManagement = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+        .rpc('get_users_with_emails', { status_filter: 'pending' });
 
       if (error) throw error;
       setPendingUsers(data || []);
     } catch (error) {
       console.error('Erro ao buscar usuários pendentes:', error);
+      // Fallback para query básica sem emails
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
+        
+        if (!error) setPendingUsers(data || []);
+      } catch (fallbackError) {
+        console.error('Erro no fallback:', fallbackError);
+      }
+      
       toast({
         title: "Erro",
         description: "Erro ao carregar usuários pendentes",
@@ -65,15 +75,25 @@ export const useUserManagement = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('status', 'approved')
-        .order('approved_at', { ascending: false });
+        .rpc('get_users_with_emails', { status_filter: 'approved' });
 
       if (error) throw error;
       setApprovedUsers(data || []);
     } catch (error) {
       console.error('Erro ao buscar usuários aprovados:', error);
+      // Fallback para query básica sem emails
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('status', 'approved')
+          .order('approved_at', { ascending: false });
+        
+        if (!error) setApprovedUsers(data || []);
+      } catch (fallbackError) {
+        console.error('Erro no fallback:', fallbackError);
+      }
+      
       toast({
         title: "Erro",
         description: "Erro ao carregar usuários aprovados",
