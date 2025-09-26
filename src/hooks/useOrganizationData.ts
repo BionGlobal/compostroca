@@ -161,6 +161,7 @@ export const useOrganizationData = () => {
           voluntario:voluntarios(nome, numero_balde)
         `)
         .eq('voluntarios.unidade', organizationCode)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(50);
 
