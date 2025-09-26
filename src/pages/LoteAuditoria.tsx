@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useLoteAuditoriaEnhanced } from '@/hooks/useLoteAuditoriaEnhanced';
 import { usePDFGenerator } from '@/hooks/usePDFGenerator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -84,6 +84,11 @@ export default function LoteAuditoria() {
             <p className="text-muted-foreground">
               O lote solicitado não foi encontrado ou ainda não foi finalizado.
             </p>
+            <div className="mt-4">
+              <Button asChild variant="outline">
+                <Link to="/lotes">Voltar aos Lotes</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -93,6 +98,9 @@ export default function LoteAuditoria() {
   const taxaReducao = loteAuditoria.peso_inicial && loteAuditoria.peso_final 
     ? ((loteAuditoria.peso_inicial - loteAuditoria.peso_final) / loteAuditoria.peso_inicial * 100)
     : 0;
+
+  // Check if data has been estimated/recovered
+  const hasEstimatedData = loteAuditoria.estatisticasIntegridade.inconsistencias.length > 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -131,6 +139,29 @@ export default function LoteAuditoria() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {/* Alert for estimated data */}
+        {hasEstimatedData && (
+          <div className="mb-6">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 dark:bg-amber-950/20">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center dark:bg-amber-900/30">
+                    <CheckCircle className="h-4 w-4 text-amber-600" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    Dados recuperados automaticamente
+                  </h3>
+                  <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                    Alguns dados deste lote foram estimados com base em padrões históricos para garantir a rastreabilidade completa. 
+                    {loteAuditoria.estatisticasIntegridade.inconsistencias.join(', ')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Informações Básicas */}
           <div className="lg:col-span-2 space-y-6">
@@ -446,9 +477,15 @@ export default function LoteAuditoria() {
                 </div>
                 <div>
                   <span className="text-sm text-muted-foreground">Hash de Integridade:</span>
-                  <p className="font-mono text-xs break-all bg-muted p-2 rounded">
-                    {formatHashDisplay(loteAuditoria.hash_integridade)}
-                  </p>
+                  {loteAuditoria.hash_integridade ? (
+                    <p className="font-mono text-xs break-all bg-muted p-2 rounded">
+                      {formatHashDisplay(loteAuditoria.hash_integridade)}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic p-2">
+                      Hash será gerado automaticamente
+                    </p>
+                  )}
                 </div>
                 {loteAuditoria.hash_anterior && (
                   <div>
