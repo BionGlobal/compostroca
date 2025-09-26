@@ -26,6 +26,28 @@ import type { Entrega } from '@/hooks/useOrganizationData';
 const EntregasOptimized = () => {
   const [selectedVoluntario, setSelectedVoluntario] = useState<string>('');
   const [peso, setPeso] = useState<string>('');
+
+  // Função para normalizar entrada de peso (lidar com vírgulas e pontos)
+  const normalizePesoInput = (value: string): string => {
+    // Remove espaços
+    let normalized = value.trim();
+    
+    // Se contém vírgula, substitui por ponto
+    if (normalized.includes(',')) {
+      normalized = normalized.replace(',', '.');
+    }
+    
+    // Remove caracteres não numéricos exceto ponto
+    normalized = normalized.replace(/[^0-9.]/g, '');
+    
+    // Se tem múltiplos pontos, manter apenas o primeiro
+    const parts = normalized.split('.');
+    if (parts.length > 2) {
+      normalized = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    return normalized;
+  };
   const [qualidadeResiduo, setQualidadeResiduo] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
@@ -76,41 +98,11 @@ const EntregasOptimized = () => {
     });
   };
 
-  // Função para sincronizar peso da caixa 1 com soma das entregas em tempo real
+  // A sincronização agora é automática via trigger do banco
+  // Esta função é mantida para compatibilidade mas não é mais necessária
   const syncCaixa1Weight = async (loteId: string, loteCodigo: string) => {
-    try {
-      console.log('⚖️ Sincronizando peso da caixa 1 com entregas...');
-      
-      // Buscar todas as entregas do lote
-      const { data: entregas, error: entregasError } = await supabase
-        .from('entregas')
-        .select('peso')
-        .eq('lote_codigo', loteCodigo)
-        .is('deleted_at', null);
-
-      if (entregasError) {
-        console.error('❌ Erro ao buscar entregas:', entregasError);
-        return;
-      }
-
-      // Calcular peso total das entregas
-      const pesoTotalEntregas = entregas?.reduce((acc, entrega) => acc + Number(entrega.peso), 0) || 0;
-      console.log(`📊 Peso total das entregas: ${pesoTotalEntregas}kg`);
-
-      // Atualizar peso atual do lote (apenas soma das entregas - sem cepilho ainda)
-      const { error: updateError } = await supabase
-        .from('lotes')
-        .update({ peso_atual: pesoTotalEntregas })
-        .eq('id', loteId);
-
-      if (updateError) {
-        console.error('❌ Erro ao atualizar peso do lote:', updateError);
-      } else {
-        console.log('✅ Peso da caixa 1 sincronizado com sucesso');
-      }
-    } catch (error) {
-      console.error('❌ Erro na sincronização de peso:', error);
-    }
+    console.log('⚖️ Sincronização automática ativa via trigger do banco para lote:', loteCodigo);
+    // O trigger tr_recalc_peso_entregas já cuida da sincronização automaticamente
   };
 
   const handleFazerFotos = async () => {
@@ -160,7 +152,7 @@ const EntregasOptimized = () => {
         .from('entregas')
         .insert({
           voluntario_id: selectedVoluntario,
-          peso: parseFloat(peso),
+          peso: parseFloat(normalizePesoInput(peso)),
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           geolocalizacao_validada: true,
@@ -354,7 +346,17 @@ const EntregasOptimized = () => {
 
           <div>
             <Label htmlFor="peso">Peso (kg)</Label>
-            <Input id="peso" type="number" step="0.001" value={peso} onChange={(e) => setPeso(e.target.value)} placeholder="Ex: 10.432" disabled={isFormDisabled} />
+            <Input 
+              id="peso" 
+              type="text" 
+              value={peso} 
+              onChange={(e) => {
+                const normalized = normalizePesoInput(e.target.value);
+                setPeso(normalized);
+              }} 
+              placeholder="Ex: 2.5 ou 2,5" 
+              disabled={isFormDisabled} 
+            />
           </div>
 
           <div>

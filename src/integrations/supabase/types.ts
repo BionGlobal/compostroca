@@ -685,6 +685,10 @@ export type Database = {
           total_processadas: number
         }[]
       }
+      recalc_peso_lote_by_codigo: {
+        Args: { lote_codigo_param: string }
+        Returns: undefined
+      }
     }
     Enums: {
       approval_status: "pending" | "approved" | "rejected"
