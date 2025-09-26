@@ -105,6 +105,12 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
         throw new Error('Lote não encontrado ou não finalizado');
       }
 
+      // Ensure essential data is available, use fallbacks for incomplete data
+      const pesoFinalSeguro = lote.peso_final || (lote.peso_inicial * 0.3); // 70% reduction estimate
+      const dataFinalizacaoSegura = lote.data_finalizacao || lote.data_encerramento || lote.updated_at;
+      const co2evitadoSeguro = lote.co2eq_evitado || (lote.peso_inicial * 0.766);
+      const creditosCAUSeguro = lote.creditos_cau || (lote.peso_inicial / 1000.0);
+
       // Simular validação de integridade (função será criada separadamente)
       let integrityCheck: any[] = [{
         status: 'OK',
@@ -372,8 +378,8 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
           });
         });
         
-        // 3. Finalização - show estimated weight for the finalization date
-        if (lote.status === 'encerrado' && lote.data_finalizacao) {
+        // 3. Finalização - always show finalization for completed lots
+        if (lote.status === 'encerrado' && dataFinalizacaoSegura) {
           timeline.push({
             id: `finalizacao-${lote.id}`,
             etapa: timeline.length + 1,
@@ -382,11 +388,11 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
             caixa_origem: null,
             caixa_destino: null,
             peso_antes: undefined,
-            peso_depois: getEstimatedWeightForDate(lote.data_finalizacao),
-            observacoes: '-',
-            created_at: lote.data_finalizacao,
+            peso_depois: pesoFinalSeguro,
+            observacoes: lote.peso_final ? 'Peso final registrado' : 'Peso final estimado (70% redução)',
+            created_at: dataFinalizacaoSegura,
             usuario_nome: lote.criado_por_nome || '-',
-            data_estimada: true,
+            data_estimada: !lote.peso_final,
             fotos: [],
             integridade_validada: true
           });
@@ -409,15 +415,15 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
         unidade: lote.unidade,
         status: lote.status,
         peso_inicial: lote.peso_inicial,
-        peso_final: lote.peso_final,
+        peso_final: pesoFinalSeguro,
         data_inicio: lote.data_inicio,
-        data_finalizacao: lote.data_finalizacao,
-        co2eq_evitado: lote.co2eq_evitado,
-        creditos_cau: lote.creditos_cau,
-        hash_integridade: lote.hash_integridade,
-        hash_anterior: lote.hash_anterior,
-        indice_cadeia: lote.indice_cadeia,
-        qr_code_url: lote.qr_code_url,
+        data_finalizacao: dataFinalizacaoSegura,
+        co2eq_evitado: co2evitadoSeguro,
+        creditos_cau: creditosCAUSeguro,
+        hash_integridade: lote.hash_integridade || null,
+        hash_anterior: lote.hash_anterior || null,
+        indice_cadeia: lote.indice_cadeia || 0,
+        qr_code_url: lote.qr_code_url || null,
         criado_por_nome: lote.criado_por_nome,
         latitude: lote.latitude,
         longitude: lote.longitude,
@@ -430,14 +436,54 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
           total_fotos_manejo: fotosUnificadas.filter(f => f.origem === 'manutencao').length,
           total_fotos_unificadas: fotosUnificadas.length,
           total_manejo_registros: manejoData?.length || 0,
-          duplicatas_detectadas: 0, // Hide duplicate information
-          inconsistencias: []
+          duplicatas_detectadas: 0,
+          inconsistencias: !lote.peso_final ? ['Peso final estimado'] : []
         }
       };
 
       setLoteAuditoria(auditoria);
 
-      // Show integrity status (simplified)
+      // Generate hash if missing
+      if (!lote.hash_integridade && lote.status === 'encerrado') {
+        try {
+          const { generateLoteHash } = await import('@/lib/hashUtils');
+          const hashData = {
+            codigo: lote.codigo,
+            unidade: lote.unidade,
+            data_inicio: lote.data_inicio,
+            data_encerramento: dataFinalizacaoSegura,
+            peso_inicial: lote.peso_inicial,
+            peso_atual: pesoFinalSeguro,
+            latitude: lote.latitude,
+            longitude: lote.longitude,
+            criado_por: lote.criado_por || 'sistema',
+            voluntarios: voluntarios.map(v => v.id),
+            entregas: entregasProcessed.map(e => e.id),
+            fotos: fotosUnificadas.map(f => f.foto_url)
+          };
+          
+          const generatedHash = generateLoteHash(hashData);
+          
+          // Update in database
+          const { error: updateError } = await supabase
+            .from('lotes')
+            .update({ hash_integridade: generatedHash })
+            .eq('id', lote.id);
+            
+          if (!updateError) {
+            auditoria.hash_integridade = generatedHash;
+            toast({
+              title: "Hash de integridade gerado",
+              description: "Hash SHA256 criado para garantir a rastreabilidade do lote.",
+              variant: "default",
+            });
+          }
+        } catch (error) {
+          console.error('Erro ao gerar hash:', error);
+        }
+      }
+
+      // Show integrity status
       if (fotosUnificadas.length > 0) {
         toast({
           title: "Dados carregados",

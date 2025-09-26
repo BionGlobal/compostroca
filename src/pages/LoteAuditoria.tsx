@@ -90,7 +90,9 @@ export default function LoteAuditoria() {
     );
   }
 
-  const taxaReducao = ((loteAuditoria.peso_inicial - loteAuditoria.peso_final) / loteAuditoria.peso_inicial * 100);
+  const taxaReducao = loteAuditoria.peso_inicial && loteAuditoria.peso_final 
+    ? ((loteAuditoria.peso_inicial - loteAuditoria.peso_final) / loteAuditoria.peso_inicial * 100)
+    : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -173,7 +175,10 @@ export default function LoteAuditoria() {
                     <div>
                       <span className="text-sm text-muted-foreground">Finalização</span>
                       <p className="font-medium">
-                        {new Date(loteAuditoria.data_finalizacao).toLocaleDateString('pt-BR')}
+                        {loteAuditoria.data_finalizacao 
+                          ? new Date(loteAuditoria.data_finalizacao).toLocaleDateString('pt-BR')
+                          : 'Não informado'
+                        }
                       </p>
                     </div>
                   </div>
@@ -211,16 +216,25 @@ export default function LoteAuditoria() {
                   <div className="text-center p-4 bg-muted rounded-lg">
                     <Weight className="h-6 w-6 mx-auto mb-2 text-green-600" />
                     <p className="text-2xl font-bold text-green-600">{formatWeight(loteAuditoria.peso_final)}</p>
-                    <p className="text-sm text-muted-foreground">Composto Final</p>
+                    <p className="text-sm text-muted-foreground">
+                      Composto Final
+                      {!loteAuditoria.peso_final && (
+                        <span className="text-xs text-amber-600 block">(estimado)</span>
+                      )}
+                    </p>
                   </div>
                   <div className="text-center p-4 bg-green-50 rounded-lg">
                     <Leaf className="h-6 w-6 mx-auto mb-2 text-green-600" />
-                    <p className="text-2xl font-bold text-green-600">{loteAuditoria.co2eq_evitado.toFixed(1)} kg</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {loteAuditoria.co2eq_evitado ? loteAuditoria.co2eq_evitado.toFixed(1) : '0'} kg
+                    </p>
                     <p className="text-sm text-muted-foreground">CO2e Evitado</p>
                   </div>
                   <div className="text-center p-4 bg-blue-50 rounded-lg">
                     <Shield className="h-6 w-6 mx-auto mb-2 text-blue-600" />
-                    <p className="text-2xl font-bold text-blue-600">{loteAuditoria.creditos_cau.toFixed(3)}</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {loteAuditoria.creditos_cau ? loteAuditoria.creditos_cau.toFixed(3) : '0.000'}
+                    </p>
                     <p className="text-sm text-muted-foreground">Créditos CAU</p>
                   </div>
                 </div>
