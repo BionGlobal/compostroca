@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { ApprovedUser } from '@/hooks/useUserManagement';
 import { UserRoleEditor } from '@/components/UserRoleEditor';
 import { useAuth } from '@/hooks/useAuth';
-import { Shield, Settings, Eye, Users, Calendar, MapPin } from 'lucide-react';
+import { Shield, Settings, Eye, Users, Calendar, MapPin, Mail } from 'lucide-react';
 
 interface UserDetailsModalProps {
   user: ApprovedUser | null;
@@ -81,6 +81,16 @@ export const UserDetailsModal = ({ user, isOpen, onClose, onRoleUpdate }: UserDe
                 <p className="text-sm text-muted-foreground">ID: {user.user_id}</p>
               </div>
             </div>
+
+            {user.email && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Email de Login</p>
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm break-all">{user.email}</span>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">

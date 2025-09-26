@@ -190,7 +190,13 @@ export const ApprovedUsersList = ({
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 text-xs sm:text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 text-xs sm:text-sm">
+                  {user.email && (
+                    <div>
+                      <p className="font-medium text-muted-foreground">Email</p>
+                      <p className="break-all text-xs">{user.email}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="font-medium text-muted-foreground">Organização</p>
                     <p className="break-all">{user.organization_code}</p>

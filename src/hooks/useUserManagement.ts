@@ -11,11 +11,13 @@ export interface PendingUser {
   status: 'pending' | 'approved' | 'rejected';
   authorized_units: string[];
   created_at: string;
+  email?: string;
 }
 
 export interface ApprovedUser extends PendingUser {
   approved_at: string;
   approved_by: string;
+  email?: string;
 }
 
 export interface UserActivity {
@@ -231,6 +233,14 @@ export const useUserManagement = () => {
 
       if (error) throw error;
 
+      // Log da atividade
+      await supabase.rpc('log_user_activity', {
+        p_user_id: userId,
+        p_action_type: 'user_rejected',
+        p_action_description: 'Usuário foi rejeitado/excluído do sistema',
+        p_table_affected: 'profiles'
+      });
+
       toast({
         title: "Usuário excluído",
         description: "Usuário foi excluído do sistema com sucesso.",
@@ -243,6 +253,47 @@ export const useUserManagement = () => {
       toast({
         title: "Erro",
         description: "Erro ao excluir usuário",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const reapplyUser = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          status: 'pending',
+          user_role: 'local_admin', // Reset para role padrão
+          authorized_units: ['CWB001'], // Reset para unidade padrão
+          approved_at: null,
+          approved_by: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      // Log da atividade
+      await supabase.rpc('log_user_activity', {
+        p_user_id: userId,
+        p_action_type: 'user_reapply',
+        p_action_description: 'Usuário reenviou solicitação de acesso',
+        p_table_affected: 'profiles'
+      });
+
+      toast({
+        title: "Solicitação reenviada",
+        description: "Sua nova solicitação foi enviada para análise.",
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao reenviar solicitação:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao reenviar solicitação",
         variant: "destructive",
       });
       return false;
@@ -264,6 +315,7 @@ export const useUserManagement = () => {
     rejectUser,
     updateUserRole,
     deleteUser,
+    reapplyUser,
     fetchUserActivities,
     refreshPendingUsers: fetchPendingUsers,
     refreshApprovedUsers: fetchApprovedUsers,
