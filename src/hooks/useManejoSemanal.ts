@@ -173,62 +173,125 @@ export const useManejoSemanal = () => {
   }, [estadoManejo]);
 
   const finalizarManejo = useCallback(async () => {
-    if (!estadoManejo || !user) return;
+    if (!estadoManejo || !user) {
+      console.error('❌ Tentativa de finalizar manejo sem estado válido');
+      return;
+    }
 
     setLoading(true);
+    console.log('🏁 Iniciando finalização do manejo semanal...');
+    
+    // Backup do estado atual
+    const backupEstado = JSON.stringify(estadoManejo);
+    
     try {
-      // Registrar todas as operações no banco
-      for (const etapa of estadoManejo.etapas) {
-        if (etapa.tipo === 'finalizacao') {
-          // Finalizar lote da caixa 7
-          await supabase
-            .from('lotes')
-            .update({
-              status: 'encerrado',
-              peso_atual: etapa.pesoNovo || etapa.pesoAnterior,
-              data_encerramento: new Date().toISOString()
-            })
-            .eq('id', etapa.loteId);
-        } else {
-          // Transferir lote para próxima caixa
-          await supabase
-            .from('lotes')
-            .update({
-              caixa_atual: etapa.caixaDestino,
-              peso_atual: etapa.pesoNovo || etapa.pesoAnterior
-            })
-            .eq('id', etapa.loteId);
-        }
-
-        // Registrar operação no manejo_semanal
-        await supabase
-          .from('manejo_semanal')
-          .insert({
-            lote_id: etapa.loteId,
-            user_id: user.id,
-            caixa_origem: etapa.caixaOrigem,
-            caixa_destino: etapa.caixaDestino || null,
-            peso_antes: etapa.pesoAnterior,
-            peso_depois: etapa.pesoNovo || etapa.pesoAnterior,
-            foto_url: etapa.foto,
-            observacoes: etapa.observacoes
-          });
+      // Validar dados antes de prosseguir
+      const etapasValidas = estadoManejo.etapas.filter(etapa => 
+        etapa.loteId && 
+        etapa.foto && 
+        etapa.pesoNovo !== undefined
+      );
+      
+      if (etapasValidas.length !== estadoManejo.etapas.length) {
+        throw new Error('Nem todas as etapas estão completas');
       }
 
-      // Limpar estado
-      setEstadoManejo(null);
-      localStorage.removeItem('manejo_em_andamento');
+      console.log(`📋 Processando ${etapasValidas.length} etapas válidas...`);
+
+      // Processar em lotes para evitar sobrecarga
+      const batchSize = 3;
+      for (let i = 0; i < etapasValidas.length; i += batchSize) {
+        const batch = etapasValidas.slice(i, i + batchSize);
+        
+        // Processar etapas do lote em paralelo
+        const etapaPromises = batch.map(async (etapa) => {
+          console.log(`📦 Processando etapa ${etapa.id}`);
+          
+          // Atualizar lote
+          let updateData: any = {
+            peso_atual: etapa.pesoNovo || etapa.pesoAnterior,
+            updated_at: new Date().toISOString()
+          };
+
+          if (etapa.tipo === 'finalizacao') {
+            updateData.status = 'encerrado';
+            updateData.data_encerramento = new Date().toISOString();
+          } else {
+            updateData.caixa_atual = etapa.caixaDestino;
+          }
+
+          const { error: loteError } = await supabase
+            .from('lotes')
+            .update(updateData)
+            .eq('id', etapa.loteId);
+
+          if (loteError) {
+            console.error(`❌ Erro ao atualizar lote ${etapa.loteId}:`, loteError);
+            throw loteError;
+          }
+
+          // Registrar operação no manejo_semanal
+          const { error: manejoError } = await supabase
+            .from('manejo_semanal')
+            .insert({
+              lote_id: etapa.loteId,
+              user_id: user.id,
+              caixa_origem: etapa.caixaOrigem,
+              caixa_destino: etapa.caixaDestino || null,
+              peso_antes: etapa.pesoAnterior,
+              peso_depois: etapa.pesoNovo || etapa.pesoAnterior,
+              foto_url: etapa.foto,
+              observacoes: etapa.observacoes || null
+            });
+
+          if (manejoError) {
+            console.error(`⚠️ Erro ao salvar manejo para lote ${etapa.loteId}:`, manejoError);
+            // Não bloquear o processo por erro de registro
+          }
+        });
+
+        await Promise.all(etapaPromises);
+        
+        // Pequena pausa entre lotes
+        if (i + batchSize < etapasValidas.length) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      console.log('✅ Todas as etapas processadas com sucesso');
+
+      // Limpar estado local com verificação
+      try {
+        localStorage.removeItem('manejo_em_andamento');
+        setEstadoManejo(null);
+        console.log('🧹 Estado local limpo');
+      } catch (cleanupError) {
+        console.error('⚠️ Erro ao limpar localStorage:', cleanupError);
+        // Não é crítico, continuar
+      }
 
       toast({
-        title: "Manejo finalizado",
-        description: "Processo de manejo semanal concluído com sucesso. Caixa 1 está agora livre para novos lotes."
+        title: "Manejo Finalizado!",
+        description: `${etapasValidas.length} operações concluídas. Caixa 1 liberada para novos lotes.`,
       });
-    } catch (error) {
-      console.error('Erro ao finalizar manejo:', error);
+
+      console.log('🎉 Manejo semanal finalizado com sucesso');
+
+    } catch (error: any) {
+      console.error('💥 Erro ao finalizar manejo:', error);
+      
+      // Tentar restaurar backup se possível
+      try {
+        localStorage.setItem('manejo_em_andamento_backup', backupEstado);
+        console.log('💾 Backup do estado salvo para recuperação');
+      } catch (backupError) {
+        console.error('❌ Erro ao salvar backup:', backupError);
+      }
+      
       toast({
-        title: "Erro",
-        description: "Não foi possível finalizar o manejo",
-        variant: "destructive"
+        title: "Erro ao Finalizar Manejo",
+        description: error.message || "Tente novamente. O progresso foi salvo.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);

@@ -38,6 +38,7 @@ import { LoteProntoCard } from '@/components/LoteProntoCard';
 import { FotosGalleryModal } from '@/components/FotosGalleryModal';
 import { FotosLoteProntoModal } from '@/components/FotosLoteProntoModal';
 import { ChainIntegrityMonitor } from '@/components/ChainIntegrityMonitor';
+import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 
 
 const Lotes = () => {
@@ -192,7 +193,8 @@ const Lotes = () => {
   }
 
   return (
-    <div className="p-4 space-y-6">
+    <PageErrorBoundary pageName="Lotes">
+      <div className="p-4 space-y-6">
       {/* Header com título e refresh */}
       <div className="flex items-center justify-between">
         <div>
@@ -434,7 +436,8 @@ const Lotes = () => {
         loteCodigo={fotosLoteProntoModal.title || ''}
         fotos={[]}
       />
-    </div>
+      </div>
+    </PageErrorBoundary>
   );
 };
 

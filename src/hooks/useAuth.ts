@@ -159,18 +159,97 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      console.log('🔐 Iniciando logout...');
+      
+      // Verificar se há sessão ativa antes de tentar logout
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.log('⚠️ Nenhuma sessão ativa, limpando estado local');
+        // Limpar estado local mesmo sem sessão ativa
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        localStorage.removeItem('supabase.auth.token');
+        
+        toast({
+          title: "Logout realizado",
+          description: "Sessão encerrada com sucesso",
+        });
+        return;
+      }
 
-      toast({
-        title: "Logout realizado com sucesso!",
-        description: "Até logo!",
-      });
+      // Tentar logout com retry
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (attempts < maxAttempts) {
+        try {
+          const { error } = await supabase.auth.signOut();
+          
+          if (!error) {
+            console.log('✅ Logout realizado com sucesso');
+            toast({
+              title: "Logout realizado com sucesso!",
+              description: "Até logo!",
+            });
+            return;
+          }
+          
+          // Se erro específico de sessão não encontrada, tratar como sucesso
+          if (error.message?.includes('Session not found') || error.message?.includes('session id')) {
+            console.log('⚠️ Sessão já era inválida, limpando estado local');
+            setSession(null);
+            setUser(null);
+            setProfile(null);
+            localStorage.removeItem('supabase.auth.token');
+            
+            toast({
+              title: "Logout realizado",
+              description: "Sessão encerrada com sucesso",
+            });
+            return;
+          }
+          
+          throw error;
+          
+        } catch (attemptError: any) {
+          attempts++;
+          console.error(`❌ Tentativa ${attempts} de logout falhou:`, attemptError);
+          
+          if (attempts >= maxAttempts) {
+            // Último recurso: limpar estado local
+            console.log('🔧 Forçando limpeza local após falhas no logout');
+            setSession(null);
+            setUser(null);
+            setProfile(null);
+            localStorage.removeItem('supabase.auth.token');
+            
+            toast({
+              title: "Logout forçado",
+              description: "Sessão encerrada localmente",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          // Aguardar antes da próxima tentativa
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+        }
+      }
+      
     } catch (error: any) {
-      console.error('Erro no logout:', error);
+      console.error('💥 Erro crítico no logout:', error);
+      
+      // Fallback: limpar estado local sempre
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      localStorage.removeItem('supabase.auth.token');
+      
       toast({
-        title: "Erro",
-        description: "Erro ao fazer logout",
+        title: "Erro no logout",
+        description: "Sessão encerrada localmente devido a erro",
         variant: "destructive",
       });
     }

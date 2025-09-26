@@ -57,9 +57,24 @@ export const ManejoSemanal: React.FC<ManejoSemanalProps> = ({
   };
 
   const handleFinalizarManejo = async () => {
-    await finalizarManejo();
-    onManejoCompleto();
-    onClose();
+    try {
+      await finalizarManejo();
+      
+      // Aguardar um pouco para garantir que o estado foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Chamar callback de sucesso
+      onManejoCompleto();
+      
+      // Fechar modal com delay para evitar conflitos
+      setTimeout(() => {
+        onClose();
+      }, 500);
+      
+    } catch (error) {
+      console.error('❌ Erro no handler de finalização:', error);
+      // Modal permanece aberto para o usuário tentar novamente
+    }
   };
 
   const handleCancelarManejo = () => {

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Star, Camera, Eye, Clock, Edit, AlertTriangle, Scale } from 'lucide-react';
@@ -76,20 +77,48 @@ const EntregasOptimized = () => {
   };
 
   const handleFazerFotos = async () => {
+    // Validações básicas
     if (!selectedVoluntario || !peso || !user || qualidadeResiduo === 0) {
-      toast({ title: "Erro", description: "Preencha todos os campos obrigatórios", variant: "destructive" });
+      toast({ 
+        title: "Campos Obrigatórios", 
+        description: "Preencha todos os campos antes de continuar", 
+        variant: "destructive" 
+      });
       return;
     }
+
     if (!loteAtivoCaixa01) {
-      toast({ title: "Erro", description: "Não há lote ativo na Caixa 01. Inicie um novo lote.", variant: "destructive" });
+      toast({ 
+        title: "Lote Necessário", 
+        description: "Inicie um novo lote antes de registrar entregas", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    // Validar se voluntário ainda está disponível
+    const isVoluntarioAvailable = availableVoluntarios.some(v => v.id === selectedVoluntario);
+    if (!isVoluntarioAvailable) {
+      toast({
+        title: "Voluntário Indisponível",
+        description: "Este voluntário já fez entrega neste lote. Selecione outro.",
+        variant: "destructive"
+      });
+      setSelectedVoluntario('');
       return;
     }
 
     setLoading(true);
+    console.log('📍 Iniciando processo de entrega para voluntário:', selectedVoluntario);
 
     try {
+      // Primeiro, tentar obter localização
+      console.log('🗺️ Solicitando geolocalização...');
       const position = await getCurrentLocation();
+      console.log('✅ Localização obtida:', position.coords.latitude, position.coords.longitude);
       
+      // Depois criar a entrega no banco
+      console.log('💾 Criando registro de entrega...');
       const { data, error } = await supabase
         .from('entregas')
         .insert({
@@ -105,28 +134,58 @@ const EntregasOptimized = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao criar entrega:', error);
+        throw new Error(`Erro no banco: ${error.message}`);
+      }
 
+      console.log('✅ Entrega criada com sucesso:', data.id);
       setTempEntregaId(data.id);
       setShowCamera(true);
 
     } catch (error: any) {
-      console.error('Erro detalhado de geolocalização:', error.code, error.message);
+      console.error('💥 Erro no processo de entrega:', error);
       
-      let description = "Não foi possível obter sua localização. Tente novamente.";
-      if (error.code === 1) { // PERMISSION_DENIED
-        description = "A permissão de localização foi negada. Por favor, habilite-a nas configurações do seu iPhone para o Safari.";
-      } else if (error.code === 2) { // POSITION_UNAVAILABLE
-        description = "Sua localização não está disponível no momento. Verifique sua conexão ou sinal de GPS.";
+      // Reset do estado em caso de erro
+      setTempEntregaId(null);
+      setShowCamera(false);
+      
+      // Tratamento específico por tipo de erro
+      let title = "Erro";
+      let description = "Ocorreu um erro inesperado. Tente novamente.";
+      
+      if (error.code) {
+        // Erro de geolocalização
+        title = "Erro de Localização";
+        switch (error.code) {
+          case 1: // PERMISSION_DENIED
+            description = "Permissão de localização negada. Habilite a localização nas configurações do navegador.";
+            break;
+          case 2: // POSITION_UNAVAILABLE
+            description = "Localização indisponível. Verifique sua conexão e sinal de GPS.";
+            break;
+          case 3: // TIMEOUT
+            description = "Tempo limite excedido para obter localização. Tente novamente.";
+            break;
+          default:
+            description = "Erro desconhecido de geolocalização. Tente novamente.";
+        }
+        
+        // Adicionar dica para iOS
+        if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad')) {
+          description += " No iOS, use o Safari diretamente (não links de outros apps).";
+        }
+      } else if (error.message?.includes('Erro no banco')) {
+        // Erro de banco de dados
+        title = "Erro no Servidor";
+        description = "Não foi possível salvar a entrega. Verifique sua conexão e tente novamente.";
       }
 
-      description += " Se o problema persistir, tente abrir o site diretamente no navegador Safari (e não por um link no Instagram, etc.).";
-
       toast({
-        title: "Erro de Localização",
-        description: description,
+        title,
+        description,
         variant: "destructive",
-        duration: 9000,
+        duration: 8000,
       });
       
     } finally {
@@ -135,21 +194,56 @@ const EntregasOptimized = () => {
   };
 
   const handleFotosComplete = async () => {
-    setShowCamera(false);
+    console.log('📸 Finalizando processo de fotos...');
     
-    if (loteAtivoCaixa01 && peso) {
-      const novoPeso = (loteAtivoCaixa01.peso_atual || 0) + parseFloat(peso);
-      await supabase.from('lotes').update({ peso_atual: novoPeso }).eq('id', loteAtivoCaixa01.id);
+    try {
+      // Fechar câmera primeiro
+      setShowCamera(false);
+      
+      // Atualizar peso do lote se necessário
+      if (loteAtivoCaixa01 && peso) {
+        const novoPeso = (loteAtivoCaixa01.peso_atual || 0) + parseFloat(peso);
+        console.log(`⚖️ Atualizando peso do lote: ${loteAtivoCaixa01.peso_atual} + ${peso} = ${novoPeso}`);
+        
+        const { error: pesoError } = await supabase
+          .from('lotes')
+          .update({ peso_atual: novoPeso })
+          .eq('id', loteAtivoCaixa01.id);
+          
+        if (pesoError) {
+          console.error('❌ Erro ao atualizar peso:', pesoError);
+          // Não bloquear o processo por isso
+        }
+      }
+      
+      // Limpar estado temporário
+      setTempEntregaId(null);
+      
+      // Resetar formulário
+      setSelectedVoluntario('');
+      setPeso('');
+      setQualidadeResiduo(0);
+      
+      toast({ 
+        title: "Entrega Registrada!", 
+        description: "Fotos salvas e dados atualizados com sucesso." 
+      });
+      
+      // Aguardar um pouco antes de atualizar dados
+      setTimeout(() => {
+        refetch();
+      }, 1000);
+      
+      console.log('✅ Processo de entrega finalizado com sucesso');
+      
+    } catch (error) {
+      console.error('💥 Erro ao finalizar fotos:', error);
+      toast({
+        title: "Erro",
+        description: "Fotos salvas, mas erro ao atualizar dados. Recarregue a página.",
+        variant: "destructive"
+      });
     }
-    
-    setTempEntregaId(null);
-    toast({ title: "Sucesso", description: "Entrega registrada com sucesso!" });
-
-    setSelectedVoluntario('');
-    setPeso('');
-    setQualidadeResiduo(0);
-    
-    refetch();
   };
 
   const handleCancelFotos = async () => {
@@ -193,7 +287,8 @@ const EntregasOptimized = () => {
   }
 
   return (
-    <div className="p-4 space-y-6">
+    <PageErrorBoundary pageName="Entregas">
+      <div className="p-4 space-y-6">
       <IOSPermissionsAlert showOnlyWhenNeeded compact />
       
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b">
@@ -305,7 +400,8 @@ const EntregasOptimized = () => {
       {editingEntrega && (
         <EditEntregaModal entrega={editingEntrega} isOpen={showEditModal} onClose={() => setShowEditModal(false)} onSuccess={handleEditSuccess} />
       )}
-    </div>
+      </div>
+    </PageErrorBoundary>
   );
 };
 

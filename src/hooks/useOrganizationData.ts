@@ -217,30 +217,68 @@ export const useOrganizationData = () => {
 
   const fetchAllData = useCallback(async () => {
     if (!profile?.organization_code || !user) {
+      console.log('⚠️ Dados insuficientes para fetch:', { 
+        hasProfile: !!profile, 
+        hasOrgCode: !!profile?.organization_code, 
+        hasUser: !!user 
+      });
       return;
     }
 
     const organizationCode = profile.organization_code;
+    console.log('🚀 Iniciando fetch de dados para organização:', organizationCode);
+
+    // Marcar loading como true no início
+    setData(prev => ({
+      ...prev,
+      loading: {
+        voluntarios: true,
+        entregas: true,
+        lotes: true,
+        stats: true,
+        initial: true,
+      }
+    }));
 
     try {
-      // Fetch all data in parallel
-      const [voluntarios, entregas, lotes] = await Promise.all([
-        fetchVoluntarios(organizationCode),
-        fetchEntregas(organizationCode),
-        fetchLotes(organizationCode)
-      ]);
+      // Fetch all data in parallel com timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 15000)
+      );
+
+      const [voluntarios, entregas, lotes] = await Promise.race([
+        Promise.all([
+          fetchVoluntarios(organizationCode),
+          fetchEntregas(organizationCode),
+          fetchLotes(organizationCode)
+        ]),
+        timeoutPromise
+      ]) as [Voluntario[], Entrega[], Lote[]];
+
+      console.log('📊 Dados carregados:', {
+        voluntarios: voluntarios.length,
+        entregas: entregas.length,
+        lotes: lotes.length
+      });
 
       // Find active lote
       const loteAtivo = lotes.find(l => l.status === 'ativo' && l.caixa_atual === 1) || null;
+      console.log('🎯 Lote ativo encontrado:', loteAtivo?.codigo || 'nenhum');
       
       // Count voluntarios for active lote
       let voluntariosCount = 0;
       if (loteAtivo) {
-        voluntariosCount = await fetchVoluntariosCount(loteAtivo.codigo);
+        try {
+          voluntariosCount = await fetchVoluntariosCount(loteAtivo.codigo);
+        } catch (countError) {
+          console.error('⚠️ Erro ao contar voluntários:', countError);
+          // Não bloquear o processo por isso
+        }
       }
 
       // Calculate stats
       const stats = calculateStats(voluntarios, lotes);
+      console.log('📈 Stats calculadas:', stats);
 
       setData(prev => ({
         ...prev,
@@ -259,8 +297,12 @@ export const useOrganizationData = () => {
         }
       }));
 
-    } catch (error) {
-      console.error('Erro ao carregar dados da organização:', error);
+      console.log('✅ Fetch de dados concluído com sucesso');
+
+    } catch (error: any) {
+      console.error('💥 Erro ao carregar dados da organização:', error);
+      
+      // Marcar loading como false mesmo em caso de erro
       setData(prev => ({
         ...prev,
         loading: {
@@ -271,8 +313,17 @@ export const useOrganizationData = () => {
           initial: false,
         }
       }));
+
+      // Toast de erro apenas se não for timeout ou erro conhecido
+      if (!error.message?.includes('Timeout')) {
+        toast({
+          title: "Erro ao Carregar Dados",
+          description: "Não foi possível carregar os dados da organização. Tente novamente.",
+          variant: "destructive",
+        });
+      }
     }
-  }, [profile?.organization_code, user, fetchVoluntarios, fetchEntregas, fetchLotes, fetchVoluntariosCount, calculateStats]);
+  }, [profile?.organization_code, user, fetchVoluntarios, fetchEntregas, fetchLotes, fetchVoluntariosCount, calculateStats, toast]);
 
   // Setup realtime subscriptions
   useEffect(() => {
@@ -425,9 +476,22 @@ export const useOrganizationData = () => {
     }
   }, [toast]);
 
-  const refetch = useCallback(() => {
-    fetchAllData();
-  }, [fetchAllData]);
+  const refetch = useCallback(async () => {
+    console.log('🔄 Refetch solicitado para dados da organização');
+    
+    // Evitar refetch múltiplos simultâneos
+    if (data.loading.initial) {
+      console.log('⏳ Refetch já em andamento, ignorando');
+      return;
+    }
+    
+    try {
+      await fetchAllData();
+      console.log('✅ Refetch concluído com sucesso');
+    } catch (error) {
+      console.error('❌ Erro no refetch:', error);
+    }
+  }, [fetchAllData, data.loading.initial]);
 
   return {
     ...data,
