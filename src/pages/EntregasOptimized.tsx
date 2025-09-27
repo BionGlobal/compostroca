@@ -471,15 +471,21 @@ const EntregasOptimized = () => {
                         </div>
                       </div>
                       
-                      <div className="flex-shrink-0 flex items-center gap-2 w-full sm:w-auto">
+                      <div className="flex-shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                         <EntregaFotosGaleria entregaId={entrega.id} numeroBalde={voluntario?.numero_balde || 0}>
-                          <Button variant="outline" size="sm" className="w-full sm:w-auto"><Eye className="h-3 w-3 mr-1" />Ver Fotos</Button>
+                          <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
+                            <Eye className="h-4 w-4 mr-1" />Ver Fotos
+                          </Button>
                         </EntregaFotosGaleria>
                         {isSuperAdmin && (
-                          <>
-                            <Button variant="outline" size="sm" onClick={() => handleEditEntrega(entrega)} className="w-full sm:w-auto"><Edit className="h-3 w-3 mr-1" />Editar</Button>
-                            <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(entrega)} className="w-full sm:w-auto"><Trash2 className="h-3 w-3 mr-1" />Deletar</Button>
-                          </>
+                          <div className="flex gap-2 sm:contents">
+                            <Button variant="outline" size="sm" onClick={() => handleEditEntrega(entrega)} className="flex-1 sm:flex-none">
+                              <Edit className="h-4 w-4 mr-1" />Editar
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(entrega)} className="flex-1 sm:flex-none">
+                              <Trash2 className="h-4 w-4 mr-1" />Deletar
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>
