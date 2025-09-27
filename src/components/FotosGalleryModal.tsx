@@ -161,7 +161,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] max-h-[95vh] p-0 flex flex-col sm:max-w-5xl sm:h-auto sm:max-h-[90vh]">
+      <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] max-h-[95vh] p-0 flex flex-col sm:max-w-5xl sm:h-auto sm:max-h-[90vh] overflow-hidden sm:overflow-visible">
         {/* Header com controles - fixo no topo */}
         <div className="flex-shrink-0 p-3 sm:p-4 border-b bg-background">
           <div className="flex items-center gap-2 mr-12 sm:mr-16">
@@ -202,7 +202,7 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
         </div>
 
         {/* Conteúdo principal - scrollável */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden sm:overflow-y-auto">
           {viewMode === 'grid' ? (
             /* Vista em grade */
             <div className="h-full overflow-y-auto p-3 sm:p-4">
