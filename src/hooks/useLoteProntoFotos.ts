@@ -105,7 +105,8 @@ export const useLoteProntoFotos = (loteId?: string) => {
               unidade
             )
           `)
-          .in('id', entregaIds);
+          .in('id', entregaIds)
+          .is('deleted_at', null);
 
         if (!entregasError && entregas) {
           entregas.forEach((entrega: any) => {

@@ -72,7 +72,8 @@ export const useLoteFotos = (loteId?: string) => {
       const entregasQuery = await supabase
         .from('entregas')
         .select('id, peso, qualidade_residuo, created_at, voluntario_id')
-        .eq('lote_codigo', loteData.codigo);
+        .eq('lote_codigo', loteData.codigo)
+        .is('deleted_at', null);
       
       const entregas = entregasQuery.data || [];
       console.log('📦 Entregas encontradas:', entregas.length);
