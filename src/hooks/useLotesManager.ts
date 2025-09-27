@@ -139,7 +139,8 @@ export const useLotesManager = () => {
       const { data: entregas, error } = await supabase
         .from('entregas')
         .select('lote_codigo, voluntario_id')
-        .in('lote_codigo', lotesCodigos);
+        .in('lote_codigo', lotesCodigos)
+        .is('deleted_at', null);
 
       if (error) {
         console.error('Erro ao buscar entregas:', error);
@@ -181,7 +182,8 @@ export const useLotesManager = () => {
       const { data: voluntariosData, error: voluntariosError } = await supabase
         .from('entregas')
         .select('voluntario_id')
-        .eq('geolocalizacao_validada', true);
+        .eq('geolocalizacao_validada', true)
+        .is('deleted_at', null);
 
       if (voluntariosError) throw voluntariosError;
 

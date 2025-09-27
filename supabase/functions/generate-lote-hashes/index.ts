@@ -96,7 +96,8 @@ Deno.serve(async (req) => {
         const { data: entregas } = await supabase
           .from('entregas')
           .select('voluntario_id')
-          .eq('lote_id', lote.id);
+          .eq('lote_id', lote.id)
+          .is('deleted_at', null);
 
         const voluntarios = [...new Set(entregas?.map(e => e.voluntario_id) || [])];
 
