@@ -86,8 +86,8 @@ export const ManejoCard = ({ lote, onRegistrarManejo }: ManejoCardProps) => {
   };
 
   const calcularPesoEsperado = () => {
-    // Redução de 3.15% do peso atual
-    return lote.peso_atual * 0.9685;
+    // Redução de 3.54% do peso atual
+    return lote.peso_atual * 0.9646;
   };
 
   const formatarData = (data: string) => {
@@ -204,7 +204,7 @@ export const ManejoCard = ({ lote, onRegistrarManejo }: ManejoCardProps) => {
                   onChange={(e) => setPeso(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Peso esperado: ~{calcularPesoEsperado().toFixed(1)}kg (redução de 3,15%)
+                  Peso esperado: ~{calcularPesoEsperado().toFixed(1)}kg (redução de 3,54%)
                 </p>
               </div>
 

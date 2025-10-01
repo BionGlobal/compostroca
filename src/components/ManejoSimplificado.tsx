@@ -318,7 +318,7 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
         .from('lotes')
         .update({
           status: 'encerrado',
-          peso_atual: lote7.peso_atual * 0.9685, // Redução de 3.15%
+          peso_atual: lote7.peso_atual * 0.9646, // Redução de 3.54%
           data_encerramento: new Date().toISOString()
         })
         .eq('id', lote7.id);
@@ -332,7 +332,7 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
           .from('lotes')
           .update({
             caixa_atual: caixa + 1,
-            peso_atual: lote.peso_atual * 0.9685 // Redução de 3.15%
+            peso_atual: lote.peso_atual * 0.9646 // Redução de 3.54%
           })
           .eq('id', lote.id);
       }
@@ -354,7 +354,7 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
           caixa_origem: 7,
           caixa_destino: null,
           peso_antes: lote7.peso_atual,
-          peso_depois: lote7.peso_atual * 0.9685, // Redução de 3.15%
+          peso_depois: lote7.peso_atual * 0.9646, // Redução de 3.54%
           foto_url: fotoUrls[0] || null,
           observacoes: `FINALIZAÇÃO - ${observacoes}`,
           latitude: localizacao?.lat,
@@ -372,7 +372,7 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
           caixa_origem: caixa,
           caixa_destino: caixa + 1,
           peso_antes: lote.peso_atual,
-          peso_depois: lote.peso_atual * 0.9685, // Redução de 3.15%
+          peso_depois: lote.peso_atual * 0.9646, // Redução de 3.54%
           foto_url: fotoUrls[Math.min(caixa - 1, fotoUrls.length - 1)] || null,
           observacoes: `TRANSFERÊNCIA ${caixa}→${caixa + 1} - ${observacoes}`,
           latitude: localizacao?.lat,

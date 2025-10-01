@@ -217,9 +217,9 @@ export const useLoteAuditoria = (codigoUnico?: string) => {
           return date;
         };
         
-        // Calculate estimated weight reduction (3.15% per week)
+        // Calculate estimated weight reduction (3.54% per week)
         const getEstimatedWeight = (initialWeight: number, weekIndex: number) => {
-          return initialWeight * Math.pow(0.9685, weekIndex);
+          return initialWeight * Math.pow(0.9646, weekIndex);
         };
         
         // 1. Etapa 1: Recebimento e Entregas (Caixa 1)

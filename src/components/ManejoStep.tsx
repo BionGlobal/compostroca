@@ -60,8 +60,8 @@ export const ManejoStep: React.FC<ManejoStepProps> = ({
   };
 
   const calcularPesoEsperado = () => {
-    // Redução esperada de 3,15% por semana
-    return etapa.pesoAnterior * 0.9685;
+    // Redução esperada de 3,54% por semana
+    return etapa.pesoAnterior * 0.9646;
   };
 
   const getStepTitle = () => {
