@@ -319,7 +319,7 @@ export const useLoteAuditoriaEnhanced = (codigoUnico?: string) => {
           const current = new Date(dateStr).getTime();
           const days = Math.max(0, Math.floor((current - start) / (1000 * 60 * 60 * 24)));
           const weeks = Math.floor(days / 7);
-          return lote.peso_inicial * Math.pow(0.9685, weeks);
+          return lote.peso_inicial * Math.pow(0.9646, weeks);
         };
         
         // 1. Início do Lote - only delivery photos from the same day of start and not linked to maintenance

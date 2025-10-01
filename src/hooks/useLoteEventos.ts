@@ -176,7 +176,7 @@ export const useLoteEventos = () => {
     unidadeCodigo?: string
   ) => {
     try {
-      const pesoDepois = Math.round(pesoAntes * (1 - 0.0366) * 100) / 100;
+      const pesoDepois = Math.round(pesoAntes * (1 - 0.0354) * 100) / 100;
       const dataSessao = new Date().toISOString();
 
       let sessaoId: string | null = null;
@@ -308,7 +308,7 @@ export const useLoteEventos = () => {
     // Gerar eventos estimados para completar até 8
     for (let etapa = ultimaEtapa + 1; etapa <= 8; etapa++) {
       const pesoAnterior = pesoAtual;
-      const pesoDepois = Number((pesoAtual * (1 - 0.0366)).toFixed(2));
+      const pesoDepois = Number((pesoAtual * (1 - 0.0354)).toFixed(2));
 
       const eventoEstimado: LoteEvento = {
         id: `estimado-${etapa}`,
@@ -329,7 +329,7 @@ export const useLoteEventos = () => {
         dados_especificos: {
           estimado: true,
           peso_calculado: pesoDepois,
-          taxa_decaimento: 0.0366
+          taxa_decaimento: 0.0354
         },
         hash_evento: null,
         created_at: ''
