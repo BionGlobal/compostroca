@@ -124,6 +124,83 @@ export type Database = {
           },
         ]
       }
+      lote_eventos: {
+        Row: {
+          administrador_id: string | null
+          administrador_nome: string
+          caixa_destino: number | null
+          caixa_origem: number | null
+          created_at: string | null
+          dados_especificos: Json | null
+          data_evento: string
+          deleted_at: string | null
+          etapa_numero: number
+          fotos_compartilhadas: Json | null
+          hash_evento: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          lote_id: string
+          observacoes: string | null
+          peso_antes: number | null
+          peso_depois: number
+          tipo_evento: string
+          updated_at: string | null
+        }
+        Insert: {
+          administrador_id?: string | null
+          administrador_nome: string
+          caixa_destino?: number | null
+          caixa_origem?: number | null
+          created_at?: string | null
+          dados_especificos?: Json | null
+          data_evento?: string
+          deleted_at?: string | null
+          etapa_numero: number
+          fotos_compartilhadas?: Json | null
+          hash_evento?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          lote_id: string
+          observacoes?: string | null
+          peso_antes?: number | null
+          peso_depois: number
+          tipo_evento: string
+          updated_at?: string | null
+        }
+        Update: {
+          administrador_id?: string | null
+          administrador_nome?: string
+          caixa_destino?: number | null
+          caixa_origem?: number | null
+          created_at?: string | null
+          dados_especificos?: Json | null
+          data_evento?: string
+          deleted_at?: string | null
+          etapa_numero?: number
+          fotos_compartilhadas?: Json | null
+          hash_evento?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          lote_id?: string
+          observacoes?: string | null
+          peso_antes?: number | null
+          peso_depois?: number
+          tipo_evento?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lote_eventos_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lote_fotos: {
         Row: {
           created_at: string
@@ -197,11 +274,13 @@ export type Database = {
           criado_por_nome: string
           data_encerramento: string | null
           data_finalizacao: string | null
+          data_hash_criacao: string | null
           data_inicio: string
           data_proxima_transferencia: string | null
           deleted_at: string | null
           hash_anterior: string | null
           hash_integridade: string | null
+          hash_rastreabilidade: string | null
           id: string
           indice_cadeia: number | null
           iot_data: Json | null
@@ -212,6 +291,7 @@ export type Database = {
           peso_final: number | null
           peso_inicial: number | null
           qr_code_url: string | null
+          regra_decaimento: number | null
           semana_atual: number
           status: string
           unidade: string
@@ -229,11 +309,13 @@ export type Database = {
           criado_por_nome: string
           data_encerramento?: string | null
           data_finalizacao?: string | null
+          data_hash_criacao?: string | null
           data_inicio?: string
           data_proxima_transferencia?: string | null
           deleted_at?: string | null
           hash_anterior?: string | null
           hash_integridade?: string | null
+          hash_rastreabilidade?: string | null
           id?: string
           indice_cadeia?: number | null
           iot_data?: Json | null
@@ -244,6 +326,7 @@ export type Database = {
           peso_final?: number | null
           peso_inicial?: number | null
           qr_code_url?: string | null
+          regra_decaimento?: number | null
           semana_atual?: number
           status?: string
           unidade?: string
@@ -261,11 +344,13 @@ export type Database = {
           criado_por_nome?: string
           data_encerramento?: string | null
           data_finalizacao?: string | null
+          data_hash_criacao?: string | null
           data_inicio?: string
           data_proxima_transferencia?: string | null
           deleted_at?: string | null
           hash_anterior?: string | null
           hash_integridade?: string | null
+          hash_rastreabilidade?: string | null
           id?: string
           indice_cadeia?: number | null
           iot_data?: Json | null
@@ -276,6 +361,7 @@ export type Database = {
           peso_final?: number | null
           peso_inicial?: number | null
           qr_code_url?: string | null
+          regra_decaimento?: number | null
           semana_atual?: number
           status?: string
           unidade?: string
@@ -291,33 +377,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      lotes_manutencoes: {
-        Row: {
-          created_at: string
-          id: string
-          lote_id: string
-          manejo_id: string
-          semana_numero: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          lote_id: string
-          manejo_id: string
-          semana_numero: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          lote_id?: string
-          manejo_id?: string
-          semana_numero?: number
-          updated_at?: string
-        }
-        Relationships: []
       }
       manejo_semanal: {
         Row: {
@@ -613,6 +672,10 @@ export type Database = {
           co2eq_evitado_calc: number
           creditos_cau_calc: number
         }[]
+      }
+      calcular_peso_com_decaimento: {
+        Args: { peso_anterior: number; taxa_decaimento?: number }
+        Returns: number
       }
       can_modify_data: {
         Args: { user_id?: string }
