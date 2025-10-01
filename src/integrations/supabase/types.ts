@@ -144,6 +144,7 @@ export type Database = {
           observacoes: string | null
           peso_antes: number | null
           peso_depois: number
+          sessao_manutencao_id: string | null
           tipo_evento: string
           updated_at: string | null
         }
@@ -166,6 +167,7 @@ export type Database = {
           observacoes?: string | null
           peso_antes?: number | null
           peso_depois: number
+          sessao_manutencao_id?: string | null
           tipo_evento: string
           updated_at?: string | null
         }
@@ -188,6 +190,7 @@ export type Database = {
           observacoes?: string | null
           peso_antes?: number | null
           peso_depois?: number
+          sessao_manutencao_id?: string | null
           tipo_evento?: string
           updated_at?: string | null
         }
@@ -197,6 +200,13 @@ export type Database = {
             columns: ["lote_id"]
             isOneToOne: false
             referencedRelation: "lotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lote_eventos_sessao_manutencao_id_fkey"
+            columns: ["sessao_manutencao_id"]
+            isOneToOne: false
+            referencedRelation: "sessoes_manutencao"
             referencedColumns: ["id"]
           },
         ]
@@ -474,6 +484,51 @@ export type Database = {
           updated_at?: string
           user_id?: string
           user_role?: Database["public"]["Enums"]["user_role_enum"]
+        }
+        Relationships: []
+      }
+      sessoes_manutencao: {
+        Row: {
+          administrador_id: string | null
+          administrador_nome: string
+          created_at: string
+          data_sessao: string
+          deleted_at: string | null
+          fotos_gerais: Json | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          observacoes_gerais: string | null
+          unidade_codigo: string
+          updated_at: string
+        }
+        Insert: {
+          administrador_id?: string | null
+          administrador_nome: string
+          created_at?: string
+          data_sessao?: string
+          deleted_at?: string | null
+          fotos_gerais?: Json | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          observacoes_gerais?: string | null
+          unidade_codigo: string
+          updated_at?: string
+        }
+        Update: {
+          administrador_id?: string | null
+          administrador_nome?: string
+          created_at?: string
+          data_sessao?: string
+          deleted_at?: string | null
+          fotos_gerais?: Json | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          observacoes_gerais?: string | null
+          unidade_codigo?: string
+          updated_at?: string
         }
         Relationships: []
       }
