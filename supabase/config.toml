@@ -2,3 +2,6 @@ project_id = "yfcxdbhrtjdmwyifgptf"
 
 [functions.generate-lote-hashes]
 verify_jwt = false
+
+[functions.migrar-eventos-historicos]
+verify_jwt = false
