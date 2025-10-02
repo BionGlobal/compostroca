@@ -179,35 +179,84 @@ export const useManejoSemanal = () => {
     }
 
     setLoading(true);
-    console.log('🏁 Iniciando finalização do manejo semanal...');
+    console.log('🏁 Iniciando finalização do manejo semanal (modo transacional)...');
     
-    // Backup do estado atual
     const backupEstado = JSON.stringify(estadoManejo);
     
     try {
-      // Validar dados antes de prosseguir
+      // 1. Validar todas as etapas
       const etapasValidas = estadoManejo.etapas.filter(etapa => 
-        etapa.loteId && 
-        etapa.foto && 
-        etapa.pesoNovo !== undefined
+        etapa.loteId && etapa.foto && etapa.pesoNovo !== undefined
       );
       
       if (etapasValidas.length !== estadoManejo.etapas.length) {
         throw new Error('Nem todas as etapas estão completas');
       }
 
-      console.log(`📋 Processando ${etapasValidas.length} etapas válidas...`);
+      console.log(`📋 Processando ${etapasValidas.length} etapas transacionalmente...`);
 
-      // Processar em lotes para evitar sobrecarga
+      // 2. Criar UMA ÚNICA sessão de manutenção para todos os lotes
+      const { data: sessao, error: sessaoError } = await supabase
+        .from('sessoes_manutencao')
+        .insert({
+          data_sessao: new Date().toISOString(),
+          administrador_id: user.id,
+          administrador_nome: estadoManejo.etapas[0]?.observacoes || 'Manutenção Semanal',
+          unidade_codigo: estadoManejo.organizacao,
+          observacoes_gerais: estadoManejo.etapas[0]?.observacoes || null
+        })
+        .select('id')
+        .single();
+
+      if (sessaoError || !sessao) {
+        throw new Error('Falha ao criar sessão de manutenção: ' + sessaoError?.message);
+      }
+
+      console.log(`✅ Sessão de manutenção criada: ${sessao.id}`);
+
+      // 3. Salvar todas as fotos associadas à sessão
+      const fotoUrls: string[] = etapasValidas
+        .map(e => e.foto)
+        .filter((f): f is string => f !== undefined);
+
+      if (fotoUrls.length > 0) {
+        const { error: fotosError } = await supabase
+          .from('lote_fotos')
+          .insert(
+            etapasValidas.map((etapa, idx) => ({
+              lote_id: etapa.loteId,
+              foto_url: etapa.foto!,
+              tipo_foto: 'manejo_semanal',
+              ordem_foto: idx + 1
+            }))
+          );
+
+        if (fotosError) {
+          console.warn('⚠️ Erro ao salvar fotos, mas continuando:', fotosError);
+        } else {
+          console.log(`📸 ${fotoUrls.length} fotos salvas`);
+        }
+      }
+
+      // 4. Chamar função SQL para criar eventos de manutenção para TODOS os lotes ativos
+      const { data: resultadoAssociacao, error: associacaoError } = await supabase
+        .rpc('associar_sessao_aos_lotes_ativos', {
+          p_sessao_id: sessao.id,
+          p_data_sessao: new Date().toISOString()
+        });
+
+      if (associacaoError) {
+        console.error('⚠️ Erro na associação automática:', associacaoError);
+      } else {
+        console.log(`🔗 Sessão associada a ${resultadoAssociacao?.length || 0} lotes ativos`);
+      }
+
+      // 5. Atualizar individualmente cada lote (peso e status)
       const batchSize = 3;
       for (let i = 0; i < etapasValidas.length; i += batchSize) {
         const batch = etapasValidas.slice(i, i + batchSize);
         
-        // Processar etapas do lote em paralelo
-        const etapaPromises = batch.map(async (etapa) => {
-          console.log(`📦 Processando etapa ${etapa.id}`);
-          
-          // Atualizar lote
+        await Promise.all(batch.map(async (etapa) => {
           let updateData: any = {
             peso_atual: etapa.pesoNovo || etapa.pesoAnterior,
             updated_at: new Date().toISOString()
@@ -230,49 +279,32 @@ export const useManejoSemanal = () => {
             throw loteError;
           }
 
-          // Registrar operação no manejo_semanal
-          const { error: manejoError } = await supabase
-            .from('manejo_semanal')
-            .insert({
-              lote_id: etapa.loteId,
-              user_id: user.id,
-              caixa_origem: etapa.caixaOrigem,
-              caixa_destino: etapa.caixaDestino || null,
-              peso_antes: etapa.pesoAnterior,
-              peso_depois: etapa.pesoNovo || etapa.pesoAnterior,
-              foto_url: etapa.foto,
-              observacoes: etapa.observacoes || null
-            });
-
-          if (manejoError) {
-            console.error(`⚠️ Erro ao salvar manejo para lote ${etapa.loteId}:`, manejoError);
-            // Não bloquear o processo por erro de registro
-          }
-        });
-
-        await Promise.all(etapaPromises);
+          // Registrar em manejo_semanal para compatibilidade
+          await supabase.from('manejo_semanal').insert({
+            lote_id: etapa.loteId,
+            user_id: user.id,
+            caixa_origem: etapa.caixaOrigem,
+            caixa_destino: etapa.caixaDestino || null,
+            peso_antes: etapa.pesoAnterior,
+            peso_depois: etapa.pesoNovo || etapa.pesoAnterior,
+            foto_url: etapa.foto,
+            observacoes: etapa.observacoes || null
+          });
+        }));
         
-        // Pequena pausa entre lotes
         if (i + batchSize < etapasValidas.length) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 300));
         }
       }
 
       console.log('✅ Todas as etapas processadas com sucesso');
 
-      // Limpar estado local com verificação
-      try {
-        localStorage.removeItem('manejo_em_andamento');
-        setEstadoManejo(null);
-        console.log('🧹 Estado local limpo');
-      } catch (cleanupError) {
-        console.error('⚠️ Erro ao limpar localStorage:', cleanupError);
-        // Não é crítico, continuar
-      }
+      localStorage.removeItem('manejo_em_andamento');
+      setEstadoManejo(null);
 
       toast({
         title: "Manejo Finalizado!",
-        description: `${etapasValidas.length} operações concluídas. Caixa 1 liberada para novos lotes.`,
+        description: `${etapasValidas.length} operações concluídas. Dados associados à sessão ${sessao.id.slice(0, 8)}...`,
       });
 
       console.log('🎉 Manejo semanal finalizado com sucesso');
@@ -280,7 +312,6 @@ export const useManejoSemanal = () => {
     } catch (error: any) {
       console.error('💥 Erro ao finalizar manejo:', error);
       
-      // Tentar restaurar backup se possível
       try {
         localStorage.setItem('manejo_em_andamento_backup', backupEstado);
         console.log('💾 Backup do estado salvo para recuperação');

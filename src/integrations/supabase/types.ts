@@ -144,6 +144,8 @@ export type Database = {
           observacoes: string | null
           peso_antes: number | null
           peso_depois: number
+          peso_estimado: number | null
+          peso_medido: number | null
           sessao_manutencao_id: string | null
           tipo_evento: string
           updated_at: string | null
@@ -167,6 +169,8 @@ export type Database = {
           observacoes?: string | null
           peso_antes?: number | null
           peso_depois: number
+          peso_estimado?: number | null
+          peso_medido?: number | null
           sessao_manutencao_id?: string | null
           tipo_evento: string
           updated_at?: string | null
@@ -190,6 +194,8 @@ export type Database = {
           observacoes?: string | null
           peso_antes?: number | null
           peso_depois?: number
+          peso_estimado?: number | null
+          peso_medido?: number | null
           sessao_manutencao_id?: string | null
           tipo_evento?: string
           updated_at?: string | null
@@ -200,6 +206,13 @@ export type Database = {
             columns: ["lote_id"]
             isOneToOne: false
             referencedRelation: "lotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lote_eventos_sessao_manutencao_fkey"
+            columns: ["sessao_manutencao_id"]
+            isOneToOne: false
+            referencedRelation: "sessoes_manutencao"
             referencedColumns: ["id"]
           },
           {
@@ -652,6 +665,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      associar_sessao_aos_lotes_ativos: {
+        Args: { p_data_sessao?: string; p_sessao_id: string }
+        Returns: {
+          evento_id: string
+          lote_id: string
+          sucesso: boolean
+        }[]
+      }
       buscar_lotes_finalizados: {
         Args:
           | {
@@ -747,6 +768,15 @@ export type Database = {
       get_last_chain_hash: {
         Args: { unit_code: string }
         Returns: string
+      }
+      get_lotes_ativos_na_data: {
+        Args: { data_ref: string }
+        Returns: {
+          caixa_atual: number
+          codigo: string
+          lote_id: string
+          peso_atual: number
+        }[]
       }
       get_next_chain_index: {
         Args: Record<PropertyKey, never>

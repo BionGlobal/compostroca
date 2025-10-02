@@ -167,34 +167,29 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           .in('entrega_id', entregaIds)
           .is('deleted_at', null);
 
-        // 5. Buscar manejos semanais do lote com validadores
-        const { data: manejosRaw } = await supabase
-          .from('manejo_semanal')
-          .select('id, created_at, observacoes, user_id')
-          .eq('lote_id', lote.id)
-          .is('deleted_at', null)
-          .order('created_at', { ascending: true });
+        // 5. Buscar sessões de manutenção vinculadas aos eventos deste lote
+        const eventosIds = eventos?.map(e => e.id) || [];
+        const { data: sessoesVinculadas } = await supabase
+          .from('lote_eventos')
+          .select('sessao_manutencao_id')
+          .in('id', eventosIds)
+          .not('sessao_manutencao_id', 'is', null);
 
-        // Buscar nomes dos validadores
-        const userIds = manejosRaw?.map(m => m.user_id).filter(Boolean) || [];
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('user_id, full_name')
-          .in('user_id', userIds);
+        const sessaoIds = [...new Set(sessoesVinculadas?.map(s => s.sessao_manutencao_id).filter(Boolean))] as string[];
 
-        const manejos = manejosRaw?.map(m => ({
-          ...m,
-          validador_nome: profiles?.find(p => p.user_id === m.user_id)?.full_name || '-'
-        })) || [];
+        // Buscar dados das sessões e fotos
+        const { data: sessoes } = sessaoIds.length > 0 ? await supabase
+          .from('sessoes_manutencao')
+          .select('id, administrador_nome, observacoes_gerais, data_sessao')
+          .in('id', sessaoIds) : { data: [] };
 
-        // 6. Buscar fotos dos manejos
-        const manejoIds = manejos?.map(m => m.id) || [];
-        const { data: fotosManejo } = await supabase
+        // 6. Buscar fotos das sessões de manutenção
+        const { data: fotosManejo } = sessaoIds.length > 0 ? await supabase
           .from('lote_fotos')
-          .select('foto_url, manejo_id')
-          .in('manejo_id', manejoIds)
+          .select('foto_url, lote_id')
+          .eq('lote_id', lote.id)
           .eq('tipo_foto', 'manejo_semanal')
-          .is('deleted_at', null);
+          .is('deleted_at', null) : { data: [] };
 
         // 7. Processar voluntários
         const voluntariosMap = new Map<number, Voluntario>();
@@ -254,23 +249,20 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             tipo = 'FINALIZACAO';
             validadorNome = evento.administrador_nome || '-';
           } else {
-            // MANUTENCAO - buscar manejo da data correspondente
-            const manejoData = manejos?.find(m => {
-              const diff = Math.abs(new Date(m.created_at).getTime() - data.getTime());
-              const diffDays = diff / (1000 * 60 * 60 * 24);
-              return diffDays <= 3; // Tolerância de 3 dias
-            });
-
-            if (manejoData) {
-              manejoId = manejoData.id;
-              comentario = manejoData.observacoes || '';
-              validadorNome = manejoData.validador_nome || '-';
+            // MANUTENCAO - buscar sessão vinculada DIRETAMENTE via FK
+            if (evento.sessao_manutencao_id) {
+              const sessaoData = sessoes?.find(s => s.id === evento.sessao_manutencao_id);
               
-              // Buscar fotos do manejo
-              fotosManejo = fotosManejo
-                ?.filter((f: any) => f.manejo_id === manejoData.id)
-                .map((f: any) => processPhotoUrl(f.foto_url))
-                .filter(url => url) || [];
+              if (sessaoData) {
+                comentario = sessaoData.observacoes_gerais || '-';
+                validadorNome = sessaoData.administrador_nome || '-';
+                
+                // Buscar fotos da sessão para este lote
+                fotosManejo = fotosManejo
+                  ?.filter((f: any) => f.lote_id === lote.id)
+                  .map((f: any) => processPhotoUrl(f.foto_url))
+                  .filter(url => url) || [];
+              }
             }
           }
 
