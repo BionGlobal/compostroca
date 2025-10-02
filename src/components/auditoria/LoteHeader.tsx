@@ -38,19 +38,54 @@ export const LoteHeader = ({
   };
 
   const handleDownloadQR = () => {
-    const svg = document.getElementById('qr-code-svg');
-    if (!svg) return;
-    
-    const svgData = new XMLSerializer().serializeToString(svg);
+    // Create high-res QR code for printing (1024x1024)
+    const qrSize = 768;
     const canvas = document.createElement('canvas');
+    const canvasSize = 1024;
+    canvas.width = canvasSize;
+    canvas.height = canvasSize;
     const ctx = canvas.getContext('2d');
-    const img = new Image();
     
+    if (!ctx) return;
+
+    // White background
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+    // Generate high-res QR code
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    document.body.appendChild(tempContainer);
+
+    // Create a div and render the QR code as SVG string
+    const tempDiv = document.createElement('div');
+    const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${qrSize}" height="${qrSize}" viewBox="0 0 ${qrSize} ${qrSize}"><rect width="${qrSize}" height="${qrSize}" fill="white"/></svg>`;
+    tempDiv.innerHTML = svgString;
+    
+    // Get the actual QR code from the page
+    const existingSvg = document.getElementById('qr-code-svg');
+    if (!existingSvg) {
+      document.body.removeChild(tempContainer);
+      return;
+    }
+
+    // Clone and scale the existing SVG
+    const clonedSvg = existingSvg.cloneNode(true) as SVGElement;
+    clonedSvg.setAttribute('width', qrSize.toString());
+    clonedSvg.setAttribute('height', qrSize.toString());
+    clonedSvg.setAttribute('viewBox', `0 0 ${qrSize} ${qrSize}`);
+    
+    const svgData = new XMLSerializer().serializeToString(clonedSvg);
+    const img = new Image();
+
     img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx?.drawImage(img, 0, 0);
-      
+      // Center QR code with padding
+      const padding = (canvasSize - qrSize) / 2;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(padding, padding, qrSize, qrSize);
+      ctx.drawImage(img, padding, padding, qrSize, qrSize);
+
       canvas.toBlob((blob) => {
         if (!blob) return;
         const url = URL.createObjectURL(blob);
@@ -60,10 +95,11 @@ export const LoteHeader = ({
         a.click();
         URL.revokeObjectURL(url);
         toast.success('QR Code baixado com sucesso');
-      });
+      }, 'image/png', 1.0);
     };
-    
-    img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    document.body.removeChild(tempContainer);
   };
 
   const formatDate = (date: Date) => {

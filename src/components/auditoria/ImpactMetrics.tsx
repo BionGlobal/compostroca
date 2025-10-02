@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Scale, Leaf, Users, Star } from 'lucide-react';
+import { Scale, Leaf, Users, Star, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ImpactMetricsProps {
   pesoInicial: number;
@@ -58,6 +59,26 @@ export const ImpactMetrics = ({
           <CardTitle className="text-base sm:text-lg flex items-center gap-2">
             <Leaf className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
             Impacto Ambiental
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs z-50">
+                  <p className="text-sm">
+                    Ref: Embrapa Solos 2010
+                  </p>
+                  <a 
+                    href="https://www.infoteca.cnptia.embrapa.br/infoteca/handle/doc/882162"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline text-xs mt-1 inline-block"
+                  >
+                    Ver documento →
+                  </a>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -67,7 +88,7 @@ export const ImpactMetrics = ({
               {co2eqEvitado.toFixed(2)} kg
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Equivalente de CO₂ evitado
+              Estimado
             </p>
           </div>
           <div className="pt-2 border-t border-border">
@@ -76,7 +97,7 @@ export const ImpactMetrics = ({
               {creditosCau.toFixed(3)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Créditos de Agricultura Urbana
+              Créditos de Compostagem + Agricultura Urbana
             </p>
           </div>
         </CardContent>
@@ -104,7 +125,7 @@ export const ImpactMetrics = ({
               </p>
               <div className="flex items-center gap-2">
                 <div className="flex gap-0.5">
-                  {[1, 2, 3, 4, 5].map((star) => (
+                  {[1, 2, 3].map((star) => (
                     <Star
                       key={star}
                       className={`w-4 h-4 ${
@@ -116,7 +137,7 @@ export const ImpactMetrics = ({
                   ))}
                 </div>
                 <span className="text-sm font-medium text-foreground">
-                  {mediaRating.toFixed(1)}/5
+                  {mediaRating.toFixed(1)}/3
                 </span>
               </div>
             </div>
