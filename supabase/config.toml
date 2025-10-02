@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.migrar-eventos-lote]
 verify_jwt = false
+
+[functions.finalizar-manutencao-semanal]
+verify_jwt = false
