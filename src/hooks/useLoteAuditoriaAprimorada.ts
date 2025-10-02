@@ -93,10 +93,7 @@ export const useLoteAuditoriaAprimorada = (codigoUnico: string) => {
 
       if (loteError) throw loteError;
       if (!loteData) {
-        console.warn(`Lote ${codigoUnico} não encontrado na base de dados`);
-        setLoteAuditoria(null);
-        setLoading(false);
-        return;
+        throw new Error('Lote não encontrado');
       }
 
       // Buscar eventos do lote
@@ -225,18 +222,11 @@ export const useLoteAuditoriaAprimorada = (codigoUnico: string) => {
       setLoteAuditoria(auditoriaData);
     } catch (error) {
       console.error('Erro ao buscar auditoria do lote:', error);
-      
-      // Não exibir toast se o lote simplesmente não foi encontrado
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      if (!errorMessage.includes('não encontrado')) {
-        toast({
-          title: 'Erro ao carregar auditoria',
-          description: 'Não foi possível carregar os dados de auditoria. Tente novamente.',
-          variant: 'destructive'
-        });
-      }
-      
-      setLoteAuditoria(null);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os dados de auditoria do lote',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
