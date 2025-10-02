@@ -108,210 +108,347 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
           canvas.width = width;
           canvas.height = height;
           
-          // Desenhar imagem redimensionada
+          // Desenhar e comprimir
           ctx.drawImage(img, 0, 0, width, height);
-          
-          // Converter para blob
-          canvas.toBlob(
-            (blob) => {
-              if (blob) {
-                const compressedFile = new File([blob], file.name, {
-                  type: 'image/jpeg',
-                  lastModified: Date.now(),
-                });
-                resolve(compressedFile);
-              } else {
-                reject(new Error('Failed to compress image'));
-              }
-            },
-            'image/jpeg',
-            0.85 // Qualidade 85%
-          );
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Failed to compress image'));
+            }
+          }, 'image/jpeg', 0.8);
         } catch (error) {
           reject(error);
         }
       };
       
-      img.onerror = () => {
-        reject(new Error('Failed to load image'));
-      };
-      
+      img.onerror = () => reject(new Error('Failed to load image'));
       img.src = URL.createObjectURL(file);
     });
   }, []);
 
-  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    // Limitar a 10 fotos
+  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    
+    if (files.length === 0) return;
+    
     if (fotos.length + files.length > 10) {
       toast({
-        title: "Limite de fotos",
-        description: "Você pode adicionar no máximo 10 fotos",
+        title: "Limite excedido",
+        description: "Máximo de 10 fotos permitidas",
         variant: "destructive"
       });
       return;
     }
 
-    const novasFotos: FotoUpload[] = [];
+    try {
+      // Validar tipos de arquivo
+      const validFiles = files.filter(file => {
+        const isImage = file.type.startsWith('image/');
+        const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB max
+        return isImage && isValidSize;
+      });
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      
-      try {
-        // Comprimir imagem
-        const compressedFile = await compressImage(file);
-        
-        const preview = URL.createObjectURL(compressedFile);
-        novasFotos.push({
-          file: compressedFile,
-          preview,
-          uploading: false
-        });
-      } catch (error) {
-        console.error('Erro ao processar foto:', error);
+      if (validFiles.length !== files.length) {
         toast({
-          title: "Erro ao processar foto",
-          description: `Falha ao processar ${file.name}`,
+          title: "Arquivos inválidos",
+          description: "Apenas imagens até 10MB são permitidas",
           variant: "destructive"
         });
       }
-    }
 
-    setFotos(prev => [...prev, ...novasFotos]);
+      // Comprimir e processar imagens válidas
+      const fotosComprimidas = await Promise.all(
+        validFiles.map(async (file) => {
+          const compressedFile = await compressImage(file);
+          return {
+            file: compressedFile,
+            preview: URL.createObjectURL(compressedFile),
+            uploading: false
+          };
+        })
+      );
 
-    // Resetar input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-
-    // Iniciar upload automático
-    uploadFotosAutomaticamente(novasFotos);
-  }, [fotos, toast, compressImage]);
-
-  const uploadFotosAutomaticamente = async (novasFotos: FotoUpload[]) => {
-    for (let i = 0; i < novasFotos.length; i++) {
-      const foto = novasFotos[i];
-      const index = fotos.length + i;
+      setFotos(prev => [...prev, ...fotosComprimidas]);
       
-      try {
-        // Marcar como enviando
-        setFotos(prev => {
-          const updated = [...prev];
-          updated[index] = { ...updated[index], uploading: true };
-          return updated;
-        });
-
-        const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
-        const filePath = `manejo/${organizacao}/${filename}`;
-
-        const { error: uploadError, data } = await supabase.storage
-          .from('manejo-fotos')
-          .upload(filePath, foto.file, {
-            contentType: 'image/jpeg',
-            upsert: false
-          });
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('manejo-fotos')
-          .getPublicUrl(filePath);
-
-        // Atualizar com URL
-        setFotos(prev => {
-          const updated = [...prev];
-          updated[index] = { 
-            ...updated[index], 
-            uploading: false, 
-            url: publicUrl 
-          };
-          return updated;
-        });
-
-      } catch (error) {
-        console.error('Erro no upload:', error);
-        setFotos(prev => {
-          const updated = [...prev];
-          updated[index] = { 
-            ...updated[index], 
-            uploading: false, 
-            error: error instanceof Error ? error.message : 'Erro no upload'
-          };
-          return updated;
-        });
+      // Limpar input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
+    } catch (error) {
+      console.error('Erro ao processar fotos:', error);
+      toast({
+        title: "Erro no upload",
+        description: "Falha ao processar uma ou mais imagens",
+        variant: "destructive",
+      });
     }
-  };
+  }, [fotos.length, compressImage, toast]);
 
   const removerFoto = useCallback((index: number) => {
     setFotos(prev => {
-      const updated = [...prev];
-      URL.revokeObjectURL(updated[index].preview);
-      updated.splice(index, 1);
-      return updated;
+      const novasFotos = [...prev];
+      URL.revokeObjectURL(novasFotos[index].preview);
+      novasFotos.splice(index, 1);
+      return novasFotos;
     });
   }, []);
 
   const uploadFotos = async (): Promise<string[]> => {
-    const fotosComUrl = fotos.filter(f => f.url && !f.error);
-    return fotosComUrl.map(f => f.url!);
+    if (!user) throw new Error('Usuário não autenticado');
+
+    const urlsFotos: string[] = [];
+
+    try {
+      for (let i = 0; i < fotos.length; i++) {
+        const foto = fotos[i];
+        
+        if (foto.url) {
+          // Verificar se a URL ainda é válida
+          try {
+            const response = await fetch(foto.url, { method: 'HEAD' });
+            if (response.ok) {
+              urlsFotos.push(foto.url);
+              continue;
+            }
+          } catch (error) {
+            console.warn(`URL inválida para foto ${i}, reupload necessário:`, error);
+          }
+        }
+
+        // Marcar como fazendo upload
+        setFotos(prev => {
+          const novasFotos = [...prev];
+          novasFotos[i] = { 
+            ...novasFotos[i], 
+            uploading: true, 
+            error: undefined,
+            uploadProgress: 0 
+          };
+          return novasFotos;
+        });
+
+        const fileName = `${user.id}/manejo-${Date.now()}-${i}.jpg`;
+        
+        console.log(`Iniciando upload da foto ${i + 1}/${fotos.length}:`, fileName);
+        
+        const { error: uploadError } = await supabase.storage
+          .from('manejo-fotos')
+          .upload(fileName, foto.file);
+
+        if (uploadError) {
+          console.error(`Erro no upload da foto ${i}:`, uploadError);
+          
+          // Marcar erro
+          setFotos(prev => {
+            const novasFotos = [...prev];
+            novasFotos[i] = { 
+              ...novasFotos[i], 
+              uploading: false, 
+              error: uploadError.message 
+            };
+            return novasFotos;
+          });
+          
+          throw new Error(`Falha no upload da foto ${i + 1}: ${uploadError.message}`);
+        }
+
+        const { data } = supabase.storage
+          .from('manejo-fotos')
+          .getPublicUrl(fileName);
+
+        // Verificar se a URL é válida
+        try {
+          const response = await fetch(data.publicUrl, { method: 'HEAD' });
+          if (!response.ok) {
+            throw new Error(`URL gerada inválida: ${response.status}`);
+          }
+        } catch (error) {
+          console.error(`Erro ao validar URL da foto ${i}:`, error);
+          
+          // Marcar erro
+          setFotos(prev => {
+            const novasFotos = [...prev];
+            novasFotos[i] = { 
+              ...novasFotos[i], 
+              uploading: false, 
+              error: 'URL inválida gerada' 
+            };
+            return novasFotos;
+          });
+          
+          throw new Error(`URL inválida para foto ${i + 1}`);
+        }
+
+        urlsFotos.push(data.publicUrl);
+        console.log(`Upload da foto ${i + 1} concluído:`, data.publicUrl);
+
+        // Marcar como concluído
+        setFotos(prev => {
+          const novasFotos = [...prev];
+          novasFotos[i] = { 
+            ...novasFotos[i], 
+            uploading: false, 
+            url: data.publicUrl,
+            error: undefined 
+          };
+          return novasFotos;
+        });
+      }
+    } catch (error) {
+      console.error('Erro no upload das fotos:', error);
+      throw error;
+    }
+
+    console.log(`Todas as ${urlsFotos.length} fotos foram enviadas com sucesso`);
+    return urlsFotos;
+  };
+
+  const processarEsteira = async () => {
+    if (!user) return;
+
+    // Finalizar lote da caixa 7 (se existir)
+    const lote7 = lotesAtivos.find(l => l.caixa_atual === 7);
+    if (lote7) {
+      await supabase
+        .from('lotes')
+        .update({
+          status: 'encerrado',
+          peso_atual: lote7.peso_atual * 0.9646, // Redução de 3.54%
+          data_encerramento: new Date().toISOString()
+        })
+        .eq('id', lote7.id);
+    }
+
+    // Transferir lotes: 6→7, 5→6, 4→5, 3→4, 2→3, 1→2
+    for (let caixa = 6; caixa >= 1; caixa--) {
+      const lote = lotesAtivos.find(l => l.caixa_atual === caixa);
+      if (lote) {
+        await supabase
+          .from('lotes')
+          .update({
+            caixa_atual: caixa + 1,
+            peso_atual: lote.peso_atual * 0.9646 // Redução de 3.54%
+          })
+          .eq('id', lote.id);
+      }
+    }
+  };
+
+  const registrarManejo = async (fotoUrls: string[]) => {
+    if (!user) return;
+
+    // Registrar operações no banco
+    const operacoes = [];
+
+    // Finalização da caixa 7
+    const lote7 = lotesAtivos.find(l => l.caixa_atual === 7);
+    if (lote7) {
+        operacoes.push({
+          lote_id: lote7.id,
+          user_id: user.id,
+          caixa_origem: 7,
+          caixa_destino: null,
+          peso_antes: lote7.peso_atual,
+          peso_depois: lote7.peso_atual * 0.9646, // Redução de 3.54%
+          foto_url: fotoUrls[0] || null,
+          observacoes: `FINALIZAÇÃO - ${observacoes}`,
+          latitude: localizacao?.lat,
+          longitude: localizacao?.lng
+        });
+    }
+
+    // Transferências
+    for (let caixa = 6; caixa >= 1; caixa--) {
+      const lote = lotesAtivos.find(l => l.caixa_atual === caixa);
+      if (lote) {
+        operacoes.push({
+          lote_id: lote.id,
+          user_id: user.id,
+          caixa_origem: caixa,
+          caixa_destino: caixa + 1,
+          peso_antes: lote.peso_atual,
+          peso_depois: lote.peso_atual * 0.9646, // Redução de 3.54%
+          foto_url: fotoUrls[Math.min(caixa - 1, fotoUrls.length - 1)] || null,
+          observacoes: `TRANSFERÊNCIA ${caixa}→${caixa + 1} - ${observacoes}`,
+          latitude: localizacao?.lat,
+          longitude: localizacao?.lng
+        });
+      }
+    }
+
+    // Inserir todas as operações
+    const { error } = await supabase
+      .from('manejo_semanal')
+      .insert(operacoes);
+
+    if (error) {
+      throw error;
+    }
   };
 
   const retryUpload = async (index: number) => {
+    if (!user || index >= fotos.length) return;
+    
     const foto = fotos[index];
-    if (!foto || foto.uploading) return;
+    
+    // Resetar estado de erro
+    setFotos(prev => {
+      const novasFotos = [...prev];
+      novasFotos[index] = { 
+        ...novasFotos[index], 
+        error: undefined, 
+        uploading: true 
+      };
+      return novasFotos;
+    });
 
     try {
-      setFotos(prev => {
-        const updated = [...prev];
-        updated[index] = { ...updated[index], uploading: true, error: undefined };
-        return updated;
-      });
-
-      const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
-      const filePath = `manejo/${organizacao}/${filename}`;
-
+      const fileName = `${user.id}/manejo-retry-${Date.now()}-${index}.jpg`;
+      
       const { error: uploadError } = await supabase.storage
         .from('manejo-fotos')
-        .upload(filePath, foto.file, {
-          contentType: 'image/jpeg',
-          upsert: false
-        });
+        .upload(fileName, foto.file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        throw uploadError;
+      }
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data } = supabase.storage
         .from('manejo-fotos')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
 
+      // Atualizar com sucesso
       setFotos(prev => {
-        const updated = [...prev];
-        updated[index] = { 
-          ...updated[index], 
+        const novasFotos = [...prev];
+        novasFotos[index] = { 
+          ...novasFotos[index], 
           uploading: false, 
-          url: publicUrl,
-          error: undefined
+          url: data.publicUrl,
+          error: undefined 
         };
-        return updated;
+        return novasFotos;
       });
 
       toast({
-        title: "Upload concluído",
+        title: "Upload recuperado",
         description: `Foto ${index + 1} enviada com sucesso`,
       });
-
     } catch (error) {
-      console.error('Erro no retry:', error);
+      console.error(`Erro no retry da foto ${index}:`, error);
+      
       setFotos(prev => {
-        const updated = [...prev];
-        updated[index] = { 
-          ...updated[index], 
+        const novasFotos = [...prev];
+        novasFotos[index] = { 
+          ...novasFotos[index], 
           uploading: false, 
-          error: error instanceof Error ? error.message : 'Erro no upload'
+          error: error instanceof Error ? error.message : 'Erro desconhecido' 
         };
-        return updated;
+        return novasFotos;
       });
 
       toast({
@@ -345,45 +482,29 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
 
     setLoading(true);
     try {
-      console.log('🚀 Iniciando processo de manejo semanal...');
+      console.log('Iniciando processo de manejo...');
       
-      // 1. Upload das fotos
+      // Upload das fotos
       const fotoUrls = await uploadFotos();
-      console.log(`✅ ${fotoUrls.length} fotos enviadas com sucesso`);
+      console.log('Upload concluído, processando esteira...');
       
-      // 2. Chamar Edge Function para processar esteira automaticamente
-      console.log('🔄 Chamando Edge Function para movimentar esteira...');
+      // Processar esteira (atualizar lotes)
+      await processarEsteira();
+      console.log('Esteira processada, registrando manejo...');
       
-      const { data, error } = await supabase.functions.invoke('finalizar-manutencao-semanal', {
-        body: {
-          unidade_codigo: organizacao,
-          data_sessao: new Date().toISOString(),
-          administrador_id: user?.id,
-          administrador_nome: user?.user_metadata?.full_name || user?.email || 'Sistema',
-          observacoes_gerais: observacoes || 'Manutenção semanal',
-          fotos_gerais: fotoUrls,
-          latitude: localizacao?.lat,
-          longitude: localizacao?.lng
-        }
-      });
-
-      if (error) {
-        console.error('❌ Erro na Edge Function:', error);
-        throw new Error(error.message || 'Falha ao processar esteira');
-      }
-
-      console.log('✅ Edge Function executada com sucesso:', data);
-      console.log(`📊 Lotes processados: ${data.total_lotes_processados}`);
+      // Registrar operações de manejo
+      await registrarManejo(fotoUrls);
+      console.log('Manejo registrado com sucesso!');
 
       toast({
         title: "Manejo concluído!",
-        description: `${data.total_lotes_processados} lotes processados. Esteira avançou com sucesso!`,
+        description: "Esteira avançou com sucesso. Caixa 1 está liberada para novos lotes.",
       });
 
       onManejoCompleto();
       onClose();
     } catch (error) {
-      console.error('❌ Erro ao processar manejo:', error);
+      console.error('Erro ao processar manejo:', error);
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Não foi possível processar o manejo",
@@ -429,54 +550,59 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
                   htmlFor="file-upload"
                   className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors block"
                 >
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    Clique ou arraste para adicionar fotos
+                  <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-base text-muted-foreground mb-1">
+                    Clique para selecionar fotos
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    JPG, PNG (máx. 10 fotos)
+                  <p className="text-sm text-muted-foreground">
+                    Máximo 10 fotos • JPG, PNG, WebP • Até 10MB cada
                   </p>
                 </label>
+
                 <input
-                  ref={fileInputRef}
                   id="file-upload"
+                  ref={fileInputRef}
                   type="file"
                   accept="image/*"
                   multiple
-                  onChange={handleFileChange}
                   className="hidden"
+                  onChange={handleFileSelect}
                 />
 
-                {/* Preview das fotos */}
                 {fotos.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
                     {fotos.map((foto, index) => (
                       <div key={index} className="relative group">
                         <img
-                          src={foto.preview}
-                          alt={`Preview ${index + 1}`}
-                          className="w-full h-40 object-cover rounded-lg"
+                          src={foto.url || foto.preview}
+                          alt={`Foto ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg border border-border"
+                          onError={(e) => {
+                            console.warn(`Erro ao carregar foto ${index}:`, foto.url || foto.preview);
+                            // Fallback para preview se URL falhar
+                            if (foto.url && e.currentTarget.src !== foto.preview) {
+                              e.currentTarget.src = foto.preview;
+                            }
+                          }}
                         />
                         
-                        {/* Status overlay */}
                         {foto.uploading && (
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
-                            <div className="text-white text-sm">Enviando...</div>
-                          </div>
-                        )}
-                        
-                        {foto.url && !foto.error && (
-                          <div className="absolute top-2 right-2">
-                            <CheckCheck className="h-5 w-5 text-green-500 bg-white rounded-full p-0.5" />
+                          <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center rounded-lg">
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mb-1" />
+                            <span className="text-xs text-white">Upload...</span>
                           </div>
                         )}
                         
                         {foto.error && (
-                          <div className="absolute inset-0 bg-red-500/20 flex flex-col items-center justify-center rounded-lg p-2">
-                            <p className="text-red-600 text-xs text-center mb-2">{foto.error}</p>
+                          <div className="absolute inset-0 bg-red-500/80 flex flex-col items-center justify-center rounded-lg">
+                            <X className="h-4 w-4 text-white mb-1" />
+                            <span className="text-xs text-white text-center px-1" title={foto.error}>
+                              Erro
+                            </span>
                             <Button
                               size="sm"
-                              variant="destructive"
+                              variant="secondary"
+                              className="mt-1 h-5 px-2 text-xs"
                               onClick={() => retryUpload(index)}
                             >
                               Tentar novamente
@@ -484,13 +610,20 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
                           </div>
                         )}
                         
-                        {/* Botão remover */}
-                        <button
+                        {foto.url && !foto.uploading && !foto.error && (
+                          <div className="absolute top-1 left-1">
+                            <CheckCheck className="h-3 w-3 text-green-500 bg-white rounded-full p-0.5" />
+                          </div>
+                        )}
+                        
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => removerFoto(index)}
-                          className="absolute top-2 left-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          <X className="h-4 w-4" />
-                        </button>
+                          <X className="h-3 w-3" />
+                        </Button>
                       </div>
                     ))}
                   </div>
@@ -505,58 +638,56 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
               <CardTitle className="text-lg">Informações Adicionais</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Localização */}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                {localizacao ? (
-                  <span>
-                    Localização: {localizacao.lat.toFixed(6)}, {localizacao.lng.toFixed(6)}
-                  </span>
-                ) : (
-                  <span>Obtendo localização...</span>
-                )}
-              </div>
-
-              {/* Observações */}
               <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Observações (opcional)
+                <label htmlFor="observacoes" className="text-sm font-medium mb-2 block">
+                  Observações
                 </label>
                 <textarea
+                  id="observacoes"
                   value={observacoes}
                   onChange={handleObservacoesChange}
-                  placeholder="Adicione observações sobre o manejo (condições climáticas, odor, umidade, etc.)"
-                  className="w-full min-h-[100px] p-3 border rounded-md resize-none"
+                  placeholder="Observações sobre o processo de manejo, condições dos lotes, etc..."
+                  rows={4}
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 />
               </div>
 
-              {/* Resumo */}
-              <div className="bg-muted p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Resumo da Operação</h4>
-                <ul className="text-sm space-y-1 text-muted-foreground">
-                  <li>• {lotesAtivos.length} lotes serão processados</li>
-                  <li>• Lotes avançarão para a próxima caixa</li>
-                  <li>• Redução de peso: 3.54% por semana</li>
-                  <li>• Lote na caixa 7 será finalizado</li>
-                </ul>
-              </div>
+              {localizacao && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  Localização: {localizacao.lat.toFixed(6)}, {localizacao.lng.toFixed(6)}
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Botões de ação */}
-          <div className="flex gap-3 justify-end">
+          {/* Ações */}
+          <div className="flex gap-3">
             <Button
-              variant="outline"
               onClick={onClose}
+              variant="outline"
               disabled={loading}
+              className="flex-1"
             >
               Cancelar
             </Button>
+            
             <Button
               onClick={handleConfirmar}
               disabled={loading || fotos.length === 0}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
             >
-              {loading ? 'Processando...' : 'Confirmar Manejo'}
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <CheckCheck className="h-4 w-4 mr-2" />
+                  Registrar
+                </>
+              )}
             </Button>
           </div>
         </div>

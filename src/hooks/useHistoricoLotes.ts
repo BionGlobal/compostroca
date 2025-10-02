@@ -129,15 +129,13 @@ export const useHistoricoLotes = () => {
 
       if (novosLotesError) throw novosLotesError;
 
-      // Buscar LOTES PRONTOS (finalizados/encerrados) - últimos 20
+      // Buscar LOTES PRONTOS (finalizados/encerrados) - últimos 6
       const { data: lotesProntosData, error: lotesProntosError } = await supabase
         .from('lotes')
         .select('*')
         .eq('status', 'encerrado')
-        .order('data_finalizacao', { ascending: false, nullsFirst: false })
-        .order('data_encerramento', { ascending: false, nullsFirst: false })
-        .order('updated_at', { ascending: false })
-        .limit(20);
+        .order('data_encerramento', { ascending: false })
+        .limit(6);
 
       if (lotesProntosError) throw lotesProntosError;
 
