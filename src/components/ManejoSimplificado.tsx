@@ -308,34 +308,111 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
     return urlsFotos;
   };
 
-  const processarEsteira = async () => {
-    if (!user) return;
-
-    // Finalizar lote da caixa 7 (se existir)
-    const lote7 = lotesAtivos.find(l => l.caixa_atual === 7);
-    if (lote7) {
-      await supabase
-        .from('lotes')
-        .update({
-          status: 'encerrado',
-          peso_atual: lote7.peso_atual * 0.9646, // Redução de 3.54%
-          data_encerramento: new Date().toISOString()
-        })
-        .eq('id', lote7.id);
+  const processarEsteira = async (): Promise<boolean> => {
+    if (!user) {
+      console.error('❌ Usuário não autenticado');
+      return false;
     }
 
-    // Transferir lotes: 6→7, 5→6, 4→5, 3→4, 2→3, 1→2
-    for (let caixa = 6; caixa >= 1; caixa--) {
-      const lote = lotesAtivos.find(l => l.caixa_atual === caixa);
-      if (lote) {
-        await supabase
+    try {
+      // Buscar lotes ativos FRESCOS do banco de dados
+      const { data: lotesFrescos, error: fetchError } = await supabase
+        .from('lotes')
+        .select('*')
+        .eq('unidade', organizacao)
+        .in('status', ['ativo', 'em_processamento'])
+        .order('caixa_atual');
+
+      if (fetchError) {
+        console.error('❌ Erro ao buscar lotes ativos:', fetchError);
+        toast({
+          title: "Erro ao buscar lotes",
+          description: fetchError.message,
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      if (!lotesFrescos || lotesFrescos.length === 0) {
+        console.warn('⚠️ Nenhum lote ativo encontrado');
+        return false;
+      }
+
+      console.log(`✅ ${lotesFrescos.length} lotes ativos encontrados para processar`);
+
+      // 1. Finalizar lote da caixa 7 (se existir)
+      const lote7 = lotesFrescos.find(l => l.caixa_atual === 7);
+      if (lote7) {
+        const pesoDepois = Number((lote7.peso_atual * 0.9646).toFixed(2));
+        console.log(`🔄 Finalizando lote ${lote7.codigo} (Caixa 7): ${lote7.peso_atual}kg → ${pesoDepois}kg`);
+
+        const { error: updateError } = await supabase
           .from('lotes')
           .update({
-            caixa_atual: caixa + 1,
-            peso_atual: lote.peso_atual * 0.9646 // Redução de 3.54%
+            status: 'encerrado',
+            peso_atual: pesoDepois,
+            peso_final: pesoDepois,
+            data_finalizacao: new Date().toISOString(),
+            data_encerramento: new Date().toISOString(),
+            semana_atual: 7
           })
-          .eq('id', lote.id);
+          .eq('id', lote7.id);
+
+        if (updateError) {
+          console.error(`❌ Erro ao finalizar lote ${lote7.codigo}:`, updateError);
+          toast({
+            title: "Erro ao finalizar lote",
+            description: `Falha ao encerrar ${lote7.codigo}: ${updateError.message}`,
+            variant: "destructive"
+          });
+          return false;
+        }
+
+        console.log(`✅ Lote ${lote7.codigo} finalizado com sucesso`);
       }
+
+      // 2. Transferir lotes: 6→7, 5→6, 4→5, 3→4, 2→3, 1→2
+      for (let caixa = 6; caixa >= 1; caixa--) {
+        const lote = lotesFrescos.find(l => l.caixa_atual === caixa);
+        if (lote) {
+          const pesoDepois = Number((lote.peso_atual * 0.9646).toFixed(2));
+          const novaSemana = lote.semana_atual + 1;
+          console.log(`🔄 Transferindo lote ${lote.codigo} (Caixa ${caixa} → ${caixa + 1}, Semana ${lote.semana_atual} → ${novaSemana}): ${lote.peso_atual}kg → ${pesoDepois}kg`);
+
+          const { error: updateError } = await supabase
+            .from('lotes')
+            .update({
+              caixa_atual: caixa + 1,
+              semana_atual: novaSemana,
+              peso_atual: pesoDepois
+            })
+            .eq('id', lote.id);
+
+          if (updateError) {
+            console.error(`❌ Erro ao transferir lote ${lote.codigo}:`, updateError);
+            toast({
+              title: "Erro ao transferir lote",
+              description: `Falha ao mover ${lote.codigo} da caixa ${caixa} para ${caixa + 1}: ${updateError.message}`,
+              variant: "destructive"
+            });
+            return false;
+          }
+
+          console.log(`✅ Lote ${lote.codigo} transferido com sucesso`);
+        }
+      }
+
+      console.log('✅ Esteira processada com sucesso - Caixa 1 está liberada!');
+      return true;
+
+    } catch (error) {
+      console.error('❌ Erro inesperado ao processar esteira:', error);
+      toast({
+        title: "Erro crítico",
+        description: error instanceof Error ? error.message : "Falha ao processar a esteira",
+        variant: "destructive"
+      });
+      return false;
     }
   };
 
@@ -592,19 +669,30 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
 
     setLoading(true);
     try {
-      console.log('Iniciando processo de manejo...');
+      console.log('🚀 Iniciando processo de manejo semanal...');
       
-      // Upload das fotos
+      // 1. Upload das fotos
       const fotoUrls = await uploadFotos();
-      console.log('Upload concluído, processando esteira...');
+      console.log(`✅ ${fotoUrls.length} fotos enviadas com sucesso`);
       
-      // Processar esteira (atualizar lotes)
-      await processarEsteira();
-      console.log('Esteira processada, registrando manejo...');
+      // 2. Processar esteira (atualizar lotes) - CRÍTICO
+      const esteiraProcessada = await processarEsteira();
       
-      // Registrar operações de manejo
+      if (!esteiraProcessada) {
+        console.error('❌ Falha ao processar esteira - abortando operação');
+        toast({
+          title: "Erro ao processar esteira",
+          description: "A movimentação dos lotes falhou. Verifique os logs e tente novamente.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log('✅ Esteira processada, registrando eventos de rastreabilidade...');
+      
+      // 3. Registrar operações de manejo (sessão + eventos)
       await registrarManejo(fotoUrls);
-      console.log('Manejo registrado com sucesso!');
+      console.log('✅ Manejo registrado com sucesso!');
 
       toast({
         title: "Manejo concluído!",
@@ -614,7 +702,7 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
       onManejoCompleto();
       onClose();
     } catch (error) {
-      console.error('Erro ao processar manejo:', error);
+      console.error('❌ Erro ao processar manejo:', error);
       toast({
         title: "Erro",
         description: error instanceof Error ? error.message : "Não foi possível processar o manejo",
