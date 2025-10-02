@@ -342,37 +342,146 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
   const registrarManejo = async (fotoUrls: string[]) => {
     if (!user) return;
 
-    // Registrar operações no banco
-    const operacoes = [];
+    // Buscar perfil do usuário
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('user_id', user.id)
+      .single();
 
-    // Finalização da caixa 7
-    const lote7 = lotesAtivos.find(l => l.caixa_atual === 7);
-    if (lote7) {
-        operacoes.push({
-          lote_id: lote7.id,
-          user_id: user.id,
-          caixa_origem: 7,
-          caixa_destino: null,
-          peso_antes: lote7.peso_atual,
-          peso_depois: lote7.peso_atual * 0.9646, // Redução de 3.54%
-          foto_url: fotoUrls[0] || null,
-          observacoes: `FINALIZAÇÃO - ${observacoes}`,
-          latitude: localizacao?.lat,
-          longitude: localizacao?.lng
-        });
+    if (!profile) {
+      throw new Error('Perfil do usuário não encontrado');
     }
 
-    // Transferências
+    // 1. Criar sessão compartilhada de manutenção
+    const { data: sessao, error: sessaoError } = await supabase
+      .from('sessoes_manutencao')
+      .insert({
+        unidade_codigo: organizacao,
+        administrador_id: user.id,
+        administrador_nome: profile.full_name,
+        data_sessao: new Date().toISOString(),
+        fotos_gerais: fotoUrls,
+        observacoes_gerais: observacoes || 'Manutenção semanal',
+        latitude: localizacao?.lat,
+        longitude: localizacao?.lng
+      })
+      .select()
+      .single();
+
+    if (sessaoError || !sessao) {
+      console.error('Erro ao criar sessão de manutenção:', sessaoError);
+      throw new Error('Falha ao criar sessão de manutenção');
+    }
+
+    console.log('Sessão de manutenção criada:', sessao.id);
+
+    // 2. Criar evento de FINALIZAÇÃO para lote da caixa 7 (se existir)
+    const lote7 = lotesAtivos.find(l => l.caixa_atual === 7);
+    if (lote7) {
+      const pesoAntes = lote7.peso_atual;
+      const pesoDepois = pesoAntes * 0.9646; // Redução de 3.54%
+
+      const { error: eventoFinalizacaoError } = await supabase
+        .from('lote_eventos')
+        .insert({
+          lote_id: lote7.id,
+          sessao_manutencao_id: sessao.id,
+          tipo_evento: 'finalizacao',
+          etapa_numero: 8,
+          data_evento: new Date().toISOString(),
+          peso_antes: pesoAntes,
+          peso_depois: pesoDepois,
+          caixa_origem: 7,
+          caixa_destino: null,
+          administrador_id: user.id,
+          administrador_nome: profile.full_name,
+          latitude: localizacao?.lat,
+          longitude: localizacao?.lng,
+          observacoes: `Compostagem finalizada - ${observacoes || 'Processo concluído'}`,
+          fotos_compartilhadas: fotoUrls,
+          dados_especificos: {
+            peso_final: pesoDepois,
+            reducao_percentual: 3.54,
+            tempo_total_dias: 49 // 7 semanas
+          }
+        });
+
+      if (eventoFinalizacaoError) {
+        console.error('Erro ao criar evento de finalização:', eventoFinalizacaoError);
+      } else {
+        console.log(`Evento de finalização criado para lote ${lote7.codigo}`);
+      }
+    }
+
+    // 3. Criar eventos de MANUTENÇÃO para lotes das caixas 1-6
     for (let caixa = 6; caixa >= 1; caixa--) {
       const lote = lotesAtivos.find(l => l.caixa_atual === caixa);
       if (lote) {
-        operacoes.push({
+        const pesoAntes = lote.peso_atual;
+        const pesoDepois = pesoAntes * 0.9646; // Redução de 3.54%
+        const etapaNumero = caixa + 1; // Caixa 1 → etapa 2, caixa 6 → etapa 7
+
+        const { error: eventoManutencaoError } = await supabase
+          .from('lote_eventos')
+          .insert({
+            lote_id: lote.id,
+            sessao_manutencao_id: sessao.id,
+            tipo_evento: 'manutencao',
+            etapa_numero: etapaNumero,
+            data_evento: new Date().toISOString(),
+            peso_antes: pesoAntes,
+            peso_depois: pesoDepois,
+            caixa_origem: caixa,
+            caixa_destino: caixa + 1,
+            administrador_id: user.id,
+            administrador_nome: profile.full_name,
+            latitude: localizacao?.lat,
+            longitude: localizacao?.lng,
+            observacoes: `Manutenção Semana ${caixa} - Transferência Caixa ${caixa} → ${caixa + 1} - ${observacoes || 'Manejo semanal realizado'}`,
+            fotos_compartilhadas: fotoUrls,
+            dados_especificos: {
+              semana: caixa,
+              reducao_percentual: 3.54
+            }
+          });
+
+        if (eventoManutencaoError) {
+          console.error(`Erro ao criar evento de manutenção para lote ${lote.codigo}:`, eventoManutencaoError);
+        } else {
+          console.log(`Evento de manutenção (etapa ${etapaNumero}) criado para lote ${lote.codigo}`);
+        }
+      }
+    }
+
+    // 4. Manter registro legacy em manejo_semanal para compatibilidade
+    const operacoesLegacy = [];
+
+    if (lote7) {
+      operacoesLegacy.push({
+        lote_id: lote7.id,
+        user_id: user.id,
+        caixa_origem: 7,
+        caixa_destino: null,
+        peso_antes: lote7.peso_atual,
+        peso_depois: lote7.peso_atual * 0.9646,
+        foto_url: fotoUrls[0] || null,
+        observacoes: `FINALIZAÇÃO - ${observacoes}`,
+        latitude: localizacao?.lat,
+        longitude: localizacao?.lng
+      });
+    }
+
+    for (let caixa = 6; caixa >= 1; caixa--) {
+      const lote = lotesAtivos.find(l => l.caixa_atual === caixa);
+      if (lote) {
+        operacoesLegacy.push({
           lote_id: lote.id,
           user_id: user.id,
           caixa_origem: caixa,
           caixa_destino: caixa + 1,
           peso_antes: lote.peso_atual,
-          peso_depois: lote.peso_atual * 0.9646, // Redução de 3.54%
+          peso_depois: lote.peso_atual * 0.9646,
           foto_url: fotoUrls[Math.min(caixa - 1, fotoUrls.length - 1)] || null,
           observacoes: `TRANSFERÊNCIA ${caixa}→${caixa + 1} - ${observacoes}`,
           latitude: localizacao?.lat,
@@ -381,13 +490,14 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
       }
     }
 
-    // Inserir todas as operações
-    const { error } = await supabase
-      .from('manejo_semanal')
-      .insert(operacoes);
+    if (operacoesLegacy.length > 0) {
+      const { error: legacyError } = await supabase
+        .from('manejo_semanal')
+        .insert(operacoesLegacy);
 
-    if (error) {
-      throw error;
+      if (legacyError) {
+        console.warn('Erro ao inserir registros legacy:', legacyError);
+      }
     }
   };
 
