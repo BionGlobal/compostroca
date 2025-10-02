@@ -104,12 +104,10 @@ export const useLotesManager = () => {
   const { subscribeToLoteUpdates } = useLoteUpdates();
 
   const calcularPesoEsperado = (pesoInicial: number, semanaAtual: number): number => {
-    const reducaoPorSemana = 0.0367; // 3.67%
-    let peso = pesoInicial;
-    for (let i = 1; i < semanaAtual; i++) {
-      peso *= (1 - reducaoPorSemana);
-    }
-    return peso;
+    // Taxa de decaimento: 3,65% por semana = fator 0,9635
+    const fatorDecaimento = 0.9635;
+    const peso = pesoInicial * Math.pow(fatorDecaimento, semanaAtual - 1);
+    return Math.round(peso * 100) / 100;
   };
 
   const calcularPesoFinal = (pesoInicial: number): number => {

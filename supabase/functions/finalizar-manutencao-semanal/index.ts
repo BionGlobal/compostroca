@@ -141,11 +141,11 @@ Deno.serve(async (req) => {
       const caixa_origem = lote.caixa_atual;
       const caixa_destino = caixa_origem + 1;
       const semana_nova = caixa_destino;
-      const taxa_decaimento = lote.regra_decaimento || 0.0366;
+      const taxa_decaimento = lote.regra_decaimento || 0.0365;
       
-      // Apply weekly decay
+      // Apply weekly decay: 3,65% reduction = multiply by 0.9635
       const peso_antes = lote.peso_atual || lote.peso_inicial;
-      const peso_depois = peso_antes * (1 - taxa_decaimento);
+      const peso_depois = peso_antes * 0.9635;
 
       console.log(`➡️ Moving ${lote.codigo}: Box ${caixa_origem}→${caixa_destino}, Weight ${peso_antes.toFixed(2)}→${peso_depois.toFixed(2)}`);
 
