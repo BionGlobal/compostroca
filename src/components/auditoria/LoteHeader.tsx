@@ -2,6 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { QRCodeSVG } from 'qrcode.react';
+import QRCode from 'qrcode';
 import { Copy, MapPin, Calendar, CheckCircle2, ExternalLink, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -37,55 +38,24 @@ export const LoteHeader = ({
     toast.success('Hash copiado para a área de transferência');
   };
 
-  const handleDownloadQR = () => {
-    // Create high-res QR code for printing (1024x1024)
-    const qrSize = 768;
-    const canvas = document.createElement('canvas');
-    const canvasSize = 1024;
-    canvas.width = canvasSize;
-    canvas.height = canvasSize;
-    const ctx = canvas.getContext('2d');
-    
-    if (!ctx) return;
-
-    // White background
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, canvasSize, canvasSize);
-
-    // Generate high-res QR code
-    const tempContainer = document.createElement('div');
-    tempContainer.style.position = 'absolute';
-    tempContainer.style.left = '-9999px';
-    document.body.appendChild(tempContainer);
-
-    // Create a div and render the QR code as SVG string
-    const tempDiv = document.createElement('div');
-    const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${qrSize}" height="${qrSize}" viewBox="0 0 ${qrSize} ${qrSize}"><rect width="${qrSize}" height="${qrSize}" fill="white"/></svg>`;
-    tempDiv.innerHTML = svgString;
-    
-    // Get the actual QR code from the page
-    const existingSvg = document.getElementById('qr-code-svg');
-    if (!existingSvg) {
-      document.body.removeChild(tempContainer);
-      return;
-    }
-
-    // Clone and scale the existing SVG
-    const clonedSvg = existingSvg.cloneNode(true) as SVGElement;
-    clonedSvg.setAttribute('width', qrSize.toString());
-    clonedSvg.setAttribute('height', qrSize.toString());
-    clonedSvg.setAttribute('viewBox', `0 0 ${qrSize} ${qrSize}`);
-    
-    const svgData = new XMLSerializer().serializeToString(clonedSvg);
-    const img = new Image();
-
-    img.onload = () => {
-      // Center QR code with padding
-      const padding = (canvasSize - qrSize) / 2;
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(padding, padding, qrSize, qrSize);
-      ctx.drawImage(img, padding, padding, qrSize, qrSize);
-
+  const handleDownloadQR = async () => {
+    try {
+      // Generate high-resolution QR code directly at 1024x1024
+      const canvas = document.createElement('canvas');
+      canvas.width = 1024;
+      canvas.height = 1024;
+      
+      await QRCode.toCanvas(canvas, currentUrl, {
+        width: 1024,
+        margin: 4,
+        errorCorrectionLevel: 'H',
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      
+      // Download the canvas as PNG
       canvas.toBlob((blob) => {
         if (!blob) return;
         const url = URL.createObjectURL(blob);
@@ -96,10 +66,10 @@ export const LoteHeader = ({
         URL.revokeObjectURL(url);
         toast.success('QR Code baixado com sucesso');
       }, 'image/png', 1.0);
-    };
-
-    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
-    document.body.removeChild(tempContainer);
+    } catch (error) {
+      console.error('Erro ao gerar QR Code:', error);
+      toast.error('Erro ao baixar QR Code');
+    }
   };
 
   const formatDate = (date: Date) => {
