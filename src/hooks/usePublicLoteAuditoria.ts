@@ -15,9 +15,12 @@ interface Evento {
   hora: string;
   validador: string;
   peso_calculado: number;
-  fotos: string[];
+  fotos_entrega: string[];
+  fotos_manejo: string[];
   comentario: string;
   nota_contexto: string;
+  lote_id: string;
+  manejo_id?: string | null;
 }
 
 interface LoteAuditoriaData {
@@ -145,6 +148,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             id,
             peso,
             qualidade_residuo,
+            created_at,
             voluntarios:voluntario_id (
               nome,
               numero_balde
@@ -155,7 +159,44 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
 
         if (entregasError) throw entregasError;
 
-        // 4. Processar voluntários
+        // 4. Buscar fotos das entregas
+        const entregaIds = entregas?.map(e => e.id) || [];
+        const { data: fotosEntregas } = await supabase
+          .from('entrega_fotos')
+          .select('foto_url, entrega_id')
+          .in('entrega_id', entregaIds)
+          .is('deleted_at', null);
+
+        // 5. Buscar manejos semanais do lote com validadores
+        const { data: manejosRaw } = await supabase
+          .from('manejo_semanal')
+          .select('id, created_at, observacoes, user_id')
+          .eq('lote_id', lote.id)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: true });
+
+        // Buscar nomes dos validadores
+        const userIds = manejosRaw?.map(m => m.user_id).filter(Boolean) || [];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', userIds);
+
+        const manejos = manejosRaw?.map(m => ({
+          ...m,
+          validador_nome: profiles?.find(p => p.user_id === m.user_id)?.full_name || '-'
+        })) || [];
+
+        // 6. Buscar fotos dos manejos
+        const manejoIds = manejos?.map(m => m.id) || [];
+        const { data: fotosManejo } = await supabase
+          .from('lote_fotos')
+          .select('foto_url, manejo_id')
+          .in('manejo_id', manejoIds)
+          .eq('tipo_foto', 'manejo_semanal')
+          .is('deleted_at', null);
+
+        // 7. Processar voluntários
         const voluntariosMap = new Map<number, Voluntario>();
         let somaRatings = 0;
         let countRatings = 0;
@@ -185,30 +226,56 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           (a, b) => a.numero_balde - b.numero_balde
         );
 
-        // 5. Processar eventos da timeline
+        // 8. Processar eventos da timeline
         const eventosProcessados: Evento[] = [];
         const validadoresSet = new Set<string>();
 
         eventos?.forEach((evento, index) => {
-          const fotos = Array.isArray(evento.fotos_compartilhadas)
-            ? evento.fotos_compartilhadas.map(processPhotoUrl).filter(url => url)
-            : [];
-
           const data = new Date(evento.data_evento);
           const hora = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
           let tipo: 'INICIO' | 'MANUTENCAO' | 'FINALIZACAO' = 'MANUTENCAO';
-          let notaContexto = 'Registro fotográfico do processo geral de manutenção da esteira, compartilhado com todos os lotes ativos nesta data.';
+          let fotosEntrega: string[] = [];
+          let fotosManejo: string[] = [];
+          let validadorNome = '-';
+          let comentario = '';
+          let manejoId: string | null = null;
 
           if (evento.tipo_evento === 'inicio') {
             tipo = 'INICIO';
-            notaContexto = 'Fotos exclusivas das entregas que deram origem a este lote.';
+            // Buscar fotos reais das entregas
+            fotosEntrega = fotosEntregas
+              ?.map(f => processPhotoUrl(f.foto_url))
+              .filter(url => url) || [];
+            
+            // Validador do início é quem criou o lote
+            validadorNome = evento.administrador_nome || '-';
           } else if (evento.tipo_evento === 'finalizacao' || index === eventos.length - 1) {
             tipo = 'FINALIZACAO';
+            validadorNome = evento.administrador_nome || '-';
+          } else {
+            // MANUTENCAO - buscar manejo da data correspondente
+            const manejoData = manejos?.find(m => {
+              const diff = Math.abs(new Date(m.created_at).getTime() - data.getTime());
+              const diffDays = diff / (1000 * 60 * 60 * 24);
+              return diffDays <= 3; // Tolerância de 3 dias
+            });
+
+            if (manejoData) {
+              manejoId = manejoData.id;
+              comentario = manejoData.observacoes || '';
+              validadorNome = manejoData.validador_nome || '-';
+              
+              // Buscar fotos do manejo
+              fotosManejo = fotosManejo
+                ?.filter((f: any) => f.manejo_id === manejoData.id)
+                .map((f: any) => processPhotoUrl(f.foto_url))
+                .filter(url => url) || [];
+            }
           }
 
-          if (evento.administrador_nome) {
-            validadoresSet.add(evento.administrador_nome);
+          if (validadorNome !== '-') {
+            validadoresSet.add(validadorNome);
           }
 
           // Calcular peso para a etapa
@@ -219,11 +286,14 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             tipo,
             data,
             hora,
-            validador: evento.administrador_nome || 'Sistema',
+            validador: validadorNome,
             peso_calculado: pesoCalculado,
-            fotos,
-            comentario: evento.observacoes || '',
-            nota_contexto: notaContexto
+            fotos_entrega: fotosEntrega,
+            fotos_manejo: fotosManejo,
+            comentario,
+            nota_contexto: '',
+            lote_id: lote.id,
+            manejo_id: manejoId
           });
         });
 

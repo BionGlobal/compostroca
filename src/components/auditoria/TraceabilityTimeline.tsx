@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, User, Scale, Image as ImageIcon } from 'lucide-react';
-import Lightbox from 'yet-another-react-lightbox';
-import 'yet-another-react-lightbox/styles.css';
+import { FotosGalleryModal } from '@/components/FotosGalleryModal';
 
 interface Evento {
   etapa: number;
@@ -12,9 +11,12 @@ interface Evento {
   hora: string;
   validador: string;
   peso_calculado: number;
-  fotos: string[];
+  fotos_entrega: string[];
+  fotos_manejo: string[];
   comentario: string;
   nota_contexto: string;
+  lote_id: string;
+  manejo_id?: string | null;
 }
 
 interface TraceabilityTimelineProps {
@@ -22,14 +24,16 @@ interface TraceabilityTimelineProps {
 }
 
 export const TraceabilityTimeline = ({ eventos }: TraceabilityTimelineProps) => {
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(0);
-  const [currentFotos, setCurrentFotos] = useState<string[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedLoteId, setSelectedLoteId] = useState<string>('');
+  const [selectedManejoId, setSelectedManejoId] = useState<string | undefined>(undefined);
+  const [modalTitle, setModalTitle] = useState('');
 
-  const handleOpenLightbox = (fotos: string[], index: number) => {
-    setCurrentFotos(fotos);
-    setLightboxIndex(index);
-    setLightboxOpen(true);
+  const handleOpenGallery = (evento: Evento) => {
+    setSelectedLoteId(evento.lote_id);
+    setSelectedManejoId(evento.manejo_id || undefined);
+    setModalTitle(getTipoLabel(evento.tipo, evento.etapa));
+    setModalOpen(true);
   };
 
   const getTipoLabel = (tipo: string, etapa: number) => {
@@ -116,31 +120,65 @@ export const TraceabilityTimeline = ({ eventos }: TraceabilityTimelineProps) => 
                       </div>
                     </div>
 
-                    {/* Galeria de fotos */}
-                    {evento.fotos.length > 0 && (
+                    {/* Galeria de fotos - Início */}
+                    {evento.tipo === 'INICIO' && (
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                          <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                          <span>{evento.fotos.length} foto(s)</span>
-                        </div>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-                          {evento.fotos.slice(0, 12).map((foto, fotoIndex) => (
-                            <button
-                              key={fotoIndex}
-                              onClick={() => handleOpenLightbox(evento.fotos, fotoIndex)}
-                              className="aspect-square rounded-lg overflow-hidden border border-border hover:border-primary transition-colors"
-                            >
-                              <img
-                                src={foto}
-                                alt={`Foto ${fotoIndex + 1}`}
-                                className="w-full h-full object-cover"
-                              />
-                            </button>
-                          ))}
-                        </div>
-                        <p className="text-xs italic text-muted-foreground">
-                          {evento.nota_contexto}
-                        </p>
+                        {evento.fotos_entrega.length > 0 ? (
+                          <>
+                            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                              <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                              <span>{evento.fotos_entrega.length} foto(s) das entregas</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {evento.fotos_entrega.map((foto, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => handleOpenGallery(evento)}
+                                  className="w-[45px] h-[45px] rounded border border-border hover:border-primary transition-colors overflow-hidden"
+                                >
+                                  <img
+                                    src={foto}
+                                    alt={`Entrega ${idx + 1}`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">-</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Galeria de fotos - Manutenção */}
+                    {evento.tipo === 'MANUTENCAO' && (
+                      <div className="space-y-2">
+                        {evento.fotos_manejo.length > 0 ? (
+                          <>
+                            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                              <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                              <span>{evento.fotos_manejo.length} foto(s) da manutenção</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {evento.fotos_manejo.map((foto, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => handleOpenGallery(evento)}
+                                  className="w-[45px] h-[45px] rounded border border-border hover:border-primary transition-colors overflow-hidden"
+                                >
+                                  <img
+                                    src={foto}
+                                    alt={`Manutenção ${idx + 1}`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">-</p>
+                        )}
                       </div>
                     )}
 
@@ -160,12 +198,14 @@ export const TraceabilityTimeline = ({ eventos }: TraceabilityTimelineProps) => 
         </div>
       </div>
 
-      {/* Lightbox para galeria de fotos */}
-      <Lightbox
-        open={lightboxOpen}
-        close={() => setLightboxOpen(false)}
-        index={lightboxIndex}
-        slides={currentFotos.map(foto => ({ src: foto }))}
+      {/* Modal de galeria de fotos */}
+      <FotosGalleryModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        loteId={selectedLoteId}
+        title={modalTitle}
+        isLoteProng={true}
+        manejoId={selectedManejoId}
       />
     </>
   );
