@@ -17,8 +17,19 @@ import {
   Camera,
   Sprout,
   Download,
-  FileText
+  FileText,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from '@/components/ui/pagination';
 
 import { useLotesManager } from '@/hooks/useLotesManager';
 import { useHistoricoLotes } from '@/hooks/useHistoricoLotes';
@@ -60,7 +71,11 @@ const Lotes = () => {
     setFilters,
     refetch: refetchHistorico,
     totalLotes,
-    lotesFiltradosCount
+    lotesFiltradosCount,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    itemsPerPage
   } = useHistoricoLotes();
 
   const {
@@ -371,10 +386,91 @@ const Lotes = () => {
             </div>
           )}
 
-          {/* Results summary for mobile */}
-          {lotesFiltrados.length > 0 && (
-            <div className="md:hidden text-center text-sm text-muted-foreground">
-              {lotesFiltradosCount} de {totalLotes} lotes
+          {/* Pagination - Mobile First */}
+          {totalPages > 1 && (
+            <div className="flex flex-col items-center gap-4 mt-6">
+              {/* Mobile: Simple prev/next */}
+              <div className="flex md:hidden items-center justify-between w-full gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="flex-1"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Anterior
+                </Button>
+                <span className="text-sm text-muted-foreground px-4">
+                  {currentPage} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="flex-1"
+                >
+                  Próxima
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+
+              {/* Desktop: Full pagination */}
+              <Pagination className="hidden md:flex">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(page => {
+                      // Mostrar primeira, última, atual e 1 antes/depois da atual
+                      return page === 1 || 
+                             page === totalPages || 
+                             Math.abs(page - currentPage) <= 1;
+                    })
+                    .map((page, index, array) => {
+                      // Adicionar ellipsis quando há gap
+                      const prevPage = array[index - 1];
+                      const showEllipsis = prevPage && page - prevPage > 1;
+                      
+                      return (
+                        <>
+                          {showEllipsis && (
+                            <PaginationItem key={`ellipsis-${page}`}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          )}
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => setCurrentPage(page)}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        </>
+                      );
+                    })}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+
+              {/* Results info */}
+              <div className="text-center text-sm text-muted-foreground">
+                Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, lotesFiltradosCount)} de {lotesFiltradosCount} lotes
+              </div>
             </div>
           )}
         </TabsContent>

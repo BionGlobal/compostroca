@@ -54,6 +54,9 @@ export const useHistoricoLotes = () => {
   const [novosLotes, setNovosLotes] = useState<LoteHistorico[]>([]);
   const [lotesProntos, setLotesProntos] = useState<LoteHistorico[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 12;
   const [filters, setFilters] = useState<SearchFilters>({
     query: '',
     tipo: 'all'
@@ -129,13 +132,12 @@ export const useHistoricoLotes = () => {
 
       if (novosLotesError) throw novosLotesError;
 
-      // Buscar LOTES PRONTOS (finalizados/encerrados) - últimos 6
+      // Buscar LOTES PRONTOS (finalizados/encerrados) - sem limit, faremos paginação depois
       const { data: lotesProntosData, error: lotesProntosError } = await supabase
         .from('lotes')
         .select('*')
         .eq('status', 'encerrado')
-        .order('data_encerramento', { ascending: false })
-        .limit(6);
+        .order('data_encerramento', { ascending: false });
 
       if (lotesProntosError) throw lotesProntosError;
 
@@ -234,7 +236,7 @@ export const useHistoricoLotes = () => {
   };
 
   // Combinar e filtrar lotes baseado nos filtros
-  const lotesFiltrados = useMemo(() => {
+  const allFilteredLotes = useMemo(() => {
     let todosLotes: LoteHistorico[] = [];
     
     // Adicionar com base no filtro de tipo
@@ -267,6 +269,16 @@ export const useHistoricoLotes = () => {
     });
   }, [novosLotes, lotesProntos, filters]);
 
+  // Calcular total de páginas e lotes paginados
+  const totalFilteredLotes = allFilteredLotes.length;
+  const lotesFiltrados = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pages = Math.ceil(totalFilteredLotes / itemsPerPage);
+    setTotalPages(pages || 1);
+    return allFilteredLotes.slice(startIndex, endIndex);
+  }, [allFilteredLotes, currentPage, totalFilteredLotes]);
+
   useEffect(() => {
     if (user) {
       fetchHistoricoLotes();
@@ -282,6 +294,10 @@ export const useHistoricoLotes = () => {
     setFilters,
     refetch: fetchHistoricoLotes,
     totalLotes: novosLotes.length + lotesProntos.length,
-    lotesFiltradosCount: lotesFiltrados.length
+    lotesFiltradosCount: totalFilteredLotes,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    itemsPerPage
   };
 };

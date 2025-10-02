@@ -20,7 +20,6 @@ import ProductionBeltPublic from "./pages/ProductionBeltPublic";
 import { PublicFotosLote } from "./pages/PublicFotosLote";
 import AuditoriaGeral from "./pages/AuditoriaGeral";
 import LoteAuditoria from "./pages/LoteAuditoria";
-import AdminRestore from "./pages/AdminRestore";
 
 const queryClient = new QueryClient();
 
@@ -69,15 +68,6 @@ const App = () => (
               <Layout>
                 <AdminRoute requireSuperAdmin={true}>
                   <PendingUsers />
-                </AdminRoute>
-              </Layout>
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/restore" element={
-            <ProtectedRoute>
-              <Layout>
-                <AdminRoute requireSuperAdmin={true}>
-                  <AdminRestore />
                 </AdminRoute>
               </Layout>
             </ProtectedRoute>
