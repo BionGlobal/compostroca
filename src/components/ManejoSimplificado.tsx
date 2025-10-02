@@ -44,7 +44,7 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
   const [localizacao, setLocalizacao] = useState<{lat: number, lng: number} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
 
   const lotesAtivos = lotes.filter(l => l.status === 'ativo' || l.status === 'em_processamento');
@@ -460,6 +460,24 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
   };
 
   const handleConfirmar = async () => {
+    if (!user?.id || !organizacao) {
+      toast({
+        title: "Erro",
+        description: "Usuário ou organização não identificados",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!profile?.full_name) {
+      toast({
+        title: "Erro",
+        description: "Nome do administrador não disponível",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (fotos.length === 0) {
       toast({
         title: "Foto obrigatória",
@@ -482,25 +500,41 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
 
     setLoading(true);
     try {
-      console.log('Iniciando processo de manejo...');
+      console.log('🔄 Iniciando manutenção semanal via Edge Function...');
       
       // Upload das fotos
       const fotoUrls = await uploadFotos();
-      console.log('Upload concluído, processando esteira...');
+      console.log('✅ Upload concluído, chamando Edge Function...');
       
-      // Processar esteira (atualizar lotes)
-      await processarEsteira();
-      console.log('Esteira processada, registrando manejo...');
-      
-      // Registrar operações de manejo
-      await registrarManejo(fotoUrls);
-      console.log('Manejo registrado com sucesso!');
+      // Call the edge function
+      const { data, error } = await supabase.functions.invoke('finalizar-manutencao-semanal', {
+        body: {
+          unidade_codigo: organizacao,
+          data_sessao: new Date().toISOString(),
+          administrador_id: user.id,
+          administrador_nome: profile.full_name,
+          observacoes_gerais: observacoes,
+          fotos_gerais: fotoUrls,
+          latitude: localizacao?.lat,
+          longitude: localizacao?.lng
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Falha ao executar manutenção semanal');
+      }
+
+      console.log("✅ Manutenção semanal concluída:", data);
 
       toast({
         title: "Manejo concluído!",
-        description: "Esteira avançou com sucesso. Caixa 1 está liberada para novos lotes.",
+        description: `${data.moved?.length || 0} lotes avançados, ${data.finalized?.length || 0} finalizados`,
       });
 
+      // Resetar estado
+      setFotos([]);
+      setObservacoes('');
+      
       onManejoCompleto();
       onClose();
     } catch (error) {

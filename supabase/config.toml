@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.migrar-eventos-historicos]
 verify_jwt = false
+
+[functions.restore-belt-state]
+verify_jwt = false
+
+[functions.finalizar-manutencao-semanal]
+verify_jwt = false
