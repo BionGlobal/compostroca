@@ -75,6 +75,8 @@ export default function LoteAuditoria() {
           dataInicio={data.data_inicio}
           dataFinalizacao={data.data_finalizacao}
           hashRastreabilidade={data.hash_rastreabilidade}
+          latitude={data.latitude}
+          longitude={data.longitude}
         />
 
         {/* Seção 2: Métricas de Impacto */}

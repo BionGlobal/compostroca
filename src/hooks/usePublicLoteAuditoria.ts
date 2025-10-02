@@ -32,6 +32,8 @@ interface LoteAuditoriaData {
   data_inicio: Date;
   data_finalizacao: Date | null;
   hash_rastreabilidade: string;
+  latitude: number | null;
+  longitude: number | null;
   
   // Métricas
   peso_inicial: number;
@@ -110,6 +112,8 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             data_finalizacao,
             data_encerramento,
             hash_integridade,
+            latitude,
+            longitude,
             unidades:unidade_id (
               nome,
               codigo_unidade,
@@ -241,6 +245,8 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           data_inicio: new Date(lote.data_inicio),
           data_finalizacao: dataFim ? new Date(dataFim) : null,
           hash_rastreabilidade: lote.hash_integridade || '',
+          latitude: lote.latitude,
+          longitude: lote.longitude,
           peso_inicial: lote.peso_inicial,
           peso_final: pesoFinal,
           duracao_dias: duracaoDias,
