@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.migrar-eventos-historicos]
 verify_jwt = false
+
+[functions.migrar-eventos-lote]
+verify_jwt = false
