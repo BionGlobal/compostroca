@@ -240,62 +240,94 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           let validadorNome = '-';
           let comentario = '';
           let manejoId: string | null = null;
+          let notaContexto = '';
 
           if (evento.tipo_evento === 'inicio') {
             tipo = 'INICIO';
-            // Buscar fotos reais das entregas
-            fotosEntrega = fotosEntregas
-              ?.map(f => processPhotoUrl(f.foto_url))
-              .filter(url => url) || [];
-            
-            // Validador do início é quem criou o lote
             validadorNome = evento.administrador_nome || '-';
+            
+            // PRIORIZAR fotos compartilhadas do evento (já processadas pela função SQL)
+            if (evento.fotos_compartilhadas && Array.isArray(evento.fotos_compartilhadas) && evento.fotos_compartilhadas.length > 0) {
+              fotosEntrega = evento.fotos_compartilhadas.map((url: string) => processPhotoUrl(url));
+            } else {
+              // Fallback: buscar fotos das entregas
+              fotosEntrega = fotosEntregas
+                ?.map(f => processPhotoUrl(f.foto_url))
+                .filter(url => url) || [];
+            }
+            
+            // Extrair dados específicos do início
+            if (evento.dados_especificos && typeof evento.dados_especificos === 'object') {
+              const dados = evento.dados_especificos as Record<string, any>;
+              const totalVol = dados.total_voluntarios || 0;
+              const pesoRes = Math.round((dados.peso_residuos || 0) * 100) / 100;
+              const pesoCep = Math.round((dados.peso_cepilho || 0) * 100) / 100;
+              comentario = `${totalVol} voluntários • ${pesoRes} kg resíduos + ${pesoCep} kg cepilho`;
+            }
           } else if (evento.tipo_evento === 'finalizacao' || index === eventos.length - 1) {
             tipo = 'FINALIZACAO';
             validadorNome = evento.administrador_nome || '-';
             
-            // Para eventos de finalização, buscar dados da sessão
-            if (evento.sessao_manutencao_id) {
+            // Priorizar fotos compartilhadas do evento, depois da sessão
+            if (evento.fotos_compartilhadas && Array.isArray(evento.fotos_compartilhadas) && evento.fotos_compartilhadas.length > 0) {
+              fotosManejo = evento.fotos_compartilhadas.map((url: string) => processPhotoUrl(url));
+            } else if (evento.sessao_manutencao_id) {
               const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
-              if (sessaoData) {
-                comentario = sessaoData.observacoes_gerais || '';
-                
-                // Priorizar fotos do evento, depois da sessão
-                if (evento.fotos_compartilhadas && Array.isArray(evento.fotos_compartilhadas) && evento.fotos_compartilhadas.length > 0) {
-                  fotosManejo = evento.fotos_compartilhadas.map((url: string) => processPhotoUrl(url));
-                } else if (sessaoData.fotos_gerais && Array.isArray(sessaoData.fotos_gerais) && sessaoData.fotos_gerais.length > 0) {
-                  fotosManejo = sessaoData.fotos_gerais.map((url: string) => processPhotoUrl(url));
-                } else if (fotosLoteManejo && fotosLoteManejo.length > 0) {
-                  fotosManejo = fotosLoteManejo.map((f: any) => processPhotoUrl(f.foto_url));
-                }
+              if (sessaoData?.fotos_gerais && Array.isArray(sessaoData.fotos_gerais) && sessaoData.fotos_gerais.length > 0) {
+                fotosManejo = sessaoData.fotos_gerais.map((url: string) => processPhotoUrl(url));
               }
             }
-          } else {
-            // MANUTENCAO/TRANSFERENCIA - buscar dados da sessão via FK direto
+            
+            // Comentário da sessão
             if (evento.sessao_manutencao_id) {
               const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
               if (sessaoData) {
-                comentario = sessaoData.observacoes_gerais || '';
+                comentario = sessaoData.observacoes_gerais || evento.observacoes || '';
+              }
+            } else {
+              comentario = evento.observacoes || '';
+            }
+          } else {
+            // MANUTENÇÃO - buscar dados da sessão
+            tipo = 'MANUTENCAO';
+            
+            // Priorizar fotos compartilhadas do evento, depois da sessão
+            if (evento.fotos_compartilhadas && Array.isArray(evento.fotos_compartilhadas) && evento.fotos_compartilhadas.length > 0) {
+              fotosManejo = evento.fotos_compartilhadas.map((url: string) => processPhotoUrl(url));
+            } else if (evento.sessao_manutencao_id) {
+              const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
+              if (sessaoData?.fotos_gerais && Array.isArray(sessaoData.fotos_gerais) && sessaoData.fotos_gerais.length > 0) {
+                fotosManejo = sessaoData.fotos_gerais.map((url: string) => processPhotoUrl(url));
+              }
+            }
+            
+            // Validador e comentário da sessão
+            if (evento.sessao_manutencao_id) {
+              const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
+              if (sessaoData) {
                 validadorNome = sessaoData.administrador_nome || evento.administrador_nome || '';
-                
-                // Priorizar fotos do evento, depois da sessão, e finalmente de lote_fotos
-                if (evento.fotos_compartilhadas && Array.isArray(evento.fotos_compartilhadas) && evento.fotos_compartilhadas.length > 0) {
-                  fotosManejo = evento.fotos_compartilhadas.map((url: string) => processPhotoUrl(url));
-                } else if (sessaoData.fotos_gerais && Array.isArray(sessaoData.fotos_gerais) && sessaoData.fotos_gerais.length > 0) {
-                  fotosManejo = sessaoData.fotos_gerais.map((url: string) => processPhotoUrl(url));
-                } else if (fotosLoteManejo && fotosLoteManejo.length > 0) {
-                  fotosManejo = fotosLoteManejo.map((f: any) => processPhotoUrl(f.foto_url));
-                }
+                comentario = sessaoData.observacoes_gerais || evento.observacoes || '';
+              }
+            } else {
+              validadorNome = evento.administrador_nome || 'Sistema (Estimado)';
+              comentario = evento.observacoes || '';
+            }
+            
+            // Marcar eventos estimados
+            if (evento.dados_especificos && typeof evento.dados_especificos === 'object') {
+              const dados = evento.dados_especificos as Record<string, any>;
+              if (dados.estimado) {
+                notaContexto = '⚠️ Evento estimado - sem registro fotográfico';
               }
             }
           }
 
-          if (validadorNome !== '-') {
+          if (validadorNome !== '-' && !validadorNome.includes('Estimado')) {
             validadoresSet.add(validadorNome);
           }
 
-          // Calcular peso para a etapa
-          const pesoCalculado = calcularPesoSemanal(lote.peso_inicial, evento.etapa_numero - 1);
+          // Usar peso_depois do evento se disponível, senão calcular
+          const pesoCalculado = evento.peso_depois || calcularPesoSemanal(lote.peso_inicial, evento.etapa_numero - 1);
 
           eventosProcessados.push({
             etapa: evento.etapa_numero,
@@ -307,7 +339,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             fotos_entrega: fotosEntrega,
             fotos_manejo: fotosManejo,
             comentario,
-            nota_contexto: '',
+            nota_contexto: notaContexto,
             lote_id: lote.id,
             manejo_id: manejoId
           });

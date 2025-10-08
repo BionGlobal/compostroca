@@ -174,10 +174,10 @@ Deno.serve(async (req) => {
       if (moveError) {
         console.error(`❌ Error moving ${lote.codigo}:`, moveError);
       } else {
-        // Create transfer event with session photos
+        // Create maintenance event with session photos  
         await supabase.from('lote_eventos').insert({
           lote_id: lote.id,
-          tipo_evento: 'transferencia',
+          tipo_evento: 'manutencao',
           etapa_numero: semana_nova,
           data_evento: new Date().toISOString(),
           peso_antes,
@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
           administrador_id,
           administrador_nome,
           sessao_manutencao_id: sessao.id,
-          observacoes: `Transferência semanal - ${observacoes_gerais}`,
+          observacoes: `Manutenção semanal - Caixa ${caixa_origem}→${caixa_destino} - ${observacoes_gerais}`,
           fotos_compartilhadas: fotos_gerais || [],
           dados_especificos: {
             taxa_decaimento,

@@ -845,6 +845,14 @@ export type Database = {
         Args: { lote_codigo_param: string }
         Returns: undefined
       }
+      recuperar_eventos_lote: {
+        Args: { p_lote_id: string }
+        Returns: {
+          etapas_geradas: string[]
+          eventos_criados: number
+          fotos_replicadas: number
+        }[]
+      }
       reprocessar_sessao_manutencao: {
         Args: { p_sessao_id: string }
         Returns: {
