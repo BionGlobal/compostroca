@@ -95,6 +95,19 @@ Deno.serve(async (req) => {
     if (loteCaixa7) {
       console.log(`🏁 Finalizing lot in box 7: ${loteCaixa7.codigo}`);
 
+      // Verificar se falta evento de início antes de finalizar
+      const { data: eventoInicio } = await supabase
+        .from('lote_eventos')
+        .select('id')
+        .eq('lote_id', loteCaixa7.id)
+        .eq('etapa_numero', 1)
+        .maybeSingle();
+
+      if (!eventoInicio) {
+        console.warn(`⚠️ Lote ${loteCaixa7.codigo} não tem evento de início. Chamando função de recuperação...`);
+        await supabase.rpc('recuperar_eventos_lote', { p_lote_id: loteCaixa7.id });
+      }
+
       const { error: finalizeError } = await supabase
         .from('lotes')
         .update({

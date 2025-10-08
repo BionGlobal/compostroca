@@ -62,16 +62,13 @@ const BUCKET_URL = 'https://yfcxdbhrtjdmwyifgptf.supabase.co/storage/v1/object/p
 const processPhotoUrl = (url: string): string => {
   if (!url) return '';
   if (url.startsWith('http')) return url;
-  // Se a URL já tem o bucket no caminho, retorna como está
   if (url.includes('entrega-fotos/') || url.includes('lote-fotos/')) {
     return `${BUCKET_URL}/${url}`;
   }
-  // Caso contrário, assume que é do bucket entrega-fotos
   return `${BUCKET_URL}/entrega-fotos/${url}`;
 };
 
 const calcularPesoSemanal = (pesoInicial: number, semana: number): number => {
-  // Taxa de decaimento: 3,65% por semana = fator 0,9635
   const fatorDecaimento = 0.9635;
   return Math.round(pesoInicial * Math.pow(fatorDecaimento, semana) * 100) / 100;
 };
@@ -169,7 +166,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
 
         // 5. Buscar dados de manutenções via sessao_manutencao_id
         const eventosManutencao = eventos?.filter(e => 
-          (e.tipo_evento === 'manutencao' || e.tipo_evento === 'transferencia') && 
+          (e.tipo_evento === 'manutencao' || e.tipo_evento === 'finalizacao') && 
           e.sessao_manutencao_id
         ) || [];
         
@@ -230,7 +227,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
         const eventosProcessados: Evento[] = [];
         const validadoresSet = new Set<string>();
 
-        eventos?.forEach((evento, index) => {
+        eventos?.forEach((evento) => {
           const data = new Date(evento.data_evento);
           const hora = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
@@ -239,86 +236,77 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           let fotosManejo: string[] = [];
           let validadorNome = '-';
           let comentario = '';
-          let manejoId: string | null = null;
           let notaContexto = '';
+
+          const isEstimado = evento.dados_especificos && typeof evento.dados_especificos === 'object' && 'estimado' in evento.dados_especificos;
 
           if (evento.tipo_evento === 'inicio') {
             tipo = 'INICIO';
             validadorNome = evento.administrador_nome || '-';
             
-            // PRIORIZAR fotos compartilhadas do evento (já processadas pela função SQL)
-            if (evento.fotos_compartilhadas && Array.isArray(evento.fotos_compartilhadas) && evento.fotos_compartilhadas.length > 0) {
-              fotosEntrega = evento.fotos_compartilhadas.map((url: string) => processPhotoUrl(url));
+            const fotos = evento.fotos_compartilhadas as string[] | null;
+            if (fotos && Array.isArray(fotos) && fotos.length > 0) {
+              fotosEntrega = fotos.map(processPhotoUrl);
             } else {
-              // Fallback: buscar fotos das entregas
-              fotosEntrega = fotosEntregas
-                ?.map(f => processPhotoUrl(f.foto_url))
-                .filter(url => url) || [];
+              fotosEntrega = fotosEntregas?.map(f => processPhotoUrl(f.foto_url)).filter(Boolean) || [];
             }
             
-            // Extrair dados específicos do início
-            if (evento.dados_especificos && typeof evento.dados_especificos === 'object') {
+            if (evento.dados_especificos) {
               const dados = evento.dados_especificos as Record<string, any>;
               const totalVol = dados.total_voluntarios || 0;
               const pesoRes = Math.round((dados.peso_residuos || 0) * 100) / 100;
               const pesoCep = Math.round((dados.peso_cepilho || 0) * 100) / 100;
               comentario = `${totalVol} voluntários • ${pesoRes} kg resíduos + ${pesoCep} kg cepilho`;
             }
-          } else if (evento.tipo_evento === 'finalizacao' || index === eventos.length - 1) {
+            
+          } else if (evento.tipo_evento === 'finalizacao' || evento.etapa_numero === 8) {
             tipo = 'FINALIZACAO';
             validadorNome = evento.administrador_nome || '-';
             
-            // Priorizar fotos compartilhadas do evento, depois da sessão
-            if (evento.fotos_compartilhadas && Array.isArray(evento.fotos_compartilhadas) && evento.fotos_compartilhadas.length > 0) {
-              fotosManejo = evento.fotos_compartilhadas.map((url: string) => processPhotoUrl(url));
+            const fotos = evento.fotos_compartilhadas as string[] | null;
+            if (fotos && Array.isArray(fotos) && fotos.length > 0) {
+              fotosManejo = fotos.map(processPhotoUrl);
             } else if (evento.sessao_manutencao_id) {
               const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
-              if (sessaoData?.fotos_gerais && Array.isArray(sessaoData.fotos_gerais) && sessaoData.fotos_gerais.length > 0) {
-                fotosManejo = sessaoData.fotos_gerais.map((url: string) => processPhotoUrl(url));
+              const fotosSessao = sessaoData?.fotos_gerais as string[] | null;
+              if (fotosSessao && Array.isArray(fotosSessao) && fotosSessao.length > 0) {
+                fotosManejo = fotosSessao.map(processPhotoUrl);
               }
             }
             
-            // Comentário da sessão
             if (evento.sessao_manutencao_id) {
               const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
-              if (sessaoData) {
-                comentario = sessaoData.observacoes_gerais || evento.observacoes || '';
-              }
+              comentario = sessaoData?.observacoes_gerais || evento.observacoes || '';
+              validadorNome = sessaoData?.administrador_nome || validadorNome;
             } else {
               comentario = evento.observacoes || '';
             }
+            
           } else {
-            // MANUTENÇÃO - buscar dados da sessão
             tipo = 'MANUTENCAO';
             
-            // Priorizar fotos compartilhadas do evento, depois da sessão
-            if (evento.fotos_compartilhadas && Array.isArray(evento.fotos_compartilhadas) && evento.fotos_compartilhadas.length > 0) {
-              fotosManejo = evento.fotos_compartilhadas.map((url: string) => processPhotoUrl(url));
+            const fotos = evento.fotos_compartilhadas as string[] | null;
+            if (fotos && Array.isArray(fotos) && fotos.length > 0) {
+              fotosManejo = fotos.map(processPhotoUrl);
             } else if (evento.sessao_manutencao_id) {
               const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
-              if (sessaoData?.fotos_gerais && Array.isArray(sessaoData.fotos_gerais) && sessaoData.fotos_gerais.length > 0) {
-                fotosManejo = sessaoData.fotos_gerais.map((url: string) => processPhotoUrl(url));
+              const fotosSessao = sessaoData?.fotos_gerais as string[] | null;
+              if (fotosSessao && Array.isArray(fotosSessao) && fotosSessao.length > 0) {
+                fotosManejo = fotosSessao.map(processPhotoUrl);
               }
             }
             
-            // Validador e comentário da sessão
             if (evento.sessao_manutencao_id) {
               const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
-              if (sessaoData) {
-                validadorNome = sessaoData.administrador_nome || evento.administrador_nome || '';
-                comentario = sessaoData.observacoes_gerais || evento.observacoes || '';
-              }
+              validadorNome = sessaoData?.administrador_nome || evento.administrador_nome || 'Sistema';
+              comentario = sessaoData?.observacoes_gerais || evento.observacoes || '';
             } else {
               validadorNome = evento.administrador_nome || 'Sistema (Estimado)';
               comentario = evento.observacoes || '';
             }
             
-            // Marcar eventos estimados
-            if (evento.dados_especificos && typeof evento.dados_especificos === 'object') {
-              const dados = evento.dados_especificos as Record<string, any>;
-              if (dados.estimado) {
-                notaContexto = '⚠️ Evento estimado - sem registro fotográfico';
-              }
+            if (isEstimado) {
+              notaContexto = '⚠️ Evento estimado - sem registro fotográfico';
             }
           }
 
@@ -326,8 +314,8 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             validadoresSet.add(validadorNome);
           }
 
-          // Usar peso_depois do evento se disponível, senão calcular
-          const pesoCalculado = evento.peso_depois || calcularPesoSemanal(lote.peso_inicial, evento.etapa_numero - 1);
+          // Peso: usar peso_depois do evento ou calcular
+          const pesoCalculado = evento.peso_depois ?? calcularPesoSemanal(lote.peso_inicial, evento.etapa_numero - 1);
 
           eventosProcessados.push({
             etapa: evento.etapa_numero,
@@ -341,7 +329,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             comentario,
             nota_contexto: notaContexto,
             lote_id: lote.id,
-            manejo_id: manejoId
+            manejo_id: null
           });
         });
 
