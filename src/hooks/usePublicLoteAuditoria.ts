@@ -188,7 +188,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
         }
 
         // 6. Buscar fotos de manejo associadas ao lote
-        const { data: fotosManejo } = await supabase
+        const { data: fotosLoteManejo } = await supabase
           .from('lote_fotos')
           .select('foto_url, created_at')
           .eq('lote_id', lote.id)
@@ -253,8 +253,25 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           } else if (evento.tipo_evento === 'finalizacao' || index === eventos.length - 1) {
             tipo = 'FINALIZACAO';
             validadorNome = evento.administrador_nome || '-';
+            
+            // Para eventos de finalização, buscar dados da sessão
+            if (evento.sessao_manutencao_id) {
+              const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
+              if (sessaoData) {
+                comentario = sessaoData.observacoes_gerais || '';
+                
+                // Priorizar fotos do evento, depois da sessão
+                if (evento.fotos_compartilhadas && Array.isArray(evento.fotos_compartilhadas) && evento.fotos_compartilhadas.length > 0) {
+                  fotosManejo = evento.fotos_compartilhadas.map((url: string) => processPhotoUrl(url));
+                } else if (sessaoData.fotos_gerais && Array.isArray(sessaoData.fotos_gerais) && sessaoData.fotos_gerais.length > 0) {
+                  fotosManejo = sessaoData.fotos_gerais.map((url: string) => processPhotoUrl(url));
+                } else if (fotosLoteManejo && fotosLoteManejo.length > 0) {
+                  fotosManejo = fotosLoteManejo.map((f: any) => processPhotoUrl(f.foto_url));
+                }
+              }
+            }
           } else {
-            // MANUTENCAO - buscar dados da sessão diretamente via sessao_manutencao_id
+            // MANUTENCAO/TRANSFERENCIA - buscar dados da sessão via FK direto
             if (evento.sessao_manutencao_id) {
               const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
               if (sessaoData) {
@@ -266,8 +283,8 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
                   fotosManejo = evento.fotos_compartilhadas.map((url: string) => processPhotoUrl(url));
                 } else if (sessaoData.fotos_gerais && Array.isArray(sessaoData.fotos_gerais) && sessaoData.fotos_gerais.length > 0) {
                   fotosManejo = sessaoData.fotos_gerais.map((url: string) => processPhotoUrl(url));
-                } else if (fotosManejo && fotosManejo.length > 0) {
-                  fotosManejo = fotosManejo.map((f: any) => processPhotoUrl(f.foto_url));
+                } else if (fotosLoteManejo && fotosLoteManejo.length > 0) {
+                  fotosManejo = fotosLoteManejo.map((f: any) => processPhotoUrl(f.foto_url));
                 }
               }
             }
@@ -296,7 +313,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           });
         });
 
-        // 6. Calcular métricas
+        // 9. Calcular métricas
         const pesoFinal = lote.peso_final || calcularPesoSemanal(lote.peso_inicial, 7);
         const dataFim = lote.data_finalizacao || lote.data_encerramento;
         const duracaoDias = dataFim
