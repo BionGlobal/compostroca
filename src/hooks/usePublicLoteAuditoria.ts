@@ -167,29 +167,34 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           .in('entrega_id', entregaIds)
           .is('deleted_at', null);
 
-        // 5. Buscar sessões de manutenção vinculadas aos eventos deste lote
-        const eventosIds = eventos?.map(e => e.id) || [];
-        const { data: sessoesVinculadas } = await supabase
-          .from('lote_eventos')
-          .select('sessao_manutencao_id')
-          .in('id', eventosIds)
-          .not('sessao_manutencao_id', 'is', null);
+        // 5. Buscar dados de manutenções via sessao_manutencao_id
+        const eventosManutencao = eventos?.filter(e => 
+          (e.tipo_evento === 'manutencao' || e.tipo_evento === 'transferencia') && 
+          e.sessao_manutencao_id
+        ) || [];
+        
+        const sessaoIds = [...new Set(eventosManutencao.map(e => e.sessao_manutencao_id).filter(Boolean))];
 
-        const sessaoIds = [...new Set(sessoesVinculadas?.map(s => s.sessao_manutencao_id).filter(Boolean))] as string[];
+        let sessoesMap = new Map();
+        if (sessaoIds.length > 0) {
+          const { data: sessoes } = await supabase
+            .from('sessoes_manutencao')
+            .select('*')
+            .in('id', sessaoIds);
+          
+          if (sessoes) {
+            sessoes.forEach(s => sessoesMap.set(s.id, s));
+          }
+        }
 
-        // Buscar dados das sessões e fotos
-        const { data: sessoes } = sessaoIds.length > 0 ? await supabase
-          .from('sessoes_manutencao')
-          .select('id, administrador_nome, observacoes_gerais, data_sessao')
-          .in('id', sessaoIds) : { data: [] };
-
-        // 6. Buscar fotos das sessões de manutenção
-        const { data: fotosManejo } = sessaoIds.length > 0 ? await supabase
+        // 6. Buscar fotos de manejo associadas ao lote
+        const { data: fotosManejo } = await supabase
           .from('lote_fotos')
-          .select('foto_url, lote_id')
+          .select('foto_url, created_at')
           .eq('lote_id', lote.id)
           .eq('tipo_foto', 'manejo_semanal')
-          .is('deleted_at', null) : { data: [] };
+          .is('deleted_at', null)
+          .order('created_at', { ascending: true });
 
         // 7. Processar voluntários
         const voluntariosMap = new Map<number, Voluntario>();
@@ -249,19 +254,21 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             tipo = 'FINALIZACAO';
             validadorNome = evento.administrador_nome || '-';
           } else {
-            // MANUTENCAO - buscar sessão vinculada DIRETAMENTE via FK
+            // MANUTENCAO - buscar dados da sessão diretamente via sessao_manutencao_id
             if (evento.sessao_manutencao_id) {
-              const sessaoData = sessoes?.find(s => s.id === evento.sessao_manutencao_id);
-              
+              const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
               if (sessaoData) {
-                comentario = sessaoData.observacoes_gerais || '-';
-                validadorNome = sessaoData.administrador_nome || '-';
+                comentario = sessaoData.observacoes_gerais || '';
+                validadorNome = sessaoData.administrador_nome || evento.administrador_nome || '';
                 
-                // Buscar fotos da sessão para este lote
-                fotosManejo = fotosManejo
-                  ?.filter((f: any) => f.lote_id === lote.id)
-                  .map((f: any) => processPhotoUrl(f.foto_url))
-                  .filter(url => url) || [];
+                // Priorizar fotos do evento, depois da sessão, e finalmente de lote_fotos
+                if (evento.fotos_compartilhadas && Array.isArray(evento.fotos_compartilhadas) && evento.fotos_compartilhadas.length > 0) {
+                  fotosManejo = evento.fotos_compartilhadas.map((url: string) => processPhotoUrl(url));
+                } else if (sessaoData.fotos_gerais && Array.isArray(sessaoData.fotos_gerais) && sessaoData.fotos_gerais.length > 0) {
+                  fotosManejo = sessaoData.fotos_gerais.map((url: string) => processPhotoUrl(url));
+                } else if (fotosManejo && fotosManejo.length > 0) {
+                  fotosManejo = fotosManejo.map((f: any) => processPhotoUrl(f.foto_url));
+                }
               }
             }
           }

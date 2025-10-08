@@ -538,10 +538,11 @@ export const ManejoSimplificado: React.FC<ManejoSimplificadoProps> = ({
       onManejoCompleto();
       onClose();
     } catch (error) {
-      console.error('Erro ao processar manejo:', error);
+      const errorMsg = (error as Error).message;
+      console.error('❌ Erro na manutenção:', errorMsg, error);
       toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Não foi possível processar o manejo",
+        title: "Erro ao finalizar manutenção",
+        description: `${errorMsg}. Verifique os logs para mais detalhes.`,
         variant: "destructive"
       });
     } finally {

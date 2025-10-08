@@ -845,6 +845,14 @@ export type Database = {
         Args: { lote_codigo_param: string }
         Returns: undefined
       }
+      reprocessar_sessao_manutencao: {
+        Args: { p_sessao_id: string }
+        Returns: {
+          eventos_criados: number
+          fotos_replicadas: number
+          lotes_processados: number
+        }[]
+      }
     }
     Enums: {
       approval_status: "pending" | "approved" | "rejected"
