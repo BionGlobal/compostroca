@@ -182,6 +182,37 @@ export const TraceabilityTimeline = ({ eventos }: TraceabilityTimelineProps) => 
                       </div>
                     )}
 
+                    {/* Galeria de fotos - Finalização */}
+                    {evento.tipo === 'FINALIZACAO' && (
+                      <div className="space-y-2">
+                        {evento.fotos_manejo.length > 0 ? (
+                          <>
+                            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                              <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                              <span>{evento.fotos_manejo.length} foto(s) da finalização</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {evento.fotos_manejo.map((foto, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => handleOpenGallery(evento)}
+                                  className="w-[45px] h-[45px] rounded border border-border hover:border-primary transition-colors overflow-hidden"
+                                >
+                                  <img
+                                    src={foto}
+                                    alt={`Finalização ${idx + 1}`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">-</p>
+                        )}
+                      </div>
+                    )}
+
                     {/* Comentário */}
                     {evento.comentario && (
                       <div className="glass-light p-3 rounded-lg">
