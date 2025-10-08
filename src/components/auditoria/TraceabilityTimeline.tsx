@@ -28,11 +28,15 @@ export const TraceabilityTimeline = ({ eventos }: TraceabilityTimelineProps) => 
   const [selectedLoteId, setSelectedLoteId] = useState<string>('');
   const [selectedManejoId, setSelectedManejoId] = useState<string | undefined>(undefined);
   const [modalTitle, setModalTitle] = useState('');
+  const [selectedPhotoUrls, setSelectedPhotoUrls] = useState<string[] | undefined>(undefined);
 
   const handleOpenGallery = (evento: Evento) => {
     setSelectedLoteId(evento.lote_id);
     setSelectedManejoId(evento.manejo_id || undefined);
     setModalTitle(getTipoLabel(evento.tipo, evento.etapa));
+    // Preferir as fotos exibidas nos cards para garantir correspondência com os thumbs
+    const urls = evento.tipo === 'INICIO' ? evento.fotos_entrega : evento.fotos_manejo;
+    setSelectedPhotoUrls(urls && urls.length ? urls : undefined);
     setModalOpen(true);
   };
 
@@ -229,15 +233,16 @@ export const TraceabilityTimeline = ({ eventos }: TraceabilityTimelineProps) => 
         </div>
       </div>
 
-      {/* Modal de galeria de fotos */}
-      <FotosGalleryModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        loteId={selectedLoteId}
-        title={modalTitle}
-        isLoteProng={true}
-        manejoId={selectedManejoId}
-      />
+{/* Modal de galeria de fotos */}
+<FotosGalleryModal
+  isOpen={modalOpen}
+  onClose={() => setModalOpen(false)}
+  loteId={selectedLoteId}
+  title={modalTitle}
+  isLoteProng={true}
+  manejoId={selectedManejoId}
+  photoUrls={selectedPhotoUrls}
+/>
     </>
   );
 };

@@ -18,6 +18,7 @@ interface FotosGalleryModalProps {
   isLoteProng?: boolean; // Indica se é um lote encerrado (pronto)
   entregaId?: string;
   manejoId?: string;
+  photoUrls?: string[]; // Override direto de URLs (ex.: fotos_compartilhadas do evento)
 }
 
 const TIPO_FOTO_LABELS = {
@@ -34,7 +35,8 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
   title,
   isLoteProng = false,
   entregaId,
-  manejoId
+  manejoId,
+  photoUrls
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [imageError, setImageError] = useState<string | null>(null);
@@ -51,22 +53,29 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
   const loading = isLoteProng ? loadingProntos : loadingNovos;
   const getFotoUrl = isLoteProng ? getFotoUrlProntos : getFotoUrlNovos;
   
-  // Filtrar fotos baseado nos parâmetros (se especificados)
-  const filteredFotos = fotos.filter((foto: any) => {
-    // Filtrar por entrega_id se especificado
-    if (entregaId) return foto.entrega_id === entregaId;
-    
-    // Filtrar por manejo_id se especificado
-    if (manejoId) {
-      return foto.manejo_id === manejoId || 
-             (foto.manejo_data && foto.manejo_data.id === manejoId);
-    }
-    
-    return true; // Mostrar todas as fotos se nenhum filtro especificado
-  }).map((foto: any) => ({
-    ...foto,
-    foto_url: typeof getFotoUrl === 'function' ? getFotoUrl(foto.foto_url) : foto.foto_url
-  }));
+// Filtrar/definir fotos baseado nos parâmetros ou override
+const filteredFotos = (photoUrls && photoUrls.length > 0)
+  ? photoUrls.map((url, idx) => ({
+      id: `${idx}-${url}`,
+      foto_url: url,
+      tipo_foto: manejoId ? 'manejo_semanal' : 'entrega_conteudo',
+      created_at: new Date().toISOString()
+    }))
+  : fotos.filter((foto: any) => {
+      // Filtrar por entrega_id se especificado
+      if (entregaId) return foto.entrega_id === entregaId;
+      
+      // Filtrar por manejo_id se especificado
+      if (manejoId) {
+        return foto.manejo_id === manejoId || 
+               (foto.manejo_data && foto.manejo_data.id === manejoId);
+      }
+      
+      return true; // Mostrar todas as fotos se nenhum filtro especificado
+    }).map((foto: any) => ({
+      ...foto,
+      foto_url: typeof getFotoUrl === 'function' ? getFotoUrl(foto.foto_url) : foto.foto_url
+    }));
 
   const currentFoto = filteredFotos[currentIndex];
 

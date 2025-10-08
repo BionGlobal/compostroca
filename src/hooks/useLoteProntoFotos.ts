@@ -211,16 +211,17 @@ export const useLoteProntoFotos = (loteId?: string) => {
 
   // Função para construir URL pública da foto
   const getFotoUrl = (fotoUrl: string): string => {
+    const BUCKET_URL = 'https://yfcxdbhrtjdmwyifgptf.supabase.co/storage/v1/object/public';
     // Se já é URL completa, retornar como está
     if (fotoUrl.startsWith('http')) return fotoUrl;
     
-    // Determinar o bucket correto baseado no tipo de foto
-    const bucketName = fotoUrl.includes('manejo') || fotoUrl.includes('Manejo')
-      ? 'manejo-fotos'
-      : 'entrega-fotos';
+    // Se já indica o bucket esperado
+    if (fotoUrl.includes('entrega-fotos/') || fotoUrl.includes('lote-fotos/')) {
+      return `${BUCKET_URL}/${fotoUrl}`;
+    }
     
-    // Construir URL completa do Supabase Storage
-    return `https://yfcxdbhrtjdmwyifgptf.supabase.co/storage/v1/object/public/${bucketName}/${fotoUrl}`;
+    // Fallback: assumir bucket de lote-fotos
+    return `${BUCKET_URL}/lote-fotos/${fotoUrl}`;
   };
 
   // Filtros específicos
