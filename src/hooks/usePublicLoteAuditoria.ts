@@ -329,7 +329,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             comentario,
             nota_contexto: notaContexto,
             lote_id: lote.id,
-            manejo_id: null
+            manejo_id: evento.sessao_manutencao_id || null
           });
         });
 

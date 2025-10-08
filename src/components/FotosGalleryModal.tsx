@@ -53,8 +53,15 @@ export const FotosGalleryModal: React.FC<FotosGalleryModalProps> = ({
   
   // Filtrar fotos baseado nos parâmetros (se especificados)
   const filteredFotos = fotos.filter((foto: any) => {
+    // Filtrar por entrega_id se especificado
     if (entregaId) return foto.entrega_id === entregaId;
-    if (manejoId) return foto.manejo_id === manejoId;
+    
+    // Filtrar por manejo_id se especificado
+    if (manejoId) {
+      return foto.manejo_id === manejoId || 
+             (foto.manejo_data && foto.manejo_data.id === manejoId);
+    }
+    
     return true; // Mostrar todas as fotos se nenhum filtro especificado
   }).map((foto: any) => ({
     ...foto,
