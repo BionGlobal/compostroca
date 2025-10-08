@@ -40,7 +40,29 @@ Deno.serve(async (req) => {
     console.log('🔄 Starting weekly maintenance for unit:', unidade_codigo);
     console.log('📅 Session date:', data_sessao);
 
-    // 1. Create maintenance session
+    // 1. Fetch active lots sorted by caixa (1..7)
+    const { data: lotes, error: lotesError } = await supabase
+      .from('lotes')
+      .select('*')
+      .eq('unidade', unidade_codigo)
+      .in('status', ['ativo', 'em_processamento'])
+      .is('deleted_at', null)
+      .order('caixa_atual', { ascending: true });
+
+    if (lotesError) {
+      console.error('❌ Error fetching lots:', lotesError);
+      throw new Error(`Failed to fetch lots: ${lotesError.message}`);
+    }
+
+    console.log(`📦 Found ${lotes.length} active lots`);
+
+    // Safety check: abort if count is invalid (must be 1-7 active lots)
+    if (lotes.length === 0 || lotes.length > 7) {
+      console.error('⚠️ Safety abort: invalid lot count detected:', lotes.length);
+      throw new Error(`Safety check failed: expected 1-7 active lots, found ${lotes.length}`);
+    }
+
+    // 2. Create maintenance session
     const { data: sessao, error: sessaoError } = await supabase
       .from('sessoes_manutencao')
       .insert({
@@ -62,28 +84,6 @@ Deno.serve(async (req) => {
     }
 
     console.log('✅ Session created:', sessao.id);
-
-    // 2. Fetch active lots sorted by caixa (1..7)
-    const { data: lotes, error: lotesError } = await supabase
-      .from('lotes')
-      .select('*')
-      .eq('unidade', unidade_codigo)
-      .in('status', ['ativo', 'em_processamento'])
-      .is('deleted_at', null)
-      .order('caixa_atual', { ascending: true });
-
-    if (lotesError) {
-      console.error('❌ Error fetching lots:', lotesError);
-      throw new Error(`Failed to fetch lots: ${lotesError.message}`);
-    }
-
-    console.log(`📦 Found ${lotes.length} active lots`);
-
-    // Safety check: abort if we're about to finalize everything
-    if (lotes.length > 6) {
-      console.error('⚠️ Safety abort: too many active lots detected');
-      throw new Error('Safety check failed: unexpected lot count');
-    }
 
     const loteCaixa7 = lotes.find(l => l.caixa_atual === 7);
     const lotesToMove = lotes.filter(l => l.caixa_atual < 7).sort((a, b) => b.caixa_atual - a.caixa_atual);
@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
       if (finalizeError) {
         console.error('❌ Error finalizing lot:', finalizeError);
       } else {
-        // Create finalization event
+        // Create finalization event with session photos
         await supabase.from('lote_eventos').insert({
           lote_id: loteCaixa7.id,
           tipo_evento: 'finalizacao',
@@ -125,8 +125,19 @@ Deno.serve(async (req) => {
           administrador_nome,
           sessao_manutencao_id: sessao.id,
           observacoes: `Finalização - ${observacoes_gerais}`,
+          fotos_compartilhadas: fotos_gerais || [],
           dados_especificos: { peso_final: loteCaixa7.peso_atual }
         });
+
+        // Replicate session photos to lote_fotos
+        if (fotos_gerais && fotos_gerais.length > 0) {
+          const fotosInserts = fotos_gerais.map((foto_url: string) => ({
+            lote_id: loteCaixa7.id,
+            foto_url,
+            tipo_foto: 'manejo_semanal'
+          }));
+          await supabase.from('lote_fotos').insert(fotosInserts);
+        }
 
         finalized.push({
           codigo: loteCaixa7.codigo,
@@ -163,7 +174,7 @@ Deno.serve(async (req) => {
       if (moveError) {
         console.error(`❌ Error moving ${lote.codigo}:`, moveError);
       } else {
-        // Create transfer event
+        // Create transfer event with session photos
         await supabase.from('lote_eventos').insert({
           lote_id: lote.id,
           tipo_evento: 'transferencia',
@@ -179,11 +190,22 @@ Deno.serve(async (req) => {
           administrador_nome,
           sessao_manutencao_id: sessao.id,
           observacoes: `Transferência semanal - ${observacoes_gerais}`,
+          fotos_compartilhadas: fotos_gerais || [],
           dados_especificos: {
             taxa_decaimento,
             reducao_peso: parseFloat((peso_antes - peso_depois).toFixed(2))
           }
         });
+
+        // Replicate session photos to lote_fotos
+        if (fotos_gerais && fotos_gerais.length > 0) {
+          const fotosInserts = fotos_gerais.map((foto_url: string) => ({
+            lote_id: lote.id,
+            foto_url,
+            tipo_foto: 'manejo_semanal'
+          }));
+          await supabase.from('lote_fotos').insert(fotosInserts);
+        }
 
         moved.push({
           codigo: lote.codigo,
