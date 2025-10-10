@@ -84,6 +84,7 @@ export const useLotes = () => {
         .eq('unidade', profile.organization_code)
         .eq('caixa_atual', 1)
         .in('status', ['ativo', 'em_processamento']) // Tolerância: aceitar ambos status na Caixa 1
+        .is('data_encerramento', null) // ✅ Garantir que não está encerrado
         .is('deleted_at', null)
         .single();
 

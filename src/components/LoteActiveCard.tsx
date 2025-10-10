@@ -12,7 +12,8 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { useLotes } from '@/hooks/useLotes';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,12 +21,16 @@ import { formatPesoDisplay } from '@/lib/organizationUtils';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { supabase } from '@/integrations/supabase/client';
+import { useLoteUpdates } from '@/contexts/LoteContext';
 
 export const LoteActiveCard = () => {
   const [isCreating, setIsCreating] = useState(false);
-  const { loteAtivoCaixa01, voluntariosCount, loading, criarNovoLote } = useLotes();
+  const [isReactivating, setIsReactivating] = useState(false);
+  const { loteAtivoCaixa01, voluntariosCount, loading, criarNovoLote, refetch } = useLotes();
   const { profile, user } = useAuth();
   const { toast } = useToast();
+  const { notifyLoteUpdate } = useLoteUpdates();
 
   // Debug logs
   console.log('🔍 LoteActiveCard - Debug Info:', {
@@ -55,6 +60,8 @@ export const LoteActiveCard = () => {
         title: "Sucesso!",
         description: "Novo lote criado na Caixa 01",
       });
+      notifyLoteUpdate();
+      refetch();
     } catch (error) {
       console.error('Erro ao criar lote:', error);
       toast({
@@ -64,6 +71,54 @@ export const LoteActiveCard = () => {
       });
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleReativarLote = async () => {
+    if (!canCreateLote) {
+      toast({
+        title: "Sem permissão",
+        description: "Apenas super_admin ou local_admin podem reativar lotes",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsReactivating(true);
+    try {
+      console.log('🔄 Chamando Edge Function para reativar lote CWB001-09102025A379...');
+      
+      const { data, error } = await supabase.functions.invoke('reativar-lote-entregas', {
+        body: { codigo_lote: 'CWB001-09102025A379' }
+      });
+
+      if (error) throw error;
+
+      console.log('✅ Resposta da Edge Function:', data);
+
+      toast({
+        title: "✅ Lote Reativado!",
+        description: data.message || "Lote liberado para receber entregas",
+      });
+
+      // Forçar atualização em cascata
+      notifyLoteUpdate();
+      await refetch();
+      
+      // Última opção: recarregar página após 1 segundo
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+
+    } catch (error) {
+      console.error('❌ Erro ao reativar lote:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível reativar o lote",
+        variant: "destructive",
+      });
+    } finally {
+      setIsReactivating(false);
     }
   };
 
@@ -243,6 +298,40 @@ export const LoteActiveCard = () => {
                 </div>
               </div>
             </div>
+
+            {/* Botão de Emergência - Reativar Lote Bloqueado */}
+            {canCreateLote && profile?.user_role === 'super_admin' && (
+              <div className="space-y-3">
+                <div className="bg-gradient-to-r from-orange-100 to-red-100 p-4 rounded-lg border-2 border-orange-400">
+                  <p className="text-center text-orange-800 font-medium mb-3">
+                    🆘 Botão de Emergência (Super Admin)
+                  </p>
+                  
+                  <Button 
+                    onClick={handleReativarLote}
+                    disabled={isReactivating}
+                    className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-bold text-base py-3 px-6 shadow-lg"
+                    size="lg"
+                  >
+                    {isReactivating ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Reativando Lote...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-5 w-5 mr-2" />
+                        🔄 REATIVAR LOTE CWB001-09102025A379
+                      </>
+                    )}
+                  </Button>
+                  
+                  <p className="text-center text-xs text-orange-700 mt-2">
+                    Use este botão para forçar reativação do lote bloqueado
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Botão para Criar Novo Lote - SUPER DESTACADO */}
             {canCreateLote && (
