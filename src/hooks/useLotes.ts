@@ -83,7 +83,7 @@ export const useLotes = () => {
         .select('*')
         .eq('unidade', profile.organization_code)
         .eq('caixa_atual', 1)
-        .eq('status', 'ativo')
+        .in('status', ['ativo', 'em_processamento']) // Tolerância: aceitar ambos status na Caixa 1
         .is('deleted_at', null)
         .single();
 
@@ -222,6 +222,15 @@ export const useLotes = () => {
       if (error) throw error;
 
       console.log('✅ Lote criado com sucesso:', data);
+      
+      // Validação crítica: garantir que o lote foi criado com status 'ativo'
+      if (data.status !== 'ativo') {
+        console.error('⚠️ ATENÇÃO: Lote criado com status incorreto:', data.status);
+        console.error('📊 Dados do lote:', data);
+      } else {
+        console.log('✅ Validação OK: Lote criado com status "ativo"');
+      }
+      
       setLoteAtivoCaixa01(data as Lote);
       
       // Notificar outros componentes

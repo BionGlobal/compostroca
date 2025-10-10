@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.finalizar-manutencao-semanal]
 verify_jwt = false
+
+[functions.corrigir-status-lote]
+verify_jwt = false
