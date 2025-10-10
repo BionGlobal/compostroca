@@ -78,13 +78,14 @@ export const useLotes = () => {
       console.log('🔄 Buscando lote ativo da organização:', profile.organization_code);
       console.log('🔍 Critérios de busca: unidade =', profile.organization_code, ', caixa_atual = 1, status = ativo, deleted_at IS NULL');
       
+      // Buscar lote ativo ideal (ativo e sem data de encerramento)
       const { data, error } = await supabase
         .from('lotes')
         .select('*')
         .eq('unidade', profile.organization_code)
         .eq('caixa_atual', 1)
-        .in('status', ['ativo', 'em_processamento']) // Tolerância: aceitar ambos status na Caixa 1
-        .is('data_encerramento', null) // ✅ Garantir que não está encerrado
+        .in('status', ['ativo', 'em_processamento'])
+        .is('data_encerramento', null)
         .is('deleted_at', null)
         .single();
 
@@ -94,7 +95,50 @@ export const useLotes = () => {
       }
 
       if (error && error.code === 'PGRST116') {
-        console.log('ℹ️ Nenhum lote ativo encontrado na busca (PGRST116)');
+        console.log('ℹ️ Nenhum lote ativo ideal encontrado, verificando lote suspeito...');
+        
+        // FALLBACK: Buscar lote "suspeito" que pode precisar reativação
+        const { data: suspiciousLote } = await supabase
+          .from('lotes')
+          .select('*')
+          .eq('unidade', profile.organization_code)
+          .eq('caixa_atual', 1)
+          .eq('status', 'em_processamento')
+          .not('data_encerramento', 'is', null)
+          .is('deleted_at', null)
+          .maybeSingle();
+
+        if (suspiciousLote && suspiciousLote.peso_inicial === 0) {
+          console.warn('⚠️ Lote suspeito detectado:', suspiciousLote.codigo, '- tentando reativar automaticamente...');
+          
+          try {
+            const { data: reactivated, error: reactivateError } = await supabase.functions.invoke(
+              'reativar-lote-entregas',
+              { body: { codigo_lote: suspiciousLote.codigo } }
+            );
+            
+            if (!reactivateError && reactivated?.success) {
+              console.log('✅ Lote reativado automaticamente:', suspiciousLote.codigo);
+              // Refazer busca após reativação
+              const { data: refreshedLote } = await supabase
+                .from('lotes')
+                .select('*')
+                .eq('codigo', suspiciousLote.codigo)
+                .single();
+              
+              if (refreshedLote) {
+                setLoteAtivoCaixa01(refreshedLote as Lote);
+                await fetchVoluntariosCount(refreshedLote.codigo);
+                setLoading(false);
+                return;
+              }
+            } else {
+              console.error('❌ Erro ao reativar lote automaticamente:', reactivateError);
+            }
+          } catch (reactivateErr) {
+            console.error('❌ Exceção ao tentar reativar lote:', reactivateErr);
+          }
+        }
       }
 
       console.log('📦 Resultado da busca de lote ativo:', data ? 'Lote encontrado' : 'Nenhum lote ativo');

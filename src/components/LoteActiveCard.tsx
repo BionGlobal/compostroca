@@ -13,7 +13,8 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import { useLotes } from '@/hooks/useLotes';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,6 +28,7 @@ import { useLoteUpdates } from '@/contexts/LoteContext';
 export const LoteActiveCard = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
+  const [suspiciousLote, setSuspiciousLote] = useState<any>(null);
   const { loteAtivoCaixa01, voluntariosCount, loading, criarNovoLote, refetch } = useLotes();
   const { profile, user } = useAuth();
   const { toast } = useToast();
@@ -42,6 +44,29 @@ export const LoteActiveCard = () => {
   });
 
   const canCreateLote = profile?.user_role === 'super_admin' || profile?.user_role === 'local_admin';
+
+  // Detectar lote suspeito ao carregar
+  React.useEffect(() => {
+    const checkSuspiciousLote = async () => {
+      if (!profile?.organization_code || loteAtivoCaixa01) return;
+
+      const { data } = await supabase
+        .from('lotes')
+        .select('*')
+        .eq('unidade', profile.organization_code)
+        .eq('caixa_atual', 1)
+        .eq('status', 'em_processamento')
+        .not('data_encerramento', 'is', null)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (data && data.peso_inicial === 0) {
+        setSuspiciousLote(data);
+      }
+    };
+
+    checkSuspiciousLote();
+  }, [profile, loteAtivoCaixa01]);
 
   const handleCriarLote = async () => {
     if (!canCreateLote) {
@@ -61,7 +86,7 @@ export const LoteActiveCard = () => {
         description: "Novo lote criado na Caixa 01",
       });
       notifyLoteUpdate();
-      refetch();
+      await refetch();
     } catch (error) {
       console.error('Erro ao criar lote:', error);
       toast({
@@ -75,10 +100,12 @@ export const LoteActiveCard = () => {
   };
 
   const handleReativarLote = async () => {
+    const loteToReactivate = suspiciousLote?.codigo || 'CWB001-09102025A379';
+    
     if (!canCreateLote) {
       toast({
         title: "Sem permissão",
-        description: "Apenas super_admin ou local_admin podem reativar lotes",
+        description: "Apenas administradores podem reativar lotes",
         variant: "destructive",
       });
       return;
@@ -86,10 +113,10 @@ export const LoteActiveCard = () => {
 
     setIsReactivating(true);
     try {
-      console.log('🔄 Chamando Edge Function para reativar lote CWB001-09102025A379...');
+      console.log('🔄 Chamando Edge Function para reativar lote:', loteToReactivate);
       
       const { data, error } = await supabase.functions.invoke('reativar-lote-entregas', {
-        body: { codigo_lote: 'CWB001-09102025A379' }
+        body: { codigo_lote: loteToReactivate }
       });
 
       if (error) throw error;
@@ -100,6 +127,9 @@ export const LoteActiveCard = () => {
         title: "✅ Lote Reativado!",
         description: data.message || "Lote liberado para receber entregas",
       });
+
+      // Limpar lote suspeito
+      setSuspiciousLote(null);
 
       // Forçar atualização em cascata
       notifyLoteUpdate();
@@ -300,36 +330,24 @@ export const LoteActiveCard = () => {
             </div>
 
             {/* Botão de Emergência - Reativar Lote Bloqueado */}
-            {canCreateLote && profile?.user_role === 'super_admin' && (
-              <div className="space-y-3">
-                <div className="bg-gradient-to-r from-orange-100 to-red-100 p-4 rounded-lg border-2 border-orange-400">
-                  <p className="text-center text-orange-800 font-medium mb-3">
-                    🆘 Botão de Emergência (Super Admin)
-                  </p>
-                  
-                  <Button 
-                    onClick={handleReativarLote}
-                    disabled={isReactivating}
-                    className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-bold text-base py-3 px-6 shadow-lg"
-                    size="lg"
-                  >
-                    {isReactivating ? (
-                      <>
-                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                        Reativando Lote...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="h-5 w-5 mr-2" />
-                        🔄 REATIVAR LOTE CWB001-09102025A379
-                      </>
-                    )}
-                  </Button>
-                  
-                  <p className="text-center text-xs text-orange-700 mt-2">
-                    Use este botão para forçar reativação do lote bloqueado
+            {canCreateLote && suspiciousLote && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-orange-600 flex-shrink-0" />
+                  <p className="text-sm text-orange-800 dark:text-orange-200">
+                    Lote <span className="font-mono font-bold">{suspiciousLote.codigo}</span> está bloqueado para entregas
                   </p>
                 </div>
+                <Button
+                  onClick={handleReativarLote}
+                  variant="destructive"
+                  size="lg"
+                  className="w-full"
+                  disabled={isReactivating}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isReactivating ? 'animate-spin' : ''}`} />
+                  {isReactivating ? 'Reativando...' : `🔄 Reativar ${suspiciousLote.codigo}`}
+                </Button>
               </div>
             )}
 

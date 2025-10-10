@@ -118,6 +118,7 @@ const Entregas = () => {
           qualidade_residuo: qualidadeResiduo,
           user_id: user.id,
           lote_codigo: loteAtivoCaixa01.codigo,
+          lote_id: loteAtivoCaixa01.id, // ✅ Garantir vínculo direto com o lote
         })
         .select()
         .single();
