@@ -27,6 +27,7 @@ interface LoteAuditoriaData {
   // Cabeçalho
   codigo_lote: string;
   codigo_unico: string;
+  status_lote: 'em_producao' | 'certificado';
   unidade: {
     nome: string;
     codigo: string;
@@ -98,13 +99,14 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
         setLoading(true);
         setError(null);
 
-        // 1. Buscar lote e unidade
+        // 1. Buscar lote e unidade (aceita lotes em produção e certificados)
         const { data: lote, error: loteError } = await supabase
           .from('lotes')
           .select(`
             id,
             codigo,
             codigo_unico,
+            status,
             unidade,
             peso_inicial,
             peso_final,
@@ -121,6 +123,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             )
           `)
           .eq('codigo_unico', codigoUnico)
+          .in('status', ['em_processamento', 'encerrado'])
           .is('deleted_at', null)
           .single();
 
@@ -333,31 +336,49 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           });
         });
 
-        // 9. Calcular métricas
-        const pesoFinal = lote.peso_final || calcularPesoSemanal(lote.peso_inicial, 7);
-        const dataFim = lote.data_finalizacao || lote.data_encerramento;
-        const duracaoDias = dataFim
-          ? Math.ceil((new Date(dataFim).getTime() - new Date(lote.data_inicio).getTime()) / (1000 * 60 * 60 * 24))
+        // 9. Determinar status do lote
+        const statusLote = lote.status === 'encerrado' && lote.data_finalizacao 
+          ? 'certificado' 
+          : 'em_producao';
+
+        // 10. Calcular métricas (condicionais para lotes em produção)
+        const dataFim = lote.data_finalizacao || lote.data_encerramento || new Date().toISOString();
+        const duracaoDias = Math.ceil(
+          (new Date(dataFim).getTime() - new Date(lote.data_inicio).getTime()) / 
+          (1000 * 60 * 60 * 24)
+        );
+
+        const pesoFinal = statusLote === 'certificado' 
+          ? (lote.peso_final || calcularPesoSemanal(lote.peso_inicial, 7))
+          : calcularPesoSemanal(lote.peso_inicial, eventos?.length || 1);
+        
+        const co2eqEvitado = statusLote === 'certificado' 
+          ? Math.round(pesoFinal * 0.766 * 100) / 100
+          : 0;
+        
+        const creditosCau = statusLote === 'certificado'
+          ? Math.round((pesoFinal / 1000) * 1000) / 1000
           : 0;
 
         const resultado: LoteAuditoriaData = {
           codigo_lote: lote.codigo,
           codigo_unico: lote.codigo_unico,
+          status_lote: statusLote,
           unidade: {
             nome: lote.unidades?.nome || 'Não disponível',
             codigo: lote.unidades?.codigo_unidade || lote.unidade,
             localizacao: lote.unidades?.localizacao || 'Não disponível'
           },
           data_inicio: new Date(lote.data_inicio),
-          data_finalizacao: dataFim ? new Date(dataFim) : null,
+          data_finalizacao: lote.data_finalizacao ? new Date(lote.data_finalizacao) : null,
           hash_rastreabilidade: lote.hash_integridade || '',
           latitude: lote.latitude,
           longitude: lote.longitude,
           peso_inicial: lote.peso_inicial,
           peso_final: pesoFinal,
           duracao_dias: duracaoDias,
-          co2eq_evitado: Math.round(pesoFinal * 0.766 * 100) / 100,
-          creditos_cau: Math.round((pesoFinal / 1000) * 1000) / 1000,
+          co2eq_evitado: co2eqEvitado,
+          creditos_cau: creditosCau,
           voluntarios,
           total_voluntarios: voluntarios.length,
           media_rating: countRatings > 0 ? Math.round((somaRatings / countRatings) * 10) / 10 : 0,

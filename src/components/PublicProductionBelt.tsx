@@ -1,9 +1,10 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, ArrowRight, User, Thermometer, Droplets, Camera } from 'lucide-react';
+import { Package, ArrowRight, User, Thermometer, Droplets, Camera, FileText } from 'lucide-react';
 import { formatPesoDisplay } from '@/lib/organizationUtils';
 import type { LoteExtended } from '@/hooks/usePublicProductionBelt';
+import { useNavigate } from 'react-router-dom';
 
 // Interface já importada do hook
 
@@ -13,6 +14,8 @@ interface PublicProductionBeltProps {
 }
 
 export const PublicProductionBelt = ({ lotesAtivos, onViewPhotos }: PublicProductionBeltProps) => {
+  const navigate = useNavigate();
+  
   // Organiza lotes por caixa (1-7) - exatamente igual ao ProductionBelt
   const caixasPorLote = Array.from({ length: 7 }, (_, index) => {
     const numeroBox = index + 1;
@@ -166,16 +169,27 @@ export const PublicProductionBelt = ({ lotesAtivos, onViewPhotos }: PublicProduc
                         </div>
                       </div>
 
-                      {/* Ver Fotos Button */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full mb-2"
-                        onClick={() => onViewPhotos?.(lote.id, `Fotos das Entregas - ${lote.codigo}`)}
-                      >
-                        <Camera className="h-3 w-3 mr-1" />
-                        Ver Fotos
-                      </Button>
+                      {/* Botões de Ação */}
+                      <div className="space-y-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs"
+                          onClick={() => navigate(`/lote/auditoria/${lote.codigo_unico}`)}
+                        >
+                          <FileText className="h-3 w-3 mr-1" />
+                          Ver Detalhes
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs"
+                          onClick={() => onViewPhotos?.(lote.id, `Fotos das Entregas - ${lote.codigo}`)}
+                        >
+                          <Camera className="h-3 w-3 mr-1" />
+                          Ver Fotos
+                        </Button>
+                      </div>
 
                       {/* Progresso */}
                       <div className="mt-auto pt-2">

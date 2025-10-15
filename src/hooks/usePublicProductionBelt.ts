@@ -12,6 +12,7 @@ import { useUnifiedKPIs, type UnifiedKPIs } from './useUnifiedKPIs';
 export interface LoteExtended {
   id: string;
   codigo: string;
+  codigo_unico: string;
   peso_inicial: number;
   peso_atual: number;
   data_inicio: string;

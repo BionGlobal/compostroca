@@ -10,6 +10,7 @@ interface ImpactMetricsProps {
   creditosCau: number;
   totalVoluntarios: number;
   mediaRating: number;
+  statusLote: 'em_producao' | 'certificado';
 }
 
 export const ImpactMetrics = ({

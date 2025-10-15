@@ -7,6 +7,7 @@ import { useLoteUpdates } from '@/contexts/LoteContext';
 export interface LoteExtended {
   id: string;
   codigo: string;
+  codigo_unico: string;
   unidade: string;
   linha_producao: string;
   status: 'ativo' | 'em_processamento' | 'encerrado';

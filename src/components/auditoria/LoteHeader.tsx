@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 interface LoteHeaderProps {
   codigoLote: string;
   codigoUnico: string;
+  statusLote: 'em_producao' | 'certificado';
   unidade: {
     nome: string;
     codigo: string;
@@ -24,6 +25,7 @@ interface LoteHeaderProps {
 export const LoteHeader = ({
   codigoLote,
   codigoUnico,
+  statusLote,
   unidade,
   dataInicio,
   dataFinalizacao,
@@ -87,9 +89,12 @@ export const LoteHeader = ({
           {/* Informações principais */}
           <div className="flex-1 space-y-4">
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="success" className="text-xs sm:text-sm">
+              <Badge 
+                variant={statusLote === 'certificado' ? 'success' : 'warning'} 
+                className="text-xs sm:text-sm"
+              >
                 <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                Lote Certificado
+                {statusLote === 'certificado' ? 'Lote Certificado' : 'Lote em Produção'}
               </Badge>
             </div>
 
@@ -141,7 +146,7 @@ export const LoteHeader = ({
                   <span className="text-muted-foreground">Período: </span>
                   <span className="font-medium text-foreground">
                     {formatDate(dataInicio)}
-                    {dataFinalizacao && ` → ${formatDate(dataFinalizacao)}`}
+                    {dataFinalizacao ? ` → ${formatDate(dataFinalizacao)}` : ' → Em aberto'}
                   </span>
                 </div>
               </div>

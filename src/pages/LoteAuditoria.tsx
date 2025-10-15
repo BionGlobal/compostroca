@@ -71,6 +71,7 @@ export default function LoteAuditoria() {
         <LoteHeader
           codigoLote={data.codigo_lote}
           codigoUnico={data.codigo_unico}
+          statusLote={data.status_lote}
           unidade={data.unidade}
           dataInicio={data.data_inicio}
           dataFinalizacao={data.data_finalizacao}
@@ -88,6 +89,7 @@ export default function LoteAuditoria() {
           creditosCau={data.creditos_cau}
           totalVoluntarios={data.total_voluntarios}
           mediaRating={data.media_rating}
+          statusLote={data.status_lote}
         />
 
         {/* Seção 3: Linha do Tempo da Rastreabilidade */}
