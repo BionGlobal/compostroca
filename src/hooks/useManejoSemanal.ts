@@ -179,7 +179,7 @@ export const useManejoSemanal = () => {
     }
 
     setLoading(true);
-    console.log('🏁 Iniciando finalização do manejo semanal (modo transacional)...');
+    console.log('🏁 Iniciando finalização do manejo semanal...');
     
     const backupEstado = JSON.stringify(estadoManejo);
     
@@ -193,32 +193,22 @@ export const useManejoSemanal = () => {
         throw new Error('Nem todas as etapas estão completas');
       }
 
-      console.log(`📋 Processando ${etapasValidas.length} etapas transacionalmente...`);
+      console.log(`📋 Processando ${etapasValidas.length} etapas...`);
 
-      // 2. Consolidar todas as fotos em um único array
-      const todasFotos = etapasValidas
-        .map(e => e.foto)
-        .filter((f): f is string => f !== undefined);
+      // 2. Criar UMA ÚNICA sessão de manutenção para toda a esteira de produção
+      const todasFotosUnicas = Array.from(new Set(
+        etapasValidas.map(e => e.foto).filter((f): f is string => f !== undefined)
+      ));
 
-      // 3. Buscar nome do usuário
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('user_id', user.id)
-        .single();
-
-      // 4. Criar UMA ÚNICA sessão de manutenção para TODA a manutenção semanal
       const { data: sessao, error: sessaoError } = await supabase
         .from('sessoes_manutencao')
         .insert({
           data_sessao: new Date().toISOString(),
           administrador_id: user.id,
-          administrador_nome: profile?.full_name || user.email || 'Administrador',
+          administrador_nome: user.user_metadata?.full_name || 'Manutenção Semanal',
           unidade_codigo: estadoManejo.organizacao,
-          observacoes_gerais: etapasValidas[0]?.observacoes || 'Manutenção Semanal Completa',
-          fotos_gerais: todasFotos,
-          latitude: null,
-          longitude: null
+          observacoes_gerais: estadoManejo.etapas[0]?.observacoes || 'Manutenção Semanal Completa',
+          fotos_gerais: todasFotosUnicas
         })
         .select('id')
         .single();
@@ -227,10 +217,10 @@ export const useManejoSemanal = () => {
         throw new Error('Falha ao criar sessão de manutenção: ' + sessaoError?.message);
       }
 
-      console.log(`✅ Sessão única de manutenção criada: ${sessao.id} com ${todasFotos.length} fotos`);
+      console.log(`✅ Sessão única criada: ${sessao.id} com ${todasFotosUnicas.length} fotos consolidadas`);
 
-      // 4. Salvar todas as fotos associadas à sessão E aos lotes
-      if (todasFotos.length > 0) {
+      // 3. Salvar fotos individuais em lote_fotos (vinculadas aos lotes específicos)
+      if (etapasValidas.length > 0) {
         const { error: fotosError } = await supabase
           .from('lote_fotos')
           .insert(
@@ -245,24 +235,44 @@ export const useManejoSemanal = () => {
         if (fotosError) {
           console.warn('⚠️ Erro ao salvar fotos, mas continuando:', fotosError);
         } else {
-          console.log(`📸 ${todasFotos.length} fotos vinculadas aos lotes`);
+          console.log(`📸 ${etapasValidas.length} fotos individuais salvas em lote_fotos`);
         }
       }
 
-      // 5. Chamar função SQL para criar eventos de manutenção vinculados à sessão única
-      const { data: resultadoAssociacao, error: associacaoError } = await supabase
-        .rpc('associar_sessao_aos_lotes_ativos', {
-          p_sessao_id: sessao.id,
-          p_data_sessao: new Date().toISOString()
-        });
+      // 4. Criar eventos de lote_eventos - TODOS vinculados à MESMA sessão
+      for (const etapa of etapasValidas) {
+        const proximaEtapa = etapa.tipo === 'finalizacao' ? 8 : (etapa.caixaOrigem + 1);
+        
+        const { error: eventoError } = await supabase
+          .from('lote_eventos')
+          .insert({
+            lote_id: etapa.loteId,
+            tipo_evento: etapa.tipo === 'finalizacao' ? 'finalizacao' : 'manutencao',
+            etapa_numero: proximaEtapa,
+            data_evento: new Date().toISOString(),
+            sessao_manutencao_id: sessao.id, // SEMPRE A MESMA SESSÃO
+            peso_antes: etapa.pesoAnterior,
+            peso_depois: etapa.pesoNovo || etapa.pesoAnterior,
+            caixa_origem: etapa.caixaOrigem,
+            caixa_destino: etapa.caixaDestino || etapa.caixaOrigem,
+            administrador_id: user.id,
+            administrador_nome: user.user_metadata?.full_name || 'Sistema',
+            observacoes: etapa.observacoes || `Manutenção Semanal - Caixa ${etapa.caixaOrigem}`,
+            fotos_compartilhadas: etapa.foto ? [etapa.foto] : [],
+            dados_especificos: {
+              fonte: 'manejo_semanal',
+              taxa_decaimento: etapa.pesoNovo ? ((etapa.pesoAnterior - etapa.pesoNovo) / etapa.pesoAnterior) : 0.0365
+            }
+          });
 
-      if (associacaoError) {
-        console.error('⚠️ Erro na associação automática:', associacaoError);
-      } else {
-        console.log(`🔗 Sessão única associada a ${resultadoAssociacao?.length || 0} lotes ativos`);
+        if (eventoError) {
+          console.error(`⚠️ Erro ao criar evento para lote ${etapa.loteNome}:`, eventoError);
+        } else {
+          console.log(`✅ Evento criado para ${etapa.loteNome} (Etapa ${proximaEtapa}) → sessão ${sessao.id}`);
+        }
       }
 
-      // 6. Atualizar individualmente cada lote (peso e status)
+      // 5. Atualizar cada lote individualmente (peso e status)
       const batchSize = 3;
       for (let i = 0; i < etapasValidas.length; i += batchSize) {
         const batch = etapasValidas.slice(i, i + batchSize);
@@ -276,12 +286,8 @@ export const useManejoSemanal = () => {
           if (etapa.tipo === 'finalizacao') {
             updateData.status = 'encerrado';
             updateData.data_encerramento = new Date().toISOString();
-            updateData.data_finalizacao = new Date().toISOString();
-            updateData.peso_final = etapa.pesoNovo || etapa.pesoAnterior;
           } else {
             updateData.caixa_atual = etapa.caixaDestino;
-            updateData.semana_atual = etapa.caixaDestino;
-            updateData.status = 'em_processamento';
           }
 
           const { error: loteError } = await supabase
@@ -294,7 +300,7 @@ export const useManejoSemanal = () => {
             throw loteError;
           }
 
-          // Registrar em manejo_semanal para compatibilidade e dados medidos reais
+          // Registrar em manejo_semanal para compatibilidade
           await supabase.from('manejo_semanal').insert({
             lote_id: etapa.loteId,
             user_id: user.id,
@@ -319,10 +325,10 @@ export const useManejoSemanal = () => {
 
       toast({
         title: "Manejo Finalizado!",
-        description: `${etapasValidas.length} operações concluídas. Dados associados à sessão ${sessao.id.slice(0, 8)}...`,
+        description: `${etapasValidas.length} operações concluídas. Sessão única: ${sessao.id.slice(0, 8)}...`,
       });
 
-      console.log('🎉 Manejo semanal finalizado com sucesso');
+      console.log('🎉 Manejo semanal finalizado - 1 sessão compartilhada para toda a esteira');
 
     } catch (error: any) {
       console.error('💥 Erro ao finalizar manejo:', error);

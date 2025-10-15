@@ -145,8 +145,15 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString()
         };
 
-        // ✅ SE JÁ EXISTE, ATUALIZAR; SE NÃO, INSERIR
-        if (eventoFinalizacaoExistente) {
+        // ✅ SE JÁ EXISTE COM DADOS REAIS, NÃO SOBRESCREVER
+        const temDadosReaisFinalizacao = eventoFinalizacaoExistente && (
+          eventoFinalizacaoExistente.fotos_compartilhadas?.length > 0 ||
+          eventoFinalizacaoExistente.dados_especificos?.fonte === 'manejo_semanal'
+        );
+
+        if (temDadosReaisFinalizacao) {
+          console.log(`⚠️ Evento de Etapa 8 já tem dados reais, não sobrescrevendo`);
+        } else if (eventoFinalizacaoExistente) {
           console.log(`⚠️ Evento de Etapa 8 já existe (${eventoFinalizacaoExistente.id}). Atualizando com dados de hoje...`);
           await supabase
             .from('lote_eventos')
