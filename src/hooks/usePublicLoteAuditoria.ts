@@ -187,16 +187,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           }
         }
 
-        // 6. Buscar fotos de manejo associadas ao lote
-        const { data: fotosLoteManejo } = await supabase
-          .from('lote_fotos')
-          .select('foto_url, created_at')
-          .eq('lote_id', lote.id)
-          .eq('tipo_foto', 'manejo_semanal')
-          .is('deleted_at', null)
-          .order('created_at', { ascending: true });
-
-        // 7. Processar voluntários
+        // 6. Processar voluntários
         const voluntariosMap = new Map<number, Voluntario>();
         let somaRatings = 0;
         let countRatings = 0;
@@ -226,11 +217,11 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           (a, b) => a.numero_balde - b.numero_balde
         );
 
-        // 8. Processar eventos da timeline
+        // 7. Processar eventos da timeline
         const eventosProcessados: Evento[] = [];
         const validadoresSet = new Set<string>();
 
-        console.log(`[📊 Auditoria ${codigoUnico}] Processando ${eventos?.length || 0} eventos`);
+        console.log(`[Lote ${codigoUnico}] Processando ${eventos?.length || 0} eventos`);
 
         eventos?.forEach((evento) => {
           const data = new Date(evento.data_evento);
@@ -249,14 +240,14 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             tipo = 'INICIO';
             validadorNome = evento.administrador_nome || '-';
             
-            // PRIORIDADE FOTOS INÍCIO: 1º evento.fotos_compartilhadas → 2º entrega_fotos
-            const fotosEvento = evento.fotos_compartilhadas as string[] | null;
-            if (fotosEvento && Array.isArray(fotosEvento) && fotosEvento.length > 0) {
-              fotosEntrega = fotosEvento.map(processPhotoUrl);
-              console.log(`[📸 Etapa ${evento.etapa_numero}] ${fotosEntrega.length} fotos do evento`);
+            // PRIORIDADE FOTOS INÍCIO: 1º evento.fotos_compartilhadas, 2º entrega_fotos
+            const fotos = evento.fotos_compartilhadas as string[] | null;
+            if (fotos && Array.isArray(fotos) && fotos.length > 0) {
+              fotosEntrega = fotos.map(processPhotoUrl);
+              console.log(`[Etapa ${evento.etapa_numero}] ${fotos.length} fotos do evento (fotos_compartilhadas)`);
             } else {
               fotosEntrega = fotosEntregas?.map(f => processPhotoUrl(f.foto_url)).filter(Boolean) || [];
-              console.log(`[📸 Etapa ${evento.etapa_numero}] ${fotosEntrega.length} fotos das entregas`);
+              console.log(`[Etapa ${evento.etapa_numero}] ${fotosEntrega.length} fotos das entregas`);
             }
             
             if (evento.dados_especificos) {
@@ -271,20 +262,22 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             tipo = 'FINALIZACAO';
             validadorNome = evento.administrador_nome || '-';
             
-            // PRIORIDADE FOTOS FINALIZAÇÃO: 1º evento.fotos_compartilhadas → 2º sessao.fotos_gerais
-            const fotosEvento = evento.fotos_compartilhadas as string[] | null;
-            if (fotosEvento && Array.isArray(fotosEvento) && fotosEvento.length > 0) {
-              fotosManejo = fotosEvento.map(processPhotoUrl);
-              console.log(`[📸 Etapa ${evento.etapa_numero} FINAL] ${fotosManejo.length} fotos do evento`);
+            // PRIORIDADE FOTOS FINALIZAÇÃO: 1º evento.fotos_compartilhadas, 2º sessao.fotos_gerais
+            const fotos = evento.fotos_compartilhadas as string[] | null;
+            if (fotos && Array.isArray(fotos) && fotos.length > 0) {
+              fotosManejo = fotos.map(processPhotoUrl);
+              console.log(`[Etapa ${evento.etapa_numero}] ${fotos.length} fotos do evento (fotos_compartilhadas)`);
             } else if (evento.sessao_manutencao_id) {
               const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
               const fotosSessao = sessaoData?.fotos_gerais as string[] | null;
               if (fotosSessao && Array.isArray(fotosSessao) && fotosSessao.length > 0) {
                 fotosManejo = fotosSessao.map(processPhotoUrl);
-                console.log(`[📸 Etapa ${evento.etapa_numero} FINAL] ${fotosManejo.length} fotos da sessão`);
+                console.log(`[Etapa ${evento.etapa_numero}] ${fotosSessao.length} fotos da sessão (fotos_gerais)`);
               } else {
-                console.log(`[⚠️ Etapa ${evento.etapa_numero} FINAL] Sem fotos disponíveis`);
+                console.log(`[Etapa ${evento.etapa_numero}] Sessão encontrada mas sem fotos`);
               }
+            } else {
+              console.log(`[Etapa ${evento.etapa_numero}] Sem sessão associada`);
             }
             
             if (evento.sessao_manutencao_id) {
@@ -298,20 +291,22 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           } else {
             tipo = 'MANUTENCAO';
             
-            // PRIORIDADE FOTOS MANUTENÇÃO: 1º evento.fotos_compartilhadas → 2º sessao.fotos_gerais
-            const fotosEvento = evento.fotos_compartilhadas as string[] | null;
-            if (fotosEvento && Array.isArray(fotosEvento) && fotosEvento.length > 0) {
-              fotosManejo = fotosEvento.map(processPhotoUrl);
-              console.log(`[📸 Etapa ${evento.etapa_numero}] ${fotosManejo.length} fotos do evento`);
+            // PRIORIDADE FOTOS MANUTENÇÃO: 1º evento.fotos_compartilhadas, 2º sessao.fotos_gerais
+            const fotos = evento.fotos_compartilhadas as string[] | null;
+            if (fotos && Array.isArray(fotos) && fotos.length > 0) {
+              fotosManejo = fotos.map(processPhotoUrl);
+              console.log(`[Etapa ${evento.etapa_numero}] ${fotos.length} fotos do evento (fotos_compartilhadas)`);
             } else if (evento.sessao_manutencao_id) {
               const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
               const fotosSessao = sessaoData?.fotos_gerais as string[] | null;
               if (fotosSessao && Array.isArray(fotosSessao) && fotosSessao.length > 0) {
                 fotosManejo = fotosSessao.map(processPhotoUrl);
-                console.log(`[📸 Etapa ${evento.etapa_numero}] ${fotosManejo.length} fotos da sessão`);
+                console.log(`[Etapa ${evento.etapa_numero}] ${fotosSessao.length} fotos da sessão (fotos_gerais)`);
               } else {
-                console.log(`[⚠️ Etapa ${evento.etapa_numero}] Sem fotos disponíveis`);
+                console.log(`[Etapa ${evento.etapa_numero}] Sessão encontrada mas sem fotos`);
               }
+            } else {
+              console.log(`[Etapa ${evento.etapa_numero}] Sem sessão associada`);
             }
             
             if (evento.sessao_manutencao_id) {
@@ -353,21 +348,20 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           });
         });
 
-        console.log(`[✅ Auditoria ${codigoUnico}] Eventos processados:`, {
-          total: eventosProcessados.length,
+        console.log(`[Lote ${codigoUnico}] Resumo:`, {
+          total_eventos: eventosProcessados.length,
           tem_etapa_1: eventosProcessados.some(e => e.etapa === 1),
-          eventos_com_fotos: eventosProcessados.filter(e => 
-            e.fotos_entrega.length > 0 || e.fotos_manejo.length > 0
-          ).length,
+          eventos_com_fotos_entrega: eventosProcessados.filter(e => e.fotos_entrega.length > 0).length,
+          eventos_com_fotos_manejo: eventosProcessados.filter(e => e.fotos_manejo.length > 0).length,
           total_validadores: validadoresSet.size
         });
 
-        // 9. Determinar status do lote
+        // 8. Determinar status do lote
         const statusLote = lote.status === 'encerrado' && lote.data_finalizacao 
           ? 'certificado' 
           : 'em_producao';
 
-        // 10. Calcular métricas (condicionais para lotes em produção)
+        // 9. Calcular métricas (condicionais para lotes em produção)
         const dataFim = lote.data_finalizacao || lote.data_encerramento || new Date().toISOString();
         const duracaoDias = Math.ceil(
           (new Date(dataFim).getTime() - new Date(lote.data_inicio).getTime()) / 
