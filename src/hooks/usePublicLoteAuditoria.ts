@@ -318,7 +318,9 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           }
 
           // Peso: usar peso_depois do evento ou calcular
-          const pesoCalculado = evento.peso_depois ?? calcularPesoSemanal(lote.peso_inicial, evento.etapa_numero - 1);
+          const pesoCalculado = evento.etapa_numero === 1
+            ? lote.peso_inicial
+            : (evento.peso_depois ?? calcularPesoSemanal(lote.peso_inicial, evento.etapa_numero - 1));
 
           eventosProcessados.push({
             etapa: evento.etapa_numero,
@@ -352,13 +354,9 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           ? (lote.peso_final || calcularPesoSemanal(lote.peso_inicial, 7))
           : calcularPesoSemanal(lote.peso_inicial, eventos?.length || 1);
         
-        const co2eqEvitado = statusLote === 'certificado' 
-          ? Math.round(pesoFinal * 0.766 * 100) / 100
-          : 0;
-        
-        const creditosCau = statusLote === 'certificado'
-          ? Math.round((pesoFinal / 1000) * 1000) / 1000
-          : 0;
+        // Sempre calcular CO2 e CAU (estimado ou final)
+        const co2eqEvitado = Math.round(pesoFinal * 0.766 * 100) / 100;
+        const creditosCau = Math.round((pesoFinal / 1000) * 1000) / 1000;
 
         const resultado: LoteAuditoriaData = {
           codigo_lote: lote.codigo,

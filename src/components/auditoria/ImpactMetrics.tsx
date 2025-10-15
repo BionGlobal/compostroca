@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Scale, Leaf, Users, Star, Info } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
 
 interface ImpactMetricsProps {
   pesoInicial: number;
@@ -20,7 +21,8 @@ export const ImpactMetrics = ({
   co2eqEvitado,
   creditosCau,
   totalVoluntarios,
-  mediaRating
+  mediaRating,
+  statusLote
 }: ImpactMetricsProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -60,6 +62,12 @@ export const ImpactMetrics = ({
           <CardTitle className="text-base sm:text-lg flex items-center gap-2">
             <Leaf className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
             Impacto Ambiental
+            <Badge 
+              variant={statusLote === 'certificado' ? 'success' : 'warning'}
+              className="ml-auto"
+            >
+              {statusLote === 'certificado' ? 'Final' : 'Estimado'}
+            </Badge>
             <Popover>
               <PopoverTrigger asChild>
                 <button 
@@ -95,7 +103,7 @@ export const ImpactMetrics = ({
               {co2eqEvitado.toFixed(2)} kg
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Estimado
+              {statusLote === 'certificado' ? 'Confirmado' : 'Estimado'}
             </p>
           </div>
           <div className="pt-2 border-t border-border">

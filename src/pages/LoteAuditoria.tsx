@@ -104,14 +104,18 @@ export default function LoteAuditoria() {
         {/* Footer */}
         <footer className="text-center py-8 border-t border-border">
           <div className="flex flex-col items-center gap-3">
-            <img
-              src="/lovable-uploads/powered-by-bion.png"
-              alt="Powered by Bion"
-              className="h-8 sm:h-10 opacity-70 hover:opacity-100 transition-opacity"
-            />
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Certificado de Rastreabilidade Blockchain
-            </p>
+            <a 
+              href="https://www.bion.global" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:opacity-100 opacity-70 transition-opacity"
+            >
+              <img
+                src="/lovable-uploads/powered-by-bion.png"
+                alt="Powered by Bion"
+                className="h-8 sm:h-10"
+              />
+            </a>
           </div>
         </footer>
       </main>
