@@ -28,6 +28,8 @@ interface VolunteerDetailsProps {
 
 export const VolunteerDetails = ({ voluntarios, validadores }: VolunteerDetailsProps) => {
   const pesoTotal = voluntarios.reduce((acc, v) => acc + v.peso, 0);
+  const cepilho = pesoTotal * 0.35;
+  const total = pesoTotal + cepilho;
 
   return (
     <Accordion type="multiple" className="space-y-3">
@@ -76,10 +78,26 @@ export const VolunteerDetails = ({ voluntarios, validadores }: VolunteerDetailsP
                 <TableFooter>
                   <TableRow>
                     <TableCell colSpan={2} className="font-semibold text-xs sm:text-sm">
+                      Resíduo entregue
+                    </TableCell>
+                    <TableCell className="text-right font-semibold text-xs sm:text-sm">
+                      {pesoTotal.toFixed(2)} kg
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={2} className="font-semibold text-xs sm:text-sm">
+                      Cepilho (35%)
+                    </TableCell>
+                    <TableCell className="text-right font-semibold text-xs sm:text-sm">
+                      {cepilho.toFixed(2)} kg
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={2} className="font-bold text-xs sm:text-sm">
                       Total
                     </TableCell>
                     <TableCell className="text-right font-bold text-xs sm:text-sm">
-                      {pesoTotal.toFixed(2)} kg
+                      {total.toFixed(2)} kg
                     </TableCell>
                   </TableRow>
                 </TableFooter>
