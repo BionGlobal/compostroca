@@ -108,13 +108,21 @@ Deno.serve(async (req) => {
         await supabase.rpc('recuperar_eventos_lote', { p_lote_id: loteCaixa7.id });
       }
 
+      // ✅ VERIFICAR SE JÁ EXISTE EVENTO DE ETAPA 8
+      const { data: eventoFinalizacaoExistente } = await supabase
+        .from('lote_eventos')
+        .select('id')
+        .eq('lote_id', loteCaixa7.id)
+        .eq('etapa_numero', 8)
+        .maybeSingle();
+
       const { error: finalizeError } = await supabase
         .from('lotes')
         .update({
           status: 'encerrado',
           peso_final: loteCaixa7.peso_atual,
-          data_finalizacao: new Date().toISOString(),
-          data_encerramento: new Date().toISOString(),
+          data_finalizacao: data_sessao,
+          data_encerramento: data_sessao,
           updated_at: new Date().toISOString()
         })
         .eq('id', loteCaixa7.id);
@@ -122,25 +130,40 @@ Deno.serve(async (req) => {
       if (finalizeError) {
         console.error('❌ Error finalizing lot:', finalizeError);
       } else {
-        // Create finalization event with session photos
-        await supabase.from('lote_eventos').insert({
-          lote_id: loteCaixa7.id,
-          tipo_evento: 'finalizacao',
-          etapa_numero: 8,
-          data_evento: new Date().toISOString(),
-          peso_antes: loteCaixa7.peso_atual,
-          peso_depois: loteCaixa7.peso_atual,
-          caixa_origem: 7,
-          caixa_destino: 7,
-          latitude,
-          longitude,
+        const eventoData = {
+          data_evento: data_sessao,
           administrador_id,
           administrador_nome,
           sessao_manutencao_id: sessao.id,
           observacoes: `Finalização - ${observacoes_gerais}`,
           fotos_compartilhadas: fotos_gerais || [],
-          dados_especificos: { peso_final: loteCaixa7.peso_atual }
-        });
+          latitude,
+          longitude,
+          peso_antes: loteCaixa7.peso_atual,
+          peso_depois: loteCaixa7.peso_atual,
+          dados_especificos: { peso_final: loteCaixa7.peso_atual },
+          updated_at: new Date().toISOString()
+        };
+
+        // ✅ SE JÁ EXISTE, ATUALIZAR; SE NÃO, INSERIR
+        if (eventoFinalizacaoExistente) {
+          console.log(`⚠️ Evento de Etapa 8 já existe (${eventoFinalizacaoExistente.id}). Atualizando com dados de hoje...`);
+          await supabase
+            .from('lote_eventos')
+            .update(eventoData)
+            .eq('id', eventoFinalizacaoExistente.id);
+          console.log(`✅ Evento de Etapa 8 atualizado com data ${data_sessao}, validador ${administrador_nome}, ${fotos_gerais?.length || 0} fotos`);
+        } else {
+          console.log(`✅ Criando novo evento de Etapa 8...`);
+          await supabase.from('lote_eventos').insert({
+            lote_id: loteCaixa7.id,
+            tipo_evento: 'finalizacao',
+            etapa_numero: 8,
+            caixa_origem: 7,
+            caixa_destino: 7,
+            ...eventoData
+          });
+        }
 
         // Replicate session photos to lote_fotos
         if (fotos_gerais && fotos_gerais.length > 0) {
@@ -156,7 +179,7 @@ Deno.serve(async (req) => {
           codigo: loteCaixa7.codigo,
           peso_final: loteCaixa7.peso_atual
         });
-        console.log(`✅ Finalized ${loteCaixa7.codigo}`);
+        console.log(`✅ Finalized ${loteCaixa7.codigo} (sessão: ${sessao.id})`);
       }
     }
 
@@ -187,28 +210,49 @@ Deno.serve(async (req) => {
       if (moveError) {
         console.error(`❌ Error moving ${lote.codigo}:`, moveError);
       } else {
-        // Create maintenance event with session photos  
-        await supabase.from('lote_eventos').insert({
-          lote_id: lote.id,
-          tipo_evento: 'manutencao',
-          etapa_numero: semana_nova,
-          data_evento: new Date().toISOString(),
-          peso_antes,
-          peso_depois: parseFloat(peso_depois.toFixed(2)),
-          caixa_origem,
-          caixa_destino,
-          latitude,
-          longitude,
+        // ✅ VERIFICAR SE JÁ EXISTE EVENTO PARA ESTA ETAPA
+        const { data: eventoManutencaoExistente } = await supabase
+          .from('lote_eventos')
+          .select('id')
+          .eq('lote_id', lote.id)
+          .eq('etapa_numero', semana_nova)
+          .maybeSingle();
+
+        const eventoData = {
+          data_evento: data_sessao,
           administrador_id,
           administrador_nome,
           sessao_manutencao_id: sessao.id,
           observacoes: `Manutenção semanal - Caixa ${caixa_origem}→${caixa_destino} - ${observacoes_gerais}`,
           fotos_compartilhadas: fotos_gerais || [],
+          latitude,
+          longitude,
+          peso_antes,
+          peso_depois: parseFloat(peso_depois.toFixed(2)),
           dados_especificos: {
             taxa_decaimento,
             reducao_peso: parseFloat((peso_antes - peso_depois).toFixed(2))
-          }
-        });
+          },
+          updated_at: new Date().toISOString()
+        };
+
+        // ✅ SE JÁ EXISTE, ATUALIZAR; SE NÃO, INSERIR
+        if (eventoManutencaoExistente) {
+          console.log(`⚠️ Evento de Etapa ${semana_nova} já existe para ${lote.codigo}. Atualizando...`);
+          await supabase
+            .from('lote_eventos')
+            .update(eventoData)
+            .eq('id', eventoManutencaoExistente.id);
+        } else {
+          await supabase.from('lote_eventos').insert({
+            lote_id: lote.id,
+            tipo_evento: 'manutencao',
+            etapa_numero: semana_nova,
+            caixa_origem,
+            caixa_destino,
+            ...eventoData
+          });
+        }
 
         // Replicate session photos to lote_fotos
         if (fotos_gerais && fotos_gerais.length > 0) {
