@@ -9,20 +9,19 @@ interface Voluntario {
 }
 
 interface Evento {
-  semana: number; // 0-7 (0 = entrega inicial, 1-7 = manutenções)
+  semana: number; // 0-7
   tipo: 'INICIO' | 'MANUTENCAO' | 'FINALIZACAO';
   data: Date;
   hora: string;
   validador: string;
-  peso_calculado: number;
-  fotos: string[]; // Array unificado de fotos
+  peso_calculado: number | null;
+  fotos: string[];
   comentario: string;
   nota_contexto: string;
   lote_id: string;
 }
 
 interface LoteAuditoriaData {
-  // Cabeçalho
   codigo_lote: string;
   codigo_unico: string;
   status_lote: 'em_producao' | 'certificado';
@@ -36,23 +35,18 @@ interface LoteAuditoriaData {
   hash_rastreabilidade: string;
   latitude: number | null;
   longitude: number | null;
-  
-  // Métricas
+
   peso_inicial: number;
   peso_final: number;
   duracao_dias: number;
   co2eq_evitado: number;
   creditos_cau: number;
-  
-  // Voluntários
+
   voluntarios: Voluntario[];
   total_voluntarios: number;
   media_rating: number;
-  
-  // Timeline (agora por semana)
+
   eventos: Evento[];
-  
-  // Validadores
   validadores: string[];
 }
 
@@ -97,11 +91,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
         setLoading(true);
         setError(null);
 
-        console.log(`[Auditoria] Buscando dados do lote: ${codigoUnico}`);
-
-        // ========================================
-        // 1. BUSCAR DADOS DO LOTE E UNIDADE
-        // ========================================
+        // 1) Lote + Unidade
         const { data: lote, error: loteError } = await supabase
           .from('lotes')
           .select(`
@@ -133,12 +123,8 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           throw new Error('Lote não encontrado');
         }
 
-        console.log(`[Auditoria] Lote encontrado: ${lote.codigo} (${lote.status})`);
-
-        // ========================================
-        // 2. BUSCAR EVENTO DE INÍCIO (SEMANA 0)
-        // ========================================
-        const { data: eventoInicio, error: inicioError } = await supabase
+        // 2) Evento de início (Semana 0)
+        const { data: eventoInicio } = await supabase
           .from('lote_eventos')
           .select('*')
           .eq('lote_id', lote.id)
@@ -146,14 +132,8 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           .is('deleted_at', null)
           .maybeSingle();
 
-        if (inicioError) {
-          console.warn('[Auditoria] Erro ao buscar evento de início:', inicioError);
-        }
-
-        // ========================================
-        // 3. BUSCAR ENTREGAS E VOLUNTÁRIOS (SEMANA 0)
-        // ========================================
-        const { data: entregas, error: entregasError } = await supabase
+        // 3) Entregas/voluntários para Semana 0
+        const { data: entregas } = await supabase
           .from('entregas')
           .select(`
             id,
@@ -168,40 +148,27 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           .eq('lote_codigo', lote.codigo)
           .is('deleted_at', null);
 
-        if (entregasError) throw entregasError;
-
-        console.log(`[Auditoria] ${entregas?.length || 0} entregas encontradas`);
-
-        // ========================================
-        // 4. BUSCAR FOTOS DAS ENTREGAS
-        // ========================================
         const entregaIds = entregas?.map(e => e.id) || [];
         let fotosEntregas: string[] = [];
-        
+
         if (entregaIds.length > 0) {
           const { data: fotosData } = await supabase
             .from('entrega_fotos')
             .select('foto_url')
             .in('entrega_id', entregaIds)
             .is('deleted_at', null);
-          
+
           fotosEntregas = fotosData?.map(f => processPhotoUrl(f.foto_url)).filter(Boolean) || [];
         }
 
-        // Priorizar fotos do evento de início se disponíveis
         if (eventoInicio?.fotos_compartilhadas) {
           const fotosEvento = eventoInicio.fotos_compartilhadas as string[] | null;
-          if (fotosEvento && Array.isArray(fotosEvento) && fotosEvento.length > 0) {
+          if (Array.isArray(fotosEvento) && fotosEvento.length > 0) {
             fotosEntregas = fotosEvento.map(processPhotoUrl);
-            console.log(`[Auditoria] ${fotosEntregas.length} fotos do evento de início`);
           }
         }
 
-        console.log(`[Auditoria] ${fotosEntregas.length} fotos das entregas`);
-
-        // ========================================
-        // 5. BUSCAR MANUTENÇÕES SEMANAIS (SEMANAS 1-7)
-        // ========================================
+        // 4) Manutenções (Semanas 1..7): JOIN lotes_manutencoes + manutencoes_semanais
         const { data: manutencoes, error: manutencoesError } = await supabase
           .from('lotes_manutencoes')
           .select(`
@@ -227,29 +194,22 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
 
         if (manutencoesError) throw manutencoesError;
 
-        console.log(`[Auditoria] ${manutencoes?.length || 0} manutenções encontradas`);
-
-        // ========================================
-        // 6. PROCESSAR VOLUNTÁRIOS
-        // ========================================
+        // 5) Processar voluntários
         const voluntariosMap = new Map<number, Voluntario>();
         let somaRatings = 0;
         let countRatings = 0;
 
         entregas?.forEach(entrega => {
           const vol = entrega.voluntarios;
-          if (vol && vol.numero_balde) {
+          if (vol?.numero_balde) {
             const existing = voluntariosMap.get(vol.numero_balde);
-            if (existing) {
-              existing.peso += entrega.peso;
-            } else {
-              voluntariosMap.set(vol.numero_balde, {
-                iniciais: getIniciais(vol.nome || ''),
-                numero_balde: vol.numero_balde,
-                peso: entrega.peso,
-                rating: entrega.qualidade_residuo || 0
-              });
-            }
+            if (existing) existing.peso += entrega.peso;
+            else voluntariosMap.set(vol.numero_balde, {
+              iniciais: getIniciais(vol.nome || ''),
+              numero_balde: vol.numero_balde,
+              peso: entrega.peso,
+              rating: entrega.qualidade_residuo || 0
+            });
           }
           if (entrega.qualidade_residuo) {
             somaRatings += entrega.qualidade_residuo;
@@ -261,19 +221,16 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           (a, b) => a.numero_balde - b.numero_balde
         );
 
-        // ========================================
-        // 7. CONSTRUIR ARRAY DE EVENTOS UNIFICADO
-        // ========================================
-        const eventosProcessados: Evento[] = [];
-        const validadoresSet = new Set<string>();
+        // 6) Construir timeline
+        const eventos: Evento[] = [];
+        const validadores = new Set<string>();
 
-        // 7.1 - SEMANA 0: INÍCIO (ENTREGAS)
+        // Semana 0
         if (eventoInicio) {
-          const data = new Date(eventoInicio.data_evento);
+          const dataEvt = new Date(eventoInicio.data_evento);
           const validador = eventoInicio.administrador_nome || 'Sistema';
-          
-          validadoresSet.add(validador);
-          
+          validadores.add(validador);
+
           let comentario = '';
           if (eventoInicio.dados_especificos) {
             const dados = eventoInicio.dados_especificos as Record<string, any>;
@@ -283,86 +240,61 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             comentario = `${totalVol} voluntários • ${pesoRes} kg resíduos + ${pesoCep} kg cepilho`;
           }
 
-          eventosProcessados.push({
+          eventos.push({
             semana: 0,
             tipo: 'INICIO',
-            data,
-            hora: data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            data: dataEvt,
+            hora: dataEvt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
             validador,
-            peso_calculado: lote.peso_inicial,
+            peso_calculado: lote.peso_inicial ?? null,
             fotos: fotosEntregas,
             comentario,
             nota_contexto: '',
             lote_id: lote.id
           });
-
-          console.log(`[Auditoria] Semana 0 - INÍCIO: ${fotosEntregas.length} fotos`);
         }
 
-        // 7.2 - SEMANAS 1-7: MANUTENÇÕES
-        manutencoes?.forEach((manutencao) => {
-          const manutencaoData = manutencao.manutencoes_semanais;
-          if (!manutencaoData) return;
+        // Semanas 1..7
+        manutencoes?.forEach((lm) => {
+          const m = lm.manutencoes_semanais;
+          if (!m) return;
+          const dataRef = new Date(m.data_ocorrencia || lm.created_at);
+          const validador = m.validador_nome || 'Sistema';
+          validadores.add(validador);
 
-          const data = new Date(manutencaoData.data_ocorrencia);
-          const validador = manutencaoData.validador_nome || 'Sistema';
-          const semana = manutencao.semana_processo;
-          
-          validadoresSet.add(validador);
+          const tipo: 'MANUTENCAO' | 'FINALIZACAO' = lm.semana_processo === 7 ? 'FINALIZACAO' : 'MANUTENCAO';
+          const fotos = (m.fotos_urls || []).map(processPhotoUrl).filter(Boolean);
 
-          // Processar fotos
-          const fotosUrls = manutencaoData.fotos_urls || [];
-          const fotos = fotosUrls.map(processPhotoUrl).filter(Boolean);
-
-          // Determinar tipo (finalização se semana 7)
-          const tipo: 'MANUTENCAO' | 'FINALIZACAO' = 
-            semana === 7 ? 'FINALIZACAO' : 'MANUTENCAO';
-
-          eventosProcessados.push({
-            semana,
+          eventos.push({
+            semana: lm.semana_processo,
             tipo,
-            data,
-            hora: data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            data: dataRef,
+            hora: dataRef.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
             validador,
-            peso_calculado: manutencao.peso_depois,
+            peso_calculado: lm.peso_depois ?? null,
             fotos,
-            comentario: manutencaoData.comentario || '',
+            comentario: m.comentario || '',
             nota_contexto: '',
             lote_id: lote.id
           });
-
-          console.log(`[Auditoria] Semana ${semana} - ${tipo}: ${fotos.length} fotos`);
         });
 
-        // Ordenar eventos por semana
-        eventosProcessados.sort((a, b) => a.semana - b.semana);
+        eventos.sort((a, b) => a.semana - b.semana);
 
-        console.log(`[Auditoria] Total de eventos processados: ${eventosProcessados.length}`);
-        console.log(`[Auditoria] Validadores únicos: ${validadoresSet.size}`);
-
-        // ========================================
-        // 8. CALCULAR MÉTRICAS
-        // ========================================
-        const statusLote = lote.status === 'encerrado' && lote.data_finalizacao 
-          ? 'certificado' 
-          : 'em_producao';
-
+        // 7) Métricas
+        const statusLote = lote.status === 'encerrado' && lote.data_finalizacao ? 'certificado' : 'em_producao';
         const dataFim = lote.data_finalizacao || lote.data_encerramento || new Date().toISOString();
         const duracaoDias = Math.ceil(
-          (new Date(dataFim).getTime() - new Date(lote.data_inicio).getTime()) / 
-          (1000 * 60 * 60 * 24)
+          (new Date(dataFim).getTime() - new Date(lote.data_inicio).getTime()) / (1000 * 60 * 60 * 24)
         );
 
-        const pesoFinal = statusLote === 'certificado' 
+        const pesoFinal = statusLote === 'certificado'
           ? (lote.peso_final || calcularPesoSemanal(lote.peso_inicial, 7))
-          : calcularPesoSemanal(lote.peso_inicial, eventosProcessados.length - 1);
-        
+          : calcularPesoSemanal(lote.peso_inicial, Math.max(0, eventos.length - 1));
+
         const co2eqEvitado = Math.round(pesoFinal * 0.766 * 100) / 100;
         const creditosCau = Math.round((pesoFinal / 1000) * 1000) / 1000;
 
-        // ========================================
-        // 9. MONTAR RESULTADO FINAL
-        // ========================================
         const resultado: LoteAuditoriaData = {
           codigo_lote: lote.codigo,
           codigo_unico: lote.codigo_unico,
@@ -377,24 +309,21 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           hash_rastreabilidade: lote.hash_integridade || '',
           latitude: lote.latitude,
           longitude: lote.longitude,
-          peso_inicial: lote.peso_inicial,
-          peso_final: pesoFinal,
+          peso_inicial: Number(lote.peso_inicial || 0),
+          peso_final: Number(pesoFinal || 0),
           duracao_dias: duracaoDias,
           co2eq_evitado: co2eqEvitado,
           creditos_cau: creditosCau,
           voluntarios,
           total_voluntarios: voluntarios.length,
           media_rating: countRatings > 0 ? Math.round((somaRatings / countRatings) * 10) / 10 : 0,
-          eventos: eventosProcessados,
-          validadores: Array.from(validadoresSet)
+          eventos,
+          validadores: Array.from(validadores)
         };
 
         setData(resultado);
-
-        console.log('[Auditoria] ✅ Dados carregados com sucesso');
-
       } catch (err) {
-        console.error('[Auditoria] ❌ Erro ao buscar dados:', err);
+        console.error('[Auditoria] Erro:', err);
         setError(err instanceof Error ? err.message : 'Erro desconhecido');
       } finally {
         setLoading(false);
