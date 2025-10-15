@@ -230,6 +230,8 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
         const eventosProcessados: Evento[] = [];
         const validadoresSet = new Set<string>();
 
+        console.log(`[📊 Auditoria ${codigoUnico}] Processando ${eventos?.length || 0} eventos`);
+
         eventos?.forEach((evento) => {
           const data = new Date(evento.data_evento);
           const hora = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -247,11 +249,14 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             tipo = 'INICIO';
             validadorNome = evento.administrador_nome || '-';
             
-            const fotos = evento.fotos_compartilhadas as string[] | null;
-            if (fotos && Array.isArray(fotos) && fotos.length > 0) {
-              fotosEntrega = fotos.map(processPhotoUrl);
+            // PRIORIDADE FOTOS INÍCIO: 1º evento.fotos_compartilhadas → 2º entrega_fotos
+            const fotosEvento = evento.fotos_compartilhadas as string[] | null;
+            if (fotosEvento && Array.isArray(fotosEvento) && fotosEvento.length > 0) {
+              fotosEntrega = fotosEvento.map(processPhotoUrl);
+              console.log(`[📸 Etapa ${evento.etapa_numero}] ${fotosEntrega.length} fotos do evento`);
             } else {
               fotosEntrega = fotosEntregas?.map(f => processPhotoUrl(f.foto_url)).filter(Boolean) || [];
+              console.log(`[📸 Etapa ${evento.etapa_numero}] ${fotosEntrega.length} fotos das entregas`);
             }
             
             if (evento.dados_especificos) {
@@ -266,14 +271,19 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             tipo = 'FINALIZACAO';
             validadorNome = evento.administrador_nome || '-';
             
-            const fotos = evento.fotos_compartilhadas as string[] | null;
-            if (fotos && Array.isArray(fotos) && fotos.length > 0) {
-              fotosManejo = fotos.map(processPhotoUrl);
+            // PRIORIDADE FOTOS FINALIZAÇÃO: 1º evento.fotos_compartilhadas → 2º sessao.fotos_gerais
+            const fotosEvento = evento.fotos_compartilhadas as string[] | null;
+            if (fotosEvento && Array.isArray(fotosEvento) && fotosEvento.length > 0) {
+              fotosManejo = fotosEvento.map(processPhotoUrl);
+              console.log(`[📸 Etapa ${evento.etapa_numero} FINAL] ${fotosManejo.length} fotos do evento`);
             } else if (evento.sessao_manutencao_id) {
               const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
               const fotosSessao = sessaoData?.fotos_gerais as string[] | null;
               if (fotosSessao && Array.isArray(fotosSessao) && fotosSessao.length > 0) {
                 fotosManejo = fotosSessao.map(processPhotoUrl);
+                console.log(`[📸 Etapa ${evento.etapa_numero} FINAL] ${fotosManejo.length} fotos da sessão`);
+              } else {
+                console.log(`[⚠️ Etapa ${evento.etapa_numero} FINAL] Sem fotos disponíveis`);
               }
             }
             
@@ -288,14 +298,19 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           } else {
             tipo = 'MANUTENCAO';
             
-            const fotos = evento.fotos_compartilhadas as string[] | null;
-            if (fotos && Array.isArray(fotos) && fotos.length > 0) {
-              fotosManejo = fotos.map(processPhotoUrl);
+            // PRIORIDADE FOTOS MANUTENÇÃO: 1º evento.fotos_compartilhadas → 2º sessao.fotos_gerais
+            const fotosEvento = evento.fotos_compartilhadas as string[] | null;
+            if (fotosEvento && Array.isArray(fotosEvento) && fotosEvento.length > 0) {
+              fotosManejo = fotosEvento.map(processPhotoUrl);
+              console.log(`[📸 Etapa ${evento.etapa_numero}] ${fotosManejo.length} fotos do evento`);
             } else if (evento.sessao_manutencao_id) {
               const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
               const fotosSessao = sessaoData?.fotos_gerais as string[] | null;
               if (fotosSessao && Array.isArray(fotosSessao) && fotosSessao.length > 0) {
                 fotosManejo = fotosSessao.map(processPhotoUrl);
+                console.log(`[📸 Etapa ${evento.etapa_numero}] ${fotosManejo.length} fotos da sessão`);
+              } else {
+                console.log(`[⚠️ Etapa ${evento.etapa_numero}] Sem fotos disponíveis`);
               }
             }
             
@@ -336,6 +351,15 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             lote_id: lote.id,
             manejo_id: evento.sessao_manutencao_id || null
           });
+        });
+
+        console.log(`[✅ Auditoria ${codigoUnico}] Eventos processados:`, {
+          total: eventosProcessados.length,
+          tem_etapa_1: eventosProcessados.some(e => e.etapa === 1),
+          eventos_com_fotos: eventosProcessados.filter(e => 
+            e.fotos_entrega.length > 0 || e.fotos_manejo.length > 0
+          ).length,
+          total_validadores: validadoresSet.size
         });
 
         // 9. Determinar status do lote
