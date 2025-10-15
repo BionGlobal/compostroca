@@ -213,45 +213,56 @@ Deno.serve(async (req) => {
         // ✅ VERIFICAR SE JÁ EXISTE EVENTO PARA ESTA ETAPA
         const { data: eventoManutencaoExistente } = await supabase
           .from('lote_eventos')
-          .select('id')
+          .select('id, fotos_compartilhadas, dados_especificos')
           .eq('lote_id', lote.id)
           .eq('etapa_numero', semana_nova)
           .maybeSingle();
 
-        const eventoData = {
-          data_evento: data_sessao,
-          administrador_id,
-          administrador_nome,
-          sessao_manutencao_id: sessao.id,
-          observacoes: `Manutenção semanal - Caixa ${caixa_origem}→${caixa_destino} - ${observacoes_gerais}`,
-          fotos_compartilhadas: fotos_gerais || [],
-          latitude,
-          longitude,
-          peso_antes,
-          peso_depois: parseFloat(peso_depois.toFixed(2)),
-          dados_especificos: {
-            taxa_decaimento,
-            reducao_peso: parseFloat((peso_antes - peso_depois).toFixed(2))
-          },
-          updated_at: new Date().toISOString()
-        };
+        // ✅ VERIFICAR SE EVENTO JÁ TEM DADOS REAIS (não sobrescrever!)
+        const temDadosReais = eventoManutencaoExistente && (
+          (eventoManutencaoExistente.fotos_compartilhadas && eventoManutencaoExistente.fotos_compartilhadas.length > 0) ||
+          (eventoManutencaoExistente.dados_especificos?.fonte === 'manejo_semanal')
+        );
 
-        // ✅ SE JÁ EXISTE, ATUALIZAR; SE NÃO, INSERIR
-        if (eventoManutencaoExistente) {
-          console.log(`⚠️ Evento de Etapa ${semana_nova} já existe para ${lote.codigo}. Atualizando...`);
-          await supabase
-            .from('lote_eventos')
-            .update(eventoData)
-            .eq('id', eventoManutencaoExistente.id);
+        if (temDadosReais) {
+          console.log(`⚠️ Evento de Etapa ${semana_nova} do lote ${lote.codigo} já tem dados reais, pulando atualização...`);
         } else {
-          await supabase.from('lote_eventos').insert({
-            lote_id: lote.id,
-            tipo_evento: 'manutencao',
-            etapa_numero: semana_nova,
-            caixa_origem,
-            caixa_destino,
-            ...eventoData
-          });
+          const eventoData = {
+            data_evento: data_sessao,
+            administrador_id,
+            administrador_nome,
+            sessao_manutencao_id: sessao.id,
+            observacoes: `Manutenção semanal - Caixa ${caixa_origem}→${caixa_destino} - ${observacoes_gerais}`,
+            fotos_compartilhadas: fotos_gerais || [],
+            latitude,
+            longitude,
+            peso_antes,
+            peso_depois: parseFloat(peso_depois.toFixed(2)),
+            dados_especificos: {
+              taxa_decaimento,
+              reducao_peso: parseFloat((peso_antes - peso_depois).toFixed(2)),
+              fonte: 'sessoes_manutencao'
+            },
+            updated_at: new Date().toISOString()
+          };
+
+          // ✅ SE JÁ EXISTE (sem dados reais), ATUALIZAR; SE NÃO, INSERIR
+          if (eventoManutencaoExistente) {
+            console.log(`⚠️ Evento de Etapa ${semana_nova} já existe para ${lote.codigo}. Atualizando...`);
+            await supabase
+              .from('lote_eventos')
+              .update(eventoData)
+              .eq('id', eventoManutencaoExistente.id);
+          } else {
+            await supabase.from('lote_eventos').insert({
+              lote_id: lote.id,
+              tipo_evento: 'manutencao',
+              etapa_numero: semana_nova,
+              caixa_origem,
+              caixa_destino,
+              ...eventoData
+            });
+          }
         }
 
         // Replicate session photos to lote_fotos
