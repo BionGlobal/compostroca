@@ -195,15 +195,30 @@ export const useManejoSemanal = () => {
 
       console.log(`📋 Processando ${etapasValidas.length} etapas transacionalmente...`);
 
-      // 2. Criar UMA ÚNICA sessão de manutenção para todos os lotes
+      // 2. Consolidar todas as fotos em um único array
+      const todasFotos = etapasValidas
+        .map(e => e.foto)
+        .filter((f): f is string => f !== undefined);
+
+      // 3. Buscar nome do usuário
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', user.id)
+        .single();
+
+      // 4. Criar UMA ÚNICA sessão de manutenção para TODA a manutenção semanal
       const { data: sessao, error: sessaoError } = await supabase
         .from('sessoes_manutencao')
         .insert({
           data_sessao: new Date().toISOString(),
           administrador_id: user.id,
-          administrador_nome: estadoManejo.etapas[0]?.observacoes || 'Manutenção Semanal',
+          administrador_nome: profile?.full_name || user.email || 'Administrador',
           unidade_codigo: estadoManejo.organizacao,
-          observacoes_gerais: estadoManejo.etapas[0]?.observacoes || null
+          observacoes_gerais: etapasValidas[0]?.observacoes || 'Manutenção Semanal Completa',
+          fotos_gerais: todasFotos,
+          latitude: null,
+          longitude: null
         })
         .select('id')
         .single();
@@ -212,14 +227,10 @@ export const useManejoSemanal = () => {
         throw new Error('Falha ao criar sessão de manutenção: ' + sessaoError?.message);
       }
 
-      console.log(`✅ Sessão de manutenção criada: ${sessao.id}`);
+      console.log(`✅ Sessão única de manutenção criada: ${sessao.id} com ${todasFotos.length} fotos`);
 
-      // 3. Salvar todas as fotos associadas à sessão
-      const fotoUrls: string[] = etapasValidas
-        .map(e => e.foto)
-        .filter((f): f is string => f !== undefined);
-
-      if (fotoUrls.length > 0) {
+      // 4. Salvar todas as fotos associadas à sessão E aos lotes
+      if (todasFotos.length > 0) {
         const { error: fotosError } = await supabase
           .from('lote_fotos')
           .insert(
@@ -234,11 +245,11 @@ export const useManejoSemanal = () => {
         if (fotosError) {
           console.warn('⚠️ Erro ao salvar fotos, mas continuando:', fotosError);
         } else {
-          console.log(`📸 ${fotoUrls.length} fotos salvas`);
+          console.log(`📸 ${todasFotos.length} fotos vinculadas aos lotes`);
         }
       }
 
-      // 4. Chamar função SQL para criar eventos de manutenção para TODOS os lotes ativos
+      // 5. Chamar função SQL para criar eventos de manutenção vinculados à sessão única
       const { data: resultadoAssociacao, error: associacaoError } = await supabase
         .rpc('associar_sessao_aos_lotes_ativos', {
           p_sessao_id: sessao.id,
@@ -248,10 +259,10 @@ export const useManejoSemanal = () => {
       if (associacaoError) {
         console.error('⚠️ Erro na associação automática:', associacaoError);
       } else {
-        console.log(`🔗 Sessão associada a ${resultadoAssociacao?.length || 0} lotes ativos`);
+        console.log(`🔗 Sessão única associada a ${resultadoAssociacao?.length || 0} lotes ativos`);
       }
 
-      // 5. Atualizar individualmente cada lote (peso e status)
+      // 6. Atualizar individualmente cada lote (peso e status)
       const batchSize = 3;
       for (let i = 0; i < etapasValidas.length; i += batchSize) {
         const batch = etapasValidas.slice(i, i + batchSize);
@@ -265,8 +276,12 @@ export const useManejoSemanal = () => {
           if (etapa.tipo === 'finalizacao') {
             updateData.status = 'encerrado';
             updateData.data_encerramento = new Date().toISOString();
+            updateData.data_finalizacao = new Date().toISOString();
+            updateData.peso_final = etapa.pesoNovo || etapa.pesoAnterior;
           } else {
             updateData.caixa_atual = etapa.caixaDestino;
+            updateData.semana_atual = etapa.caixaDestino;
+            updateData.status = 'em_processamento';
           }
 
           const { error: loteError } = await supabase
@@ -279,7 +294,7 @@ export const useManejoSemanal = () => {
             throw loteError;
           }
 
-          // Registrar em manejo_semanal para compatibilidade
+          // Registrar em manejo_semanal para compatibilidade e dados medidos reais
           await supabase.from('manejo_semanal').insert({
             lote_id: etapa.loteId,
             user_id: user.id,

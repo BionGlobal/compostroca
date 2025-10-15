@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
       throw new Error(`Safety check failed: expected 1-7 active lots, found ${lotes.length}`);
     }
 
-    // 2. Create maintenance session
+    // 2. Create ONE maintenance session for ALL lots in the production line
     const { data: sessao, error: sessaoError } = await supabase
       .from('sessoes_manutencao')
       .insert({
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
         data_sessao,
         administrador_id,
         administrador_nome,
-        observacoes_gerais,
+        observacoes_gerais: observacoes_gerais || `Manutenção semanal completa - ${lotes.length} lotes processados`,
         fotos_gerais: fotos_gerais || [],
         latitude,
         longitude
@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to create session: ${sessaoError.message}`);
     }
 
-    console.log('✅ Session created:', sessao.id);
+    console.log(`✅ Single maintenance session created: ${sessao.id} for ${lotes.length} lots`);
 
     const loteCaixa7 = lotes.find(l => l.caixa_atual === 7);
     const lotesToMove = lotes.filter(l => l.caixa_atual < 7).sort((a, b) => b.caixa_atual - a.caixa_atual);
