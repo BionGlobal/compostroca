@@ -401,6 +401,60 @@ export type Database = {
           },
         ]
       }
+      lotes_manutencoes: {
+        Row: {
+          caixa_destino: number
+          caixa_origem: number
+          created_at: string
+          deleted_at: string | null
+          id: string
+          lote_id: string
+          manutencao_id: string
+          peso_antes: number
+          peso_depois: number
+          semana_processo: number
+        }
+        Insert: {
+          caixa_destino: number
+          caixa_origem: number
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          lote_id: string
+          manutencao_id: string
+          peso_antes: number
+          peso_depois: number
+          semana_processo: number
+        }
+        Update: {
+          caixa_destino?: number
+          caixa_origem?: number
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          lote_id?: string
+          manutencao_id?: string
+          peso_antes?: number
+          peso_depois?: number
+          semana_processo?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lotes_manutencoes_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lotes_manutencoes_manutencao_id_fkey"
+            columns: ["manutencao_id"]
+            isOneToOne: false
+            referencedRelation: "manutencoes_semanais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manejo_semanal: {
         Row: {
           caixa_destino: number | null
@@ -449,6 +503,48 @@ export type Database = {
           peso_depois?: number
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      manutencoes_semanais: {
+        Row: {
+          comentario: string | null
+          created_at: string
+          data_ocorrencia: string
+          deleted_at: string | null
+          fotos_urls: string[]
+          id: string
+          latitude: number | null
+          longitude: number | null
+          updated_at: string
+          validador_id: string | null
+          validador_nome: string
+        }
+        Insert: {
+          comentario?: string | null
+          created_at?: string
+          data_ocorrencia: string
+          deleted_at?: string | null
+          fotos_urls?: string[]
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          updated_at?: string
+          validador_id?: string | null
+          validador_nome: string
+        }
+        Update: {
+          comentario?: string | null
+          created_at?: string
+          data_ocorrencia?: string
+          deleted_at?: string | null
+          fotos_urls?: string[]
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          updated_at?: string
+          validador_id?: string | null
+          validador_nome?: string
         }
         Relationships: []
       }

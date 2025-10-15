@@ -5,18 +5,16 @@ import { Clock, User, Scale, Image as ImageIcon } from 'lucide-react';
 import { FotosGalleryModal } from '@/components/FotosGalleryModal';
 
 interface Evento {
-  etapa: number;
+  semana: number; // 0-7
   tipo: 'INICIO' | 'MANUTENCAO' | 'FINALIZACAO';
   data: Date;
   hora: string;
   validador: string;
   peso_calculado: number;
-  fotos_entrega: string[];
-  fotos_manejo: string[];
+  fotos: string[];
   comentario: string;
   nota_contexto: string;
   lote_id: string;
-  manejo_id?: string | null;
 }
 
 interface TraceabilityTimelineProps {
@@ -26,24 +24,20 @@ interface TraceabilityTimelineProps {
 export const TraceabilityTimeline = ({ eventos }: TraceabilityTimelineProps) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedLoteId, setSelectedLoteId] = useState<string>('');
-  const [selectedManejoId, setSelectedManejoId] = useState<string | undefined>(undefined);
   const [modalTitle, setModalTitle] = useState('');
   const [selectedPhotoUrls, setSelectedPhotoUrls] = useState<string[] | undefined>(undefined);
 
   const handleOpenGallery = (evento: Evento) => {
     setSelectedLoteId(evento.lote_id);
-    setSelectedManejoId(evento.manejo_id || undefined);
-    setModalTitle(getTipoLabel(evento.tipo, evento.etapa));
-    // Preferir as fotos exibidas nos cards para garantir correspondência com os thumbs
-    const urls = evento.tipo === 'INICIO' ? evento.fotos_entrega : evento.fotos_manejo;
-    setSelectedPhotoUrls(urls && urls.length ? urls : undefined);
+    setModalTitle(getTipoLabel(evento.tipo, evento.semana));
+    setSelectedPhotoUrls(evento.fotos.length > 0 ? evento.fotos : undefined);
     setModalOpen(true);
   };
 
-  const getTipoLabel = (tipo: string, etapa: number) => {
-    if (tipo === 'INICIO') return 'Início do Lote';
-    if (tipo === 'FINALIZACAO') return 'Lote Pronto!';
-    return `Manutenção Semanal ${etapa - 1}`;
+  const getTipoLabel = (tipo: string, semana: number) => {
+    if (tipo === 'INICIO') return 'Semana 0 - Entrega';
+    if (tipo === 'FINALIZACAO') return 'Semana 7 - Lote Pronto!';
+    return `Semana ${semana} - Manutenção`;
   };
 
   const getTipoBadgeVariant = (tipo: string) => {
@@ -68,21 +62,21 @@ export const TraceabilityTimeline = ({ eventos }: TraceabilityTimelineProps) => 
             Trilha de Rastreabilidade
           </h2>
           <p className="text-sm sm:text-base text-muted-foreground">
-            Acompanhe cada etapa do processo de compostagem
+            Acompanhe cada semana do processo de compostagem
           </p>
         </div>
 
         <div className="relative">
-          {/* Linha vertical da timeline - oculta em mobile, visível de sm em diante */}
+          {/* Linha vertical da timeline */}
           <div className="hidden sm:block absolute left-6 top-0 bottom-0 w-0.5 bg-border" />
 
           <div className="space-y-6 sm:space-y-8">
             {eventos.map((evento, index) => (
               <div key={index} className="relative">
-                {/* Marcador da timeline - oculto em mobile */}
+                {/* Marcador da timeline */}
                 <div className="hidden sm:flex absolute left-0 w-12 h-12 items-center justify-center">
                   <div className="w-10 h-10 rounded-full glass-light border-2 border-primary flex items-center justify-center font-bold text-sm text-primary">
-                    {evento.etapa}
+                    {evento.semana}
                   </div>
                 </div>
 
@@ -93,11 +87,8 @@ export const TraceabilityTimeline = ({ eventos }: TraceabilityTimelineProps) => 
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           <Badge variant={getTipoBadgeVariant(evento.tipo)} className="text-xs sm:text-sm">
-                            Semana {evento.etapa - 1}
+                            {getTipoLabel(evento.tipo, evento.semana)}
                           </Badge>
-                          <span className="text-xs sm:text-sm text-muted-foreground">
-                            {getTipoLabel(evento.tipo, evento.etapa)}
-                          </span>
                         </div>
                         
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
@@ -124,104 +115,51 @@ export const TraceabilityTimeline = ({ eventos }: TraceabilityTimelineProps) => 
                       </div>
                     </div>
 
-                    {/* Galeria de fotos - Início */}
-                    {evento.tipo === 'INICIO' && (
-                      <div className="space-y-2">
-                        {evento.fotos_entrega.length > 0 ? (
-                          <>
-                            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                              <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                              <span>{evento.fotos_entrega.length} foto(s) das entregas</span>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {evento.fotos_entrega.map((foto, idx) => (
-                                <button
-                                  key={idx}
-                                  onClick={() => handleOpenGallery(evento)}
-                                  className="w-[45px] h-[45px] rounded border border-border hover:border-primary transition-colors overflow-hidden"
-                                >
-                                  <img
-                                    src={foto}
-                                    alt={`Entrega ${idx + 1}`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </button>
-                              ))}
-                            </div>
-                          </>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">-</p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Galeria de fotos - Manutenção */}
-                    {evento.tipo === 'MANUTENCAO' && (
-                      <div className="space-y-2">
-                        {evento.fotos_manejo.length > 0 ? (
-                          <>
-                            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                              <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                              <span>{evento.fotos_manejo.length} foto(s) da manutenção</span>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {evento.fotos_manejo.map((foto, idx) => (
-                                <button
-                                  key={idx}
-                                  onClick={() => handleOpenGallery(evento)}
-                                  className="w-[45px] h-[45px] rounded border border-border hover:border-primary transition-colors overflow-hidden"
-                                >
-                                  <img
-                                    src={foto}
-                                    alt={`Manutenção ${idx + 1}`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </button>
-                              ))}
-                            </div>
-                          </>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">-</p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Galeria de fotos - Finalização */}
-                    {evento.tipo === 'FINALIZACAO' && (
-                      <div className="space-y-2">
-                        {evento.fotos_manejo.length > 0 ? (
-                          <>
-                            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                              <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                              <span>{evento.fotos_manejo.length} foto(s) da finalização</span>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {evento.fotos_manejo.map((foto, idx) => (
-                                <button
-                                  key={idx}
-                                  onClick={() => handleOpenGallery(evento)}
-                                  className="w-[45px] h-[45px] rounded border border-border hover:border-primary transition-colors overflow-hidden"
-                                >
-                                  <img
-                                    src={foto}
-                                    alt={`Finalização ${idx + 1}`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </button>
-                              ))}
-                            </div>
-                          </>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">-</p>
-                        )}
-                      </div>
-                    )}
+                    {/* Galeria de fotos */}
+                    <div className="space-y-2">
+                      {evento.fotos.length > 0 ? (
+                        <>
+                          <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                            <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <span>{evento.fotos.length} foto(s)</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {evento.fotos.map((foto, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => handleOpenGallery(evento)}
+                                className="w-[45px] h-[45px] rounded border border-border hover:border-primary transition-colors overflow-hidden"
+                              >
+                                <img
+                                  src={foto}
+                                  alt={`${getTipoLabel(evento.tipo, evento.semana)} ${idx + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic">
+                          Sem fotos registradas nesta etapa
+                        </p>
+                      )}
+                    </div>
 
                     {/* Comentário */}
                     {evento.comentario && (
                       <div className="glass-light p-3 rounded-lg">
                         <p className="text-xs sm:text-sm text-foreground leading-relaxed">
                           {evento.comentario}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Nota de contexto (se houver) */}
+                    {evento.nota_contexto && (
+                      <div className="border-l-2 border-warning pl-3">
+                        <p className="text-xs text-warning">
+                          {evento.nota_contexto}
                         </p>
                       </div>
                     )}
@@ -233,16 +171,15 @@ export const TraceabilityTimeline = ({ eventos }: TraceabilityTimelineProps) => 
         </div>
       </div>
 
-{/* Modal de galeria de fotos */}
-<FotosGalleryModal
-  isOpen={modalOpen}
-  onClose={() => setModalOpen(false)}
-  loteId={selectedLoteId}
-  title={modalTitle}
-  isLoteProng={true}
-  manejoId={selectedManejoId}
-  photoUrls={selectedPhotoUrls}
-/>
+      {/* Modal de galeria */}
+      <FotosGalleryModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        loteId={selectedLoteId}
+        title={modalTitle}
+        isLoteProng={true}
+        photoUrls={selectedPhotoUrls}
+      />
     </>
   );
 };

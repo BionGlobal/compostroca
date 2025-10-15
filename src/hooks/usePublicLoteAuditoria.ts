@@ -9,18 +9,16 @@ interface Voluntario {
 }
 
 interface Evento {
-  etapa: number;
+  semana: number; // 0-7 (0 = entrega inicial, 1-7 = manutenções)
   tipo: 'INICIO' | 'MANUTENCAO' | 'FINALIZACAO';
   data: Date;
   hora: string;
   validador: string;
   peso_calculado: number;
-  fotos_entrega: string[];
-  fotos_manejo: string[];
+  fotos: string[]; // Array unificado de fotos
   comentario: string;
   nota_contexto: string;
   lote_id: string;
-  manejo_id?: string | null;
 }
 
 interface LoteAuditoriaData {
@@ -51,7 +49,7 @@ interface LoteAuditoriaData {
   total_voluntarios: number;
   media_rating: number;
   
-  // Timeline
+  // Timeline (agora por semana)
   eventos: Evento[];
   
   // Validadores
@@ -63,7 +61,7 @@ const BUCKET_URL = 'https://yfcxdbhrtjdmwyifgptf.supabase.co/storage/v1/object/p
 const processPhotoUrl = (url: string): string => {
   if (!url) return '';
   if (url.startsWith('http')) return url;
-  if (url.includes('entrega-fotos/') || url.includes('lote-fotos/')) {
+  if (url.includes('entrega-fotos/') || url.includes('lote-fotos/') || url.includes('manejo-fotos/')) {
     return `${BUCKET_URL}/${url}`;
   }
   return `${BUCKET_URL}/entrega-fotos/${url}`;
@@ -99,7 +97,11 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
         setLoading(true);
         setError(null);
 
-        // 1. Buscar lote e unidade (aceita lotes em produção e certificados)
+        console.log(`[Auditoria] Buscando dados do lote: ${codigoUnico}`);
+
+        // ========================================
+        // 1. BUSCAR DADOS DO LOTE E UNIDADE
+        // ========================================
         const { data: lote, error: loteError } = await supabase
           .from('lotes')
           .select(`
@@ -125,23 +127,32 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           .eq('codigo_unico', codigoUnico)
           .in('status', ['em_processamento', 'encerrado'])
           .is('deleted_at', null)
-          .single();
+          .maybeSingle();
 
         if (loteError || !lote) {
           throw new Error('Lote não encontrado');
         }
 
-        // 2. Buscar eventos
-        const { data: eventos, error: eventosError } = await supabase
+        console.log(`[Auditoria] Lote encontrado: ${lote.codigo} (${lote.status})`);
+
+        // ========================================
+        // 2. BUSCAR EVENTO DE INÍCIO (SEMANA 0)
+        // ========================================
+        const { data: eventoInicio, error: inicioError } = await supabase
           .from('lote_eventos')
           .select('*')
           .eq('lote_id', lote.id)
+          .eq('tipo_evento', 'inicio')
           .is('deleted_at', null)
-          .order('etapa_numero', { ascending: true });
+          .maybeSingle();
 
-        if (eventosError) throw eventosError;
+        if (inicioError) {
+          console.warn('[Auditoria] Erro ao buscar evento de início:', inicioError);
+        }
 
-        // 3. Buscar entregas e voluntários
+        // ========================================
+        // 3. BUSCAR ENTREGAS E VOLUNTÁRIOS (SEMANA 0)
+        // ========================================
         const { data: entregas, error: entregasError } = await supabase
           .from('entregas')
           .select(`
@@ -159,35 +170,68 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
 
         if (entregasError) throw entregasError;
 
-        // 4. Buscar fotos das entregas
+        console.log(`[Auditoria] ${entregas?.length || 0} entregas encontradas`);
+
+        // ========================================
+        // 4. BUSCAR FOTOS DAS ENTREGAS
+        // ========================================
         const entregaIds = entregas?.map(e => e.id) || [];
-        const { data: fotosEntregas } = await supabase
-          .from('entrega_fotos')
-          .select('foto_url, entrega_id')
-          .in('entrega_id', entregaIds)
-          .is('deleted_at', null);
-
-        // 5. Buscar dados de manutenções via sessao_manutencao_id
-        const eventosManutencao = eventos?.filter(e => 
-          (e.tipo_evento === 'manutencao' || e.tipo_evento === 'finalizacao') && 
-          e.sessao_manutencao_id
-        ) || [];
+        let fotosEntregas: string[] = [];
         
-        const sessaoIds = [...new Set(eventosManutencao.map(e => e.sessao_manutencao_id).filter(Boolean))];
-
-        let sessoesMap = new Map();
-        if (sessaoIds.length > 0) {
-          const { data: sessoes } = await supabase
-            .from('sessoes_manutencao')
-            .select('*')
-            .in('id', sessaoIds);
+        if (entregaIds.length > 0) {
+          const { data: fotosData } = await supabase
+            .from('entrega_fotos')
+            .select('foto_url')
+            .in('entrega_id', entregaIds)
+            .is('deleted_at', null);
           
-          if (sessoes) {
-            sessoes.forEach(s => sessoesMap.set(s.id, s));
+          fotosEntregas = fotosData?.map(f => processPhotoUrl(f.foto_url)).filter(Boolean) || [];
+        }
+
+        // Priorizar fotos do evento de início se disponíveis
+        if (eventoInicio?.fotos_compartilhadas) {
+          const fotosEvento = eventoInicio.fotos_compartilhadas as string[] | null;
+          if (fotosEvento && Array.isArray(fotosEvento) && fotosEvento.length > 0) {
+            fotosEntregas = fotosEvento.map(processPhotoUrl);
+            console.log(`[Auditoria] ${fotosEntregas.length} fotos do evento de início`);
           }
         }
 
-        // 6. Processar voluntários
+        console.log(`[Auditoria] ${fotosEntregas.length} fotos das entregas`);
+
+        // ========================================
+        // 5. BUSCAR MANUTENÇÕES SEMANAIS (SEMANAS 1-7)
+        // ========================================
+        const { data: manutencoes, error: manutencoesError } = await supabase
+          .from('lotes_manutencoes')
+          .select(`
+            semana_processo,
+            peso_antes,
+            peso_depois,
+            caixa_origem,
+            caixa_destino,
+            created_at,
+            manutencoes_semanais:manutencao_id (
+              id,
+              data_ocorrencia,
+              comentario,
+              fotos_urls,
+              validador_nome,
+              latitude,
+              longitude
+            )
+          `)
+          .eq('lote_id', lote.id)
+          .is('deleted_at', null)
+          .order('semana_processo', { ascending: true });
+
+        if (manutencoesError) throw manutencoesError;
+
+        console.log(`[Auditoria] ${manutencoes?.length || 0} manutenções encontradas`);
+
+        // ========================================
+        // 6. PROCESSAR VOLUNTÁRIOS
+        // ========================================
         const voluntariosMap = new Map<number, Voluntario>();
         let somaRatings = 0;
         let countRatings = 0;
@@ -217,151 +261,92 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           (a, b) => a.numero_balde - b.numero_balde
         );
 
-        // 7. Processar eventos da timeline
+        // ========================================
+        // 7. CONSTRUIR ARRAY DE EVENTOS UNIFICADO
+        // ========================================
         const eventosProcessados: Evento[] = [];
         const validadoresSet = new Set<string>();
 
-        console.log(`[Lote ${codigoUnico}] Processando ${eventos?.length || 0} eventos`);
-
-        eventos?.forEach((evento) => {
-          const data = new Date(evento.data_evento);
-          const hora = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-          let tipo: 'INICIO' | 'MANUTENCAO' | 'FINALIZACAO' = 'MANUTENCAO';
-          let fotosEntrega: string[] = [];
-          let fotosManejo: string[] = [];
-          let validadorNome = '-';
+        // 7.1 - SEMANA 0: INÍCIO (ENTREGAS)
+        if (eventoInicio) {
+          const data = new Date(eventoInicio.data_evento);
+          const validador = eventoInicio.administrador_nome || 'Sistema';
+          
+          validadoresSet.add(validador);
+          
           let comentario = '';
-          let notaContexto = '';
-
-          const isEstimado = evento.dados_especificos && typeof evento.dados_especificos === 'object' && 'estimado' in evento.dados_especificos;
-
-          if (evento.tipo_evento === 'inicio') {
-            tipo = 'INICIO';
-            validadorNome = evento.administrador_nome || '-';
-            
-            // PRIORIDADE FOTOS INÍCIO: 1º evento.fotos_compartilhadas, 2º entrega_fotos
-            const fotos = evento.fotos_compartilhadas as string[] | null;
-            if (fotos && Array.isArray(fotos) && fotos.length > 0) {
-              fotosEntrega = fotos.map(processPhotoUrl);
-              console.log(`[Etapa ${evento.etapa_numero}] ${fotos.length} fotos do evento (fotos_compartilhadas)`);
-            } else {
-              fotosEntrega = fotosEntregas?.map(f => processPhotoUrl(f.foto_url)).filter(Boolean) || [];
-              console.log(`[Etapa ${evento.etapa_numero}] ${fotosEntrega.length} fotos das entregas`);
-            }
-            
-            if (evento.dados_especificos) {
-              const dados = evento.dados_especificos as Record<string, any>;
-              const totalVol = dados.total_voluntarios || 0;
-              const pesoRes = Math.round((dados.peso_residuos || 0) * 100) / 100;
-              const pesoCep = Math.round((dados.peso_cepilho || 0) * 100) / 100;
-              comentario = `${totalVol} voluntários • ${pesoRes} kg resíduos + ${pesoCep} kg cepilho`;
-            }
-            
-          } else if (evento.tipo_evento === 'finalizacao' || evento.etapa_numero === 8) {
-            tipo = 'FINALIZACAO';
-            validadorNome = evento.administrador_nome || '-';
-            
-            // PRIORIDADE FOTOS FINALIZAÇÃO: 1º evento.fotos_compartilhadas, 2º sessao.fotos_gerais
-            const fotos = evento.fotos_compartilhadas as string[] | null;
-            if (fotos && Array.isArray(fotos) && fotos.length > 0) {
-              fotosManejo = fotos.map(processPhotoUrl);
-              console.log(`[Etapa ${evento.etapa_numero}] ${fotos.length} fotos do evento (fotos_compartilhadas)`);
-            } else if (evento.sessao_manutencao_id) {
-              const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
-              const fotosSessao = sessaoData?.fotos_gerais as string[] | null;
-              if (fotosSessao && Array.isArray(fotosSessao) && fotosSessao.length > 0) {
-                fotosManejo = fotosSessao.map(processPhotoUrl);
-                console.log(`[Etapa ${evento.etapa_numero}] ${fotosSessao.length} fotos da sessão (fotos_gerais)`);
-              } else {
-                console.log(`[Etapa ${evento.etapa_numero}] Sessão encontrada mas sem fotos`);
-              }
-            } else {
-              console.log(`[Etapa ${evento.etapa_numero}] Sem sessão associada`);
-            }
-            
-            if (evento.sessao_manutencao_id) {
-              const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
-              comentario = sessaoData?.observacoes_gerais || evento.observacoes || '';
-              validadorNome = sessaoData?.administrador_nome || validadorNome;
-            } else {
-              comentario = evento.observacoes || '';
-            }
-            
-          } else {
-            tipo = 'MANUTENCAO';
-            
-            // PRIORIDADE FOTOS MANUTENÇÃO: 1º evento.fotos_compartilhadas, 2º sessao.fotos_gerais
-            const fotos = evento.fotos_compartilhadas as string[] | null;
-            if (fotos && Array.isArray(fotos) && fotos.length > 0) {
-              fotosManejo = fotos.map(processPhotoUrl);
-              console.log(`[Etapa ${evento.etapa_numero}] ${fotos.length} fotos do evento (fotos_compartilhadas)`);
-            } else if (evento.sessao_manutencao_id) {
-              const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
-              const fotosSessao = sessaoData?.fotos_gerais as string[] | null;
-              if (fotosSessao && Array.isArray(fotosSessao) && fotosSessao.length > 0) {
-                fotosManejo = fotosSessao.map(processPhotoUrl);
-                console.log(`[Etapa ${evento.etapa_numero}] ${fotosSessao.length} fotos da sessão (fotos_gerais)`);
-              } else {
-                console.log(`[Etapa ${evento.etapa_numero}] Sessão encontrada mas sem fotos`);
-              }
-            } else {
-              console.log(`[Etapa ${evento.etapa_numero}] Sem sessão associada`);
-            }
-            
-            if (evento.sessao_manutencao_id) {
-              const sessaoData = sessoesMap.get(evento.sessao_manutencao_id);
-              validadorNome = sessaoData?.administrador_nome || evento.administrador_nome || 'Sistema';
-              comentario = sessaoData?.observacoes_gerais || evento.observacoes || '';
-            } else {
-              validadorNome = evento.administrador_nome || 'Sistema (Estimado)';
-              comentario = evento.observacoes || '';
-            }
-            
-            if (isEstimado) {
-              notaContexto = '⚠️ Evento estimado - sem registro fotográfico';
-            }
+          if (eventoInicio.dados_especificos) {
+            const dados = eventoInicio.dados_especificos as Record<string, any>;
+            const totalVol = dados.total_voluntarios || 0;
+            const pesoRes = Math.round((dados.peso_residuos || 0) * 100) / 100;
+            const pesoCep = Math.round((dados.peso_cepilho || 0) * 100) / 100;
+            comentario = `${totalVol} voluntários • ${pesoRes} kg resíduos + ${pesoCep} kg cepilho`;
           }
-
-          if (validadorNome !== '-' && !validadorNome.includes('Estimado')) {
-            validadoresSet.add(validadorNome);
-          }
-
-          // Peso: usar peso_depois do evento ou calcular
-          const pesoCalculado = evento.etapa_numero === 1
-            ? lote.peso_inicial
-            : (evento.peso_depois ?? calcularPesoSemanal(lote.peso_inicial, evento.etapa_numero - 1));
 
           eventosProcessados.push({
-            etapa: evento.etapa_numero,
+            semana: 0,
+            tipo: 'INICIO',
+            data,
+            hora: data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            validador,
+            peso_calculado: lote.peso_inicial,
+            fotos: fotosEntregas,
+            comentario,
+            nota_contexto: '',
+            lote_id: lote.id
+          });
+
+          console.log(`[Auditoria] Semana 0 - INÍCIO: ${fotosEntregas.length} fotos`);
+        }
+
+        // 7.2 - SEMANAS 1-7: MANUTENÇÕES
+        manutencoes?.forEach((manutencao) => {
+          const manutencaoData = manutencao.manutencoes_semanais;
+          if (!manutencaoData) return;
+
+          const data = new Date(manutencaoData.data_ocorrencia);
+          const validador = manutencaoData.validador_nome || 'Sistema';
+          const semana = manutencao.semana_processo;
+          
+          validadoresSet.add(validador);
+
+          // Processar fotos
+          const fotosUrls = manutencaoData.fotos_urls || [];
+          const fotos = fotosUrls.map(processPhotoUrl).filter(Boolean);
+
+          // Determinar tipo (finalização se semana 7)
+          const tipo: 'MANUTENCAO' | 'FINALIZACAO' = 
+            semana === 7 ? 'FINALIZACAO' : 'MANUTENCAO';
+
+          eventosProcessados.push({
+            semana,
             tipo,
             data,
-            hora,
-            validador: validadorNome,
-            peso_calculado: pesoCalculado,
-            fotos_entrega: fotosEntrega,
-            fotos_manejo: fotosManejo,
-            comentario,
-            nota_contexto: notaContexto,
-            lote_id: lote.id,
-            manejo_id: evento.sessao_manutencao_id || null
+            hora: data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            validador,
+            peso_calculado: manutencao.peso_depois,
+            fotos,
+            comentario: manutencaoData.comentario || '',
+            nota_contexto: '',
+            lote_id: lote.id
           });
+
+          console.log(`[Auditoria] Semana ${semana} - ${tipo}: ${fotos.length} fotos`);
         });
 
-        console.log(`[Lote ${codigoUnico}] Resumo:`, {
-          total_eventos: eventosProcessados.length,
-          tem_etapa_1: eventosProcessados.some(e => e.etapa === 1),
-          eventos_com_fotos_entrega: eventosProcessados.filter(e => e.fotos_entrega.length > 0).length,
-          eventos_com_fotos_manejo: eventosProcessados.filter(e => e.fotos_manejo.length > 0).length,
-          total_validadores: validadoresSet.size
-        });
+        // Ordenar eventos por semana
+        eventosProcessados.sort((a, b) => a.semana - b.semana);
 
-        // 8. Determinar status do lote
+        console.log(`[Auditoria] Total de eventos processados: ${eventosProcessados.length}`);
+        console.log(`[Auditoria] Validadores únicos: ${validadoresSet.size}`);
+
+        // ========================================
+        // 8. CALCULAR MÉTRICAS
+        // ========================================
         const statusLote = lote.status === 'encerrado' && lote.data_finalizacao 
           ? 'certificado' 
           : 'em_producao';
 
-        // 9. Calcular métricas (condicionais para lotes em produção)
         const dataFim = lote.data_finalizacao || lote.data_encerramento || new Date().toISOString();
         const duracaoDias = Math.ceil(
           (new Date(dataFim).getTime() - new Date(lote.data_inicio).getTime()) / 
@@ -370,12 +355,14 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
 
         const pesoFinal = statusLote === 'certificado' 
           ? (lote.peso_final || calcularPesoSemanal(lote.peso_inicial, 7))
-          : calcularPesoSemanal(lote.peso_inicial, eventos?.length || 1);
+          : calcularPesoSemanal(lote.peso_inicial, eventosProcessados.length - 1);
         
-        // Sempre calcular CO2 e CAU (estimado ou final)
         const co2eqEvitado = Math.round(pesoFinal * 0.766 * 100) / 100;
         const creditosCau = Math.round((pesoFinal / 1000) * 1000) / 1000;
 
+        // ========================================
+        // 9. MONTAR RESULTADO FINAL
+        // ========================================
         const resultado: LoteAuditoriaData = {
           codigo_lote: lote.codigo,
           codigo_unico: lote.codigo_unico,
@@ -403,8 +390,11 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
         };
 
         setData(resultado);
+
+        console.log('[Auditoria] ✅ Dados carregados com sucesso');
+
       } catch (err) {
-        console.error('Erro ao buscar dados da auditoria:', err);
+        console.error('[Auditoria] ❌ Erro ao buscar dados:', err);
         setError(err instanceof Error ? err.message : 'Erro desconhecido');
       } finally {
         setLoading(false);
