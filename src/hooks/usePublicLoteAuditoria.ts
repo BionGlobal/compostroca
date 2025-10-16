@@ -259,20 +259,13 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           const m = lm.manutencoes_semanais;
           if (!m) return;
           
-          // CORREÇÃO: Usar created_at da associação como data principal
-          const dataRef = new Date(lm.created_at || m.data_ocorrencia);
+          // CORREÇÃO FINAL: A data do registro de manutenção é a fonte primária.
+          const dataRef = new Date(m.data_ocorrencia || lm.created_at);
           const validador = m.validador_nome || 'Sistema';
           validadores.add(validador);
 
           const tipo: 'MANUTENCAO' | 'FINALIZACAO' = lm.semana_processo === 7 ? 'FINALIZACAO' : 'MANUTENCAO';
           const fotos = (m.fotos_urls || []).map(processPhotoUrl).filter(Boolean);
-
-          console.log(`[Auditoria] Lote ${lote.codigo_unico} - Semana ${lm.semana_processo}:`, {
-            data: dataRef.toISOString(),
-            validador,
-            fotos: fotos.length,
-            manutencao_id: m.id
-          });
 
           eventos.push({
             semana: lm.semana_processo,
