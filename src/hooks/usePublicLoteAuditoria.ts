@@ -254,13 +254,13 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           });
         }
 
-        // Semanas 1..7
+        // Semanas 1..7 - Agora cada semana tem sua própria manutenção única
         manutencoes?.forEach((lm) => {
           const m = lm.manutencoes_semanais;
           if (!m) return;
           
-          // CORREÇÃO FINAL: A data do registro de manutenção é a fonte primária.
-          const dataRef = new Date(m.data_ocorrencia || lm.created_at);
+          // Após reconstrução do banco, cada evento tem data única
+          const dataRef = new Date(m.data_ocorrencia);
           const validador = m.validador_nome || 'Sistema';
           validadores.add(validador);
 
