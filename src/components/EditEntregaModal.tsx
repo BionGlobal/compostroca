@@ -239,7 +239,7 @@ export const EditEntregaModal = ({ entrega, isOpen, onClose, onSuccess }: EditEn
                   const normalized = normalizePesoInput(e.target.value);
                   setPeso(normalized);
                 }}
-                placeholder="Ex: 2.5 ou 2,5"
+                placeholder="Ex: 2.500"
               />
               <p className="text-sm text-muted-foreground mt-1">
                 Peso atual: {formatPesoDisplay(Number(entrega.peso))}

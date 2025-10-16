@@ -128,7 +128,7 @@ export const useLoteFinalization = () => {
 
       toast({
         title: "Lote finalizado com sucesso",
-        description: `Lote ${lote.codigo} foi finalizado. CO2e evitado: ${co2eq_evitado_calc.toFixed(2)} kg, Créditos CAU: ${creditos_cau_calc.toFixed(3)}`,
+        description: `Lote ${lote.codigo} foi finalizado. CO2e evitado: ${co2eq_evitado_calc.toFixed(3)} kg, Créditos CAU: ${creditos_cau_calc.toFixed(3)}`,
       });
 
       return {

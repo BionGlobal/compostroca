@@ -108,7 +108,7 @@ export const useLotesManager = () => {
     // Taxa de decaimento: 3,65% por semana = fator 0,9635
     const fatorDecaimento = 0.9635;
     const peso = pesoInicial * Math.pow(fatorDecaimento, semanaAtual - 1);
-    return Math.round(peso * 100) / 100;
+    return Number(peso.toFixed(3));
   };
 
   const calcularPesoFinal = (pesoInicial: number): number => {

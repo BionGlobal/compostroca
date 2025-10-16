@@ -413,7 +413,7 @@ const EntregasOptimized = () => {
                 const normalized = normalizePesoInput(e.target.value);
                 setPeso(normalized);
               }} 
-              placeholder="Ex: 2.5 ou 2,5" 
+              placeholder="Ex: 2.500" 
               disabled={isFormDisabled} 
             />
           </div>

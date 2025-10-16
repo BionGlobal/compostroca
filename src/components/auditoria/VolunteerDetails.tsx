@@ -62,7 +62,7 @@ export const VolunteerDetails = ({ voluntarios, validadores }: VolunteerDetailsP
                         #{voluntario.numero_balde}
                       </TableCell>
                       <TableCell className="text-right text-xs sm:text-sm">
-                        {voluntario.peso.toFixed(2)}
+                        {voluntario.peso.toFixed(3)} kg
                       </TableCell>
                     </TableRow>
                   ))
@@ -81,7 +81,7 @@ export const VolunteerDetails = ({ voluntarios, validadores }: VolunteerDetailsP
                       Resíduo entregue
                     </TableCell>
                     <TableCell className="text-right font-semibold text-xs sm:text-sm">
-                      {pesoTotal.toFixed(2)} kg
+                      {pesoTotal.toFixed(3)} kg
                     </TableCell>
                   </TableRow>
                   <TableRow>
@@ -89,7 +89,7 @@ export const VolunteerDetails = ({ voluntarios, validadores }: VolunteerDetailsP
                       Cepilho (35%)
                     </TableCell>
                     <TableCell className="text-right font-semibold text-xs sm:text-sm">
-                      {cepilho.toFixed(2)} kg
+                      {cepilho.toFixed(3)} kg
                     </TableCell>
                   </TableRow>
                   <TableRow>
@@ -97,7 +97,7 @@ export const VolunteerDetails = ({ voluntarios, validadores }: VolunteerDetailsP
                       Total
                     </TableCell>
                     <TableCell className="text-right font-bold text-xs sm:text-sm">
-                      {total.toFixed(2)} kg
+                      {total.toFixed(3)} kg
                     </TableCell>
                   </TableRow>
                 </TableFooter>

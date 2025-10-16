@@ -110,7 +110,7 @@ export const TraceabilityTimeline = ({ eventos }: TraceabilityTimelineProps) => 
                           <span>Peso</span>
                         </div>
                         <p className="text-lg sm:text-xl font-bold text-foreground">
-                          {evento.peso_calculado.toFixed(2)} kg
+                          {evento.peso_calculado.toFixed(3)} kg
                         </p>
                       </div>
                     </div>

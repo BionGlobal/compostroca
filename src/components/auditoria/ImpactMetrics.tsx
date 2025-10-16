@@ -38,13 +38,13 @@ export const ImpactMetrics = ({
           <div>
             <p className="text-xs sm:text-sm text-muted-foreground">Peso Inicial</p>
             <p className="text-xl sm:text-2xl font-bold text-foreground">
-              {pesoInicial.toFixed(2)} kg
+              {pesoInicial.toFixed(3)} kg
             </p>
           </div>
           <div>
             <p className="text-xs sm:text-sm text-muted-foreground">Peso Final Estimado</p>
             <p className="text-xl sm:text-2xl font-bold text-foreground">
-              {pesoFinal.toFixed(2)} kg
+              {pesoFinal.toFixed(3)} kg
             </p>
           </div>
           <div className="pt-2 border-t border-border">
@@ -100,7 +100,7 @@ export const ImpactMetrics = ({
           <div>
             <p className="text-xs sm:text-sm text-muted-foreground">CO₂e Evitado</p>
             <p className="text-xl sm:text-2xl font-bold text-success">
-              {co2eqEvitado.toFixed(2)} kg
+              {co2eqEvitado.toFixed(3)} kg
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {statusLote === 'certificado' ? 'Confirmado' : 'Estimado'}

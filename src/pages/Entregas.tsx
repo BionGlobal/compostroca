@@ -310,7 +310,7 @@ const Entregas = () => {
                 step="0.001"
                 value={peso}
                 onChange={(e) => setPeso(e.target.value)}
-                placeholder="Ex: 10.432"
+                placeholder="Ex: 10.123"
                 disabled={isFormDisabled}
               />
             </div>

@@ -27,11 +27,11 @@ export const formatLocation = (latitude: number | null, longitude: number | null
 };
 
 export const formatWeight = (weight: number): string => {
-  return `${weight.toFixed(2)} kg`;
+  return `${weight.toFixed(3)} kg`;
 };
 
 export const formatPesoDisplay = (weight: number): string => {
-  return `${weight.toFixed(1).replace('.', ',')} kg`;
+  return `${weight.toFixed(3)} kg`;
 };
 
 export const calculateWeightReduction = (initial: number, final: number): number => {
