@@ -63,7 +63,7 @@ const processPhotoUrl = (url: string): string => {
 
 const calcularPesoSemanal = (pesoInicial: number, semana: number): number => {
   const fatorDecaimento = 0.9635;
-  return Math.round(pesoInicial * Math.pow(fatorDecaimento, semana) * 100) / 100;
+  return Number((pesoInicial * Math.pow(fatorDecaimento, semana)).toFixed(3));
 };
 
 const getIniciais = (nome: string): string => {
@@ -231,14 +231,12 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           const validador = eventoInicio.administrador_nome || 'Sistema';
           validadores.add(validador);
 
-          let comentario = '';
-          if (eventoInicio.dados_especificos) {
-            const dados = eventoInicio.dados_especificos as Record<string, any>;
-            const totalVol = dados.total_voluntarios || 0;
-            const pesoRes = Math.round((dados.peso_residuos || 0) * 100) / 100;
-            const pesoCep = Math.round((dados.peso_cepilho || 0) * 100) / 100;
-            comentario = `${totalVol} voluntários • ${pesoRes} kg resíduos + ${pesoCep} kg cepilho`;
-          }
+          // NOVA LÓGICA: Calcular a partir dos voluntários processados
+          const pesoTotalResiduos = Number(voluntarios.reduce((acc, v) => acc + v.peso, 0).toFixed(3));
+          const pesoTotalCepilho = Number((pesoTotalResiduos * 0.35).toFixed(3));
+          const totalVol = voluntarios.length;
+          
+          const comentario = `${totalVol} voluntários • ${pesoTotalResiduos.toFixed(3)} kg resíduos + ${pesoTotalCepilho.toFixed(3)} kg cepilho`;
 
           eventos.push({
             semana: 0,
@@ -294,8 +292,8 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           ? (lote.peso_final || calcularPesoSemanal(lote.peso_inicial, 7))
           : calcularPesoSemanal(lote.peso_inicial, Math.max(0, eventos.length - 1));
 
-        const co2eqEvitado = Math.round(pesoFinal * 0.766 * 100) / 100;
-        const creditosCau = Math.round((pesoFinal / 1000) * 1000) / 1000;
+        const co2eqEvitado = Number((pesoFinal * 0.766).toFixed(3));
+        const creditosCau = Number((pesoFinal / 1000).toFixed(3));
 
         const resultado: LoteAuditoriaData = {
           codigo_lote: lote.codigo,
