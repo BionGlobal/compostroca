@@ -7,6 +7,8 @@ interface ImpactMetricsProps {
   pesoInicial: number;
   pesoFinal: number;
   duracaoDias: number;
+  diaAtualCiclo: number;
+  totalDiasCiclo: number;
   co2eqEvitado: number;
   creditosCau: number;
   totalVoluntarios: number;
@@ -18,6 +20,8 @@ export const ImpactMetrics = ({
   pesoInicial,
   pesoFinal,
   duracaoDias,
+  diaAtualCiclo,
+  totalDiasCiclo,
   co2eqEvitado,
   creditosCau,
   totalVoluntarios,
@@ -50,7 +54,7 @@ export const ImpactMetrics = ({
           <div className="pt-2 border-t border-border">
             <p className="text-xs sm:text-sm text-muted-foreground">Duração do Ciclo</p>
             <p className="text-lg sm:text-xl font-semibold text-foreground">
-              {duracaoDias} dias
+              Dia {diaAtualCiclo} de {totalDiasCiclo}
             </p>
           </div>
         </CardContent>

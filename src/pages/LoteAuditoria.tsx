@@ -85,6 +85,8 @@ export default function LoteAuditoria() {
           pesoInicial={data.peso_inicial}
           pesoFinal={data.peso_final}
           duracaoDias={data.duracao_dias}
+          diaAtualCiclo={data.dia_atual_ciclo}
+          totalDiasCiclo={data.total_dias_ciclo}
           co2eqEvitado={data.co2eq_evitado}
           creditosCau={data.creditos_cau}
           totalVoluntarios={data.total_voluntarios}

@@ -39,6 +39,8 @@ interface LoteAuditoriaData {
   peso_inicial: number;
   peso_final: number;
   duracao_dias: number;
+  dia_atual_ciclo: number;
+  total_dias_ciclo: number;
   co2eq_evitado: number;
   creditos_cau: number;
 
@@ -61,10 +63,6 @@ const processPhotoUrl = (url: string): string => {
   return `${BUCKET_URL}/entrega-fotos/${url}`;
 };
 
-const calcularPesoSemanal = (pesoInicial: number, semana: number): number => {
-  const fatorDecaimento = 0.9635;
-  return Number((pesoInicial * Math.pow(fatorDecaimento, semana)).toFixed(3));
-};
 
 const getIniciais = (nome: string): string => {
   if (!nome) return 'N/A';
@@ -284,14 +282,27 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
         // 7) Métricas
         const statusLote = lote.status === 'encerrado' && lote.data_finalizacao ? 'certificado' : 'em_producao';
         const dataFim = lote.data_finalizacao || lote.data_encerramento || new Date().toISOString();
+        const hoje = new Date();
+        const dataInicio = new Date(lote.data_inicio);
+
+        // Dias corridos totais (para compatibilidade)
         const duracaoDias = Math.ceil(
-          (new Date(dataFim).getTime() - new Date(lote.data_inicio).getTime()) / (1000 * 60 * 60 * 24)
+          (new Date(dataFim).getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)
         );
 
-        const pesoFinal = statusLote === 'certificado'
-          ? (lote.peso_final || calcularPesoSemanal(lote.peso_inicial, 7))
-          : calcularPesoSemanal(lote.peso_inicial, Math.max(0, eventos.length - 1));
+        // Dia atual do ciclo (1 = dia da criação)
+        const diaAtualCiclo = Math.ceil(
+          (hoje.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)
+        ) + 1;
 
+        const totalDiasCiclo = 49; // 7 semanas × 7 dias
+
+        // Peso final: sempre 22% menor (78% do peso inicial)
+        const pesoFinal = statusLote === 'certificado'
+          ? Number((lote.peso_final || lote.peso_inicial * 0.78).toFixed(3))
+          : Number((lote.peso_inicial * 0.78).toFixed(3));
+
+        // Cálculos ambientais baseados no peso final
         const co2eqEvitado = Number((pesoFinal * 0.766).toFixed(3));
         const creditosCau = Number((pesoFinal / 1000).toFixed(3));
 
@@ -312,6 +323,8 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           peso_inicial: Number(lote.peso_inicial || 0),
           peso_final: Number(pesoFinal || 0),
           duracao_dias: duracaoDias,
+          dia_atual_ciclo: diaAtualCiclo,
+          total_dias_ciclo: totalDiasCiclo,
           co2eq_evitado: co2eqEvitado,
           creditos_cau: creditosCau,
           voluntarios,
