@@ -306,14 +306,28 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
         const co2eqEvitado = Number((pesoFinal * 0.766).toFixed(3));
         const creditosCau = Number((pesoFinal / 1000).toFixed(3));
 
+        // Buscar dados da unidade com fallback
+        let unidadeData = lote.unidades;
+
+        // Fallback: se unidade_id estiver NULL mas tiver código, busca manualmente
+        if (!unidadeData && lote.unidade) {
+          const { data: unidadeFallback } = await supabase
+            .from('unidades')
+            .select('nome, codigo_unidade, localizacao')
+            .eq('codigo_unidade', lote.unidade)
+            .maybeSingle();
+          
+          unidadeData = unidadeFallback;
+        }
+
         const resultado: LoteAuditoriaData = {
           codigo_lote: lote.codigo,
           codigo_unico: lote.codigo_unico,
           status_lote: statusLote,
           unidade: {
-            nome: lote.unidades?.nome || 'Não disponível',
-            codigo: lote.unidades?.codigo_unidade || lote.unidade,
-            localizacao: lote.unidades?.localizacao || 'Não disponível'
+            nome: unidadeData?.nome || 'Não disponível',
+            codigo: unidadeData?.codigo_unidade || lote.unidade,
+            localizacao: unidadeData?.localizacao || 'Não disponível'
           },
           data_inicio: new Date(lote.data_inicio),
           data_finalizacao: lote.data_finalizacao ? new Date(lote.data_finalizacao) : null,
