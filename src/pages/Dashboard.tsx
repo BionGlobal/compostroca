@@ -8,9 +8,6 @@ import { StatsSkeletonLoader } from '@/components/ui/skeleton-loader';
 const Dashboard = () => {
   const { stats, loading } = useOrganizationData();
 
-  // Entregas recentes virão da página /entregas
-  const entregasRecentes: any[] = [];
-
   return (
     <div className="p-4 space-y-6">
       {/* Informações da Unidade */}
@@ -87,46 +84,6 @@ const Dashboard = () => {
 
       {/* Processo de Compostagem */}
       <CompostingBoxes />
-
-      {/* Entregas Recentes */}
-      <Card className="border-0">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-primary" />
-            Entregas Recentes
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {entregasRecentes.length === 0 ? (
-            <div className="text-center p-6 glass-light rounded-xl">
-              <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Nenhuma entrega registrada ainda
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                As entregas aparecerão aqui conforme forem sendo registradas
-              </p>
-            </div>
-          ) : (
-            entregasRecentes.map((entrega, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 glass-light rounded-xl organic-hover border-0"
-              >
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{entrega.voluntario}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Balde {entrega.balde} • {entrega.peso}kg
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">{entrega.data}</p>
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
 
     </div>
   );
