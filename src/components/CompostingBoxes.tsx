@@ -135,8 +135,8 @@ export const CompostingBoxes = () => {
         <div className="grid grid-cols-1 gap-4 relative z-10">
           {boxes.map((box, index) => (
             <div key={box.number} className="relative">
-              <Card className="glass-light organic-hover border-0 h-[400px] sm:h-[420px]">
-                <CardContent className="p-3 h-full flex flex-col">
+              <Card className="glass-light organic-hover border-0 min-h-[280px]">
+                <CardContent className="p-3 h-full flex flex-col space-y-2">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
@@ -187,47 +187,97 @@ export const CompostingBoxes = () => {
                     </div>
                   )}
 
-                  {/* Dados IoT - Temperatura (Caixa 1) */}
-                  {box.number === 1 && (
-                    <div className="p-1.5 bg-gradient-primary rounded-lg text-primary-foreground">
-                      <div className="flex items-center gap-1.5 justify-between">
-                        <div className="flex items-center gap-1">
-                          <Thermometer className="h-3 w-3" />
-                          <span className="text-[10px] opacity-90">Temperatura</span>
-                        </div>
-                        <span className="text-xs font-bold">
-                          {box.temperature ? `${box.temperature}°C` : '-°C'}
+                  {/* Placeholder IoT - Caixa 2 (Termofílico) */}
+                  {box.number === 2 && box.status !== 'vazia' && (
+                    <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/20 dark:to-slate-950/20 rounded-lg p-1.5 border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-1 mb-1">
+                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
+                        <span className="text-[9px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                          Aguardando Dados
                         </span>
                       </div>
+                      
+                      <div className="grid grid-cols-2 gap-1 text-[10px]">
+                        <div className="flex items-center gap-1">
+                          <Thermometer className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                          <span className="text-gray-500">Temp: -°C</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Droplets className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                          <span className="text-gray-500">Umid: -%</span>
+                        </div>
+                        <div className="col-span-2 flex items-center gap-1">
+                          <Zap className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                          <span className="text-[9px] text-gray-500">Cond: - mS/cm</span>
+                        </div>
+                      </div>
+                      
+                      <p className="text-[8px] text-gray-400 mt-0.5 italic text-center">
+                        Coleta: 23:00 UTC
+                      </p>
                     </div>
                   )}
 
                   {/* Dados IoT - Química (Caixa 6) */}
-                  {box.chemistry && (
-                    <div className="p-1.5 bg-gradient-earth rounded-lg text-white">
-                      <div className="flex items-center gap-1 mb-1">
-                        <Zap className="h-3 w-3" />
-                        <span className="text-[10px] font-medium">Análise Química</span>
+                  {box.number === 6 && box.status !== 'vazia' && (
+                    box.chemistry ? (
+                      <div className="p-1.5 bg-gradient-earth rounded-lg text-white">
+                        <div className="flex items-center gap-1 mb-1">
+                          <Zap className="h-3 w-3" />
+                          <span className="text-[10px] font-medium">Análise Química</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1 text-[10px]">
+                          <div className="flex items-center gap-0.5">
+                            <Droplets className="h-2.5 w-2.5" />
+                            <span>pH: {box.chemistry.ph !== null ? box.chemistry.ph : '-'}</span>
+                          </div>
+                          <div className="flex items-center gap-0.5">
+                            <Leaf className="h-2.5 w-2.5" />
+                            <span>N: {box.chemistry.nitrogen !== null ? `${box.chemistry.nitrogen}%` : '-%'}</span>
+                          </div>
+                          <div className="flex items-center gap-0.5">
+                            <Zap className="h-2.5 w-2.5" />
+                            <span>P: {box.chemistry.phosphorus !== null ? `${box.chemistry.phosphorus}%` : '-%'}</span>
+                          </div>
+                          <div className="flex items-center gap-0.5">
+                            <Zap className="h-2.5 w-2.5" />
+                            <span>K: {box.chemistry.potassium !== null ? `${box.chemistry.potassium}%` : '-%'}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-1 text-[10px]">
-                        <div className="flex items-center gap-0.5">
-                          <Droplets className="h-2.5 w-2.5" />
-                          <span>pH: {box.chemistry.ph !== null ? box.chemistry.ph : '-'}</span>
+                    ) : (
+                      <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/20 dark:to-slate-950/20 rounded-lg p-1.5 border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-1 mb-1">
+                          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
+                          <span className="text-[9px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                            Aguardando Dados
+                          </span>
                         </div>
-                        <div className="flex items-center gap-0.5">
-                          <Leaf className="h-2.5 w-2.5" />
-                          <span>N: {box.chemistry.nitrogen !== null ? `${box.chemistry.nitrogen}%` : '-%'}</span>
+                        
+                        <div className="grid grid-cols-2 gap-1 text-[10px]">
+                          <div className="flex items-center gap-1">
+                            <Droplets className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                            <span className="text-gray-500">pH: -</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Leaf className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                            <span className="text-gray-500">N: -%</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Zap className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                            <span className="text-gray-500">P: -%</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Zap className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                            <span className="text-gray-500">K: -%</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-0.5">
-                          <Zap className="h-2.5 w-2.5" />
-                          <span>P: {box.chemistry.phosphorus !== null ? `${box.chemistry.phosphorus}%` : '-%'}</span>
-                        </div>
-                        <div className="flex items-center gap-0.5">
-                          <Zap className="h-2.5 w-2.5" />
-                          <span>K: {box.chemistry.potassium !== null ? `${box.chemistry.potassium}%` : '-%'}</span>
-                        </div>
+                        
+                        <p className="text-[8px] text-gray-400 mt-0.5 italic text-center">
+                          Coleta: 23:00 UTC
+                        </p>
                       </div>
-                    </div>
+                    )
                   )}
                 </CardContent>
               </Card>
