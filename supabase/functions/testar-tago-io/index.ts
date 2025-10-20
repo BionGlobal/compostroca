@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     console.log('📊 Teste 3: Buscar dados do sensor...')
     try {
       const dataResponse = await fetch(
-        'https://api.tago.io/data?variable=data&query=last_value',
+        'https://api.tago.io/data?qty=1&variables=temperatura_solo1,umidade_solo1,pore_water_ec1,nitrogenio1,fosforo1,potassio1,ph1',
         {
           method: 'GET',
           headers: {
@@ -120,8 +120,17 @@ Deno.serve(async (req) => {
       }
       
       if (dataResponse.ok) {
-        const metadata = dataBody.result?.[0]?.metadata
-        if (metadata) {
+        // Agregar metadata de todos os itens do result
+        const metadata: Record<string, any> = {}
+        if (dataBody.result && Array.isArray(dataBody.result)) {
+          for (const item of dataBody.result) {
+            if (item.variable === 'data' && item.metadata) {
+              Object.assign(metadata, item.metadata)
+            }
+          }
+        }
+        
+        if (Object.keys(metadata).length > 0) {
           console.log('✅ Dados recebidos com sucesso')
           console.log('📋 Campos disponíveis:', Object.keys(metadata))
           
@@ -138,7 +147,7 @@ Deno.serve(async (req) => {
             campos_esperados: camposEsperados,
             campos_encontrados: camposEncontrados,
             campos_faltantes: camposFaltantes,
-            metadata_completo: metadata
+            metadata_agregado: metadata
           }
           
           console.log(`✅ ${camposEncontrados.length}/${camposEsperados.length} campos encontrados`)

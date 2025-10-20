@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
 
     // Fazer requisição GET para API Tago.io com retry
     const tagoResponse = await fetchComRetry(
-      'https://api.tago.io/data?variable=data&query=last_value',
+      'https://api.tago.io/data?qty=1&variables=temperatura_solo1,umidade_solo1,pore_water_ec1,nitrogenio1,fosforo1,potassio1,ph1',
       {
         method: 'GET',
         headers: {
@@ -115,15 +115,30 @@ Detalhes do erro: ${errorText}
     }
 
     const tagoData = await tagoResponse.json()
-    const metadata = tagoData.result?.[0]?.metadata
+    console.log('📦 Resposta completa da Tago.io:', JSON.stringify(tagoData, null, 2))
 
-    if (!metadata) {
-      console.error('❌ Estrutura da resposta Tago.io:', JSON.stringify(tagoData, null, 2))
+    // Validar se result existe e tem dados
+    if (!tagoData.result || tagoData.result.length === 0) {
+      console.error('❌ Nenhum resultado encontrado na resposta')
+      throw new Error('Nenhum dado retornado pela API Tago.io')
+    }
+
+    // Construir objeto metadata agregando de todos os itens do result
+    const metadata: Record<string, any> = {}
+    for (const item of tagoData.result) {
+      if (item.variable === 'data' && item.metadata) {
+        Object.assign(metadata, item.metadata)
+      }
+    }
+
+    console.log('📊 Metadados extraídos:', JSON.stringify(metadata, null, 2))
+
+    if (Object.keys(metadata).length === 0) {
+      console.error('❌ Metadados não encontrados na resposta')
       throw new Error('Metadados não encontrados na resposta da Tago.io')
     }
 
-    console.log('✅ Dados recebidos da Tago.io:')
-    console.log(JSON.stringify(metadata, null, 2))
+    console.log('✅ Dados recebidos da Tago.io com sucesso')
 
     // Validar campos esperados
     const camposEsperados = {
