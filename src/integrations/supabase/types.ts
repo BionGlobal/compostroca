@@ -124,6 +124,56 @@ export type Database = {
           },
         ]
       }
+      leituras_diarias_sensores: {
+        Row: {
+          condutividade_agua_poros: number | null
+          created_at: string
+          fosforo: number | null
+          id: string
+          lote_id: string
+          nitrogenio: number | null
+          numero_caixa: number
+          ph: number | null
+          potassio: number | null
+          temperatura_solo: number | null
+          umidade_solo: number | null
+        }
+        Insert: {
+          condutividade_agua_poros?: number | null
+          created_at?: string
+          fosforo?: number | null
+          id?: string
+          lote_id: string
+          nitrogenio?: number | null
+          numero_caixa: number
+          ph?: number | null
+          potassio?: number | null
+          temperatura_solo?: number | null
+          umidade_solo?: number | null
+        }
+        Update: {
+          condutividade_agua_poros?: number | null
+          created_at?: string
+          fosforo?: number | null
+          id?: string
+          lote_id?: string
+          nitrogenio?: number | null
+          numero_caixa?: number
+          ph?: number | null
+          potassio?: number | null
+          temperatura_solo?: number | null
+          umidade_solo?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leituras_diarias_sensores_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: false
+            referencedRelation: "lotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lote_eventos: {
         Row: {
           administrador_id: string | null
@@ -547,6 +597,50 @@ export type Database = {
           validador_nome?: string
         }
         Relationships: []
+      }
+      medias_sensores_lote: {
+        Row: {
+          lote_id: string
+          media_condutividade_semana2: number | null
+          media_fosforo_semana6: number | null
+          media_nitrogenio_semana6: number | null
+          media_ph_semana6: number | null
+          media_potassio_semana6: number | null
+          media_temperatura_semana2: number | null
+          media_umidade_semana2: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          lote_id: string
+          media_condutividade_semana2?: number | null
+          media_fosforo_semana6?: number | null
+          media_nitrogenio_semana6?: number | null
+          media_ph_semana6?: number | null
+          media_potassio_semana6?: number | null
+          media_temperatura_semana2?: number | null
+          media_umidade_semana2?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          lote_id?: string
+          media_condutividade_semana2?: number | null
+          media_fosforo_semana6?: number | null
+          media_nitrogenio_semana6?: number | null
+          media_ph_semana6?: number | null
+          media_potassio_semana6?: number | null
+          media_temperatura_semana2?: number | null
+          media_umidade_semana2?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medias_sensores_lote_lote_id_fkey"
+            columns: ["lote_id"]
+            isOneToOne: true
+            referencedRelation: "lotes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
