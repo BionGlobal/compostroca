@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.reativar-lote-entregas]
 verify_jwt = false
+
+[functions.coleta-diaria-sensores]
+verify_jwt = false
