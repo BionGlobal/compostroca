@@ -88,17 +88,17 @@ export const PublicProductionBelt = ({ lotesAtivos, onViewPhotos }: PublicProduc
             <div key={numeroBox} className="flex items-center">
               {/* Caixa de Compostagem - Idêntica ao ProductionBelt */}
               <Card className={`
-                relative w-64 sm:w-72 h-auto min-h-[280px] sm:min-h-[300px] transition-all duration-300
+                relative w-64 sm:w-72 h-[420px] sm:h-[440px] transition-all duration-300
                  ${getBoxColor(numeroBox, lote)}
                  ${lote ? 'hover:shadow-lg hover:scale-105' : ''}
-               `}>
+              `}>
                  {/* Indicador de dados ao vivo */}
                  {lote && (
                    <div className="absolute top-2 right-2 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                  )}
                 <CardContent className="p-3 h-full flex flex-col">
                   {/* Header da Caixa */}
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-2.5">
                     <div className="flex items-center gap-2">
                       <Package className="h-4 w-4" />
                       <span className="font-semibold text-sm">Caixa {numeroBox}</span>
@@ -110,34 +110,33 @@ export const PublicProductionBelt = ({ lotesAtivos, onViewPhotos }: PublicProduc
                   {lote ? (
                     <div className="flex-1 space-y-3">
                       {/* Código do Lote - Destaque Principal */}
-                      <div className="text-center bg-primary/5 rounded-lg p-2">
-                        <p className="text-xs text-muted-foreground mb-1">Lote</p>
-                        <p className="text-sm font-bold text-primary">
+                      <div className="text-center bg-primary/5 rounded-lg p-1.5 mb-1">
+                        <p className="text-[10px] text-muted-foreground mb-0.5">Lote</p>
+                        <p className="text-xs font-bold text-primary">
                           {lote.codigo}
                         </p>
                       </div>
 
                       {/* Peso Atual - Destaque Secundário */}
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground">Peso Atual</p>
-                        <p className="text-xl font-bold text-foreground">
+                      <div className="text-center mb-1">
+                        <p className="text-[10px] text-muted-foreground">Peso Atual</p>
+                        <p className="text-lg font-bold text-foreground">
                           {lote.peso_atual?.toFixed(1) || '0.0'}kg
                         </p>
                       </div>
 
                        {/* Data de Entrada e Final */}
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground">Entrada</p>
-                        <p className="text-xs font-medium">
-                          {formatarData(lote.data_inicio)} às {formatarHora(lote.data_inicio)}
+                      <div className="text-center mb-1.5">
+                        <p className="text-[10px] text-muted-foreground">
+                          Entrada: {formatarData(lote.data_inicio)} {formatarHora(lote.data_inicio)}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-[10px] text-muted-foreground">
                           Final: {formatarData(new Date(new Date(lote.data_inicio).getTime() + 7 * 7 * 24 * 60 * 60 * 1000).toISOString())}
                         </p>
                       </div>
 
                       {/* Validador e Voluntários */}
-                      <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="grid grid-cols-2 gap-1.5 text-[10px] mb-2">
                         <div>
                           <p className="text-muted-foreground flex items-center gap-1">
                             <User className="h-3 w-3" />
@@ -157,15 +156,15 @@ export const PublicProductionBelt = ({ lotesAtivos, onViewPhotos }: PublicProduc
 
                 {/* Dados de Sensores IoT - LIVE */}
                 {lote.ultima_leitura_sensores && (numeroBox === 2 || numeroBox === 6) && (
-                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 rounded-lg p-2 border border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center gap-1 mb-1.5">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                      <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">
-                        Monitoramento Live
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 rounded-lg p-1.5 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-1 mb-1">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                      <span className="text-[9px] font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">
+                        Live
                       </span>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-1.5 text-xs">
+                    <div className="grid grid-cols-2 gap-1 text-[10px]">
                       {numeroBox === 2 && (
                         <>
                           <div className="flex items-center gap-1">
@@ -182,7 +181,7 @@ export const PublicProductionBelt = ({ lotesAtivos, onViewPhotos }: PublicProduc
                           </div>
                           <div className="col-span-2 flex items-center gap-1">
                             <Zap className="h-3 w-3 text-yellow-500 flex-shrink-0" />
-                            <span className="text-[10px] text-muted-foreground">Condutividade:</span>
+                            <span className="text-[9px] text-muted-foreground">Cond:</span>
                             <span className="font-medium text-foreground">
                               {lote.ultima_leitura_sensores.condutividade_agua_poros?.toFixed(2) || '-'} mS/cm
                             </span>
@@ -194,7 +193,7 @@ export const PublicProductionBelt = ({ lotesAtivos, onViewPhotos }: PublicProduc
                         <>
                           <div className="col-span-2 flex items-center gap-1">
                             <Leaf className="h-3 w-3 text-green-500 flex-shrink-0" />
-                            <span className="text-[10px] text-muted-foreground">NPK:</span>
+                            <span className="text-[9px] text-muted-foreground">NPK:</span>
                             <span className="font-medium text-foreground font-mono">
                               {lote.ultima_leitura_sensores.nitrogenio?.toFixed(0) || '-'}/
                               {lote.ultima_leitura_sensores.fosforo?.toFixed(0) || '-'}/
@@ -203,7 +202,7 @@ export const PublicProductionBelt = ({ lotesAtivos, onViewPhotos }: PublicProduc
                           </div>
                           <div className="col-span-2 flex items-center gap-1">
                             <FlaskConical className="h-3 w-3 text-purple-500 flex-shrink-0" />
-                            <span className="text-[10px] text-muted-foreground">pH:</span>
+                            <span className="text-[9px] text-muted-foreground">pH:</span>
                             <span className="font-medium text-foreground">
                               {lote.ultima_leitura_sensores.ph?.toFixed(1) || '-'}
                             </span>
@@ -212,30 +211,51 @@ export const PublicProductionBelt = ({ lotesAtivos, onViewPhotos }: PublicProduc
                       )}
                     </div>
                     
-                    <p className="text-[9px] text-muted-foreground mt-1 italic text-center">
-                      Atualizado: {new Date(lote.ultima_leitura_sensores.created_at).toLocaleDateString('pt-BR')}
+                    <p className="text-[8px] text-muted-foreground mt-0.5 italic text-center">
+                      {new Date(lote.ultima_leitura_sensores.created_at).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                 )}
 
                 {/* Fallback: Dados IoT Simplificados (se não houver leitura de sensores) */}
-                {!lote.ultima_leitura_sensores && (
-                  <div className="bg-muted/30 rounded-lg p-2">
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="flex items-center gap-1">
-                        <Thermometer className="h-3 w-3 text-orange-500" />
-                        <span>{lote.temperatura ? `${lote.temperatura}°C` : '-°C'}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Droplets className="h-3 w-3 text-blue-500" />
-                        <span>{lote.umidade ? `${lote.umidade}%` : '-%'}</span>
-                      </div>
+                {!lote.ultima_leitura_sensores && (numeroBox === 2 || numeroBox === 6) && (
+                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/20 dark:to-slate-950/20 rounded-lg p-1.5 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-1 mb-1">
+                      <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wide">
+                        Aguardando dados
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1 text-[10px]">
+                      {numeroBox === 2 && (
+                        <>
+                          <div className="flex items-center gap-1">
+                            <Thermometer className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-muted-foreground">-°C</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Droplets className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-muted-foreground">-%</span>
+                          </div>
+                        </>
+                      )}
+                      {numeroBox === 6 && (
+                        <>
+                          <div className="col-span-2 flex items-center gap-1">
+                            <Leaf className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-muted-foreground">NPK: -/-/-</span>
+                          </div>
+                          <div className="col-span-2 flex items-center gap-1">
+                            <FlaskConical className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-muted-foreground">pH: -</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
 
                       {/* Botões de Ação */}
-                      <div className="space-y-1.5">
+                      <div className="space-y-1.5 mb-2.5">
                         <Button
                           variant="outline"
                           size="sm"
@@ -257,7 +277,7 @@ export const PublicProductionBelt = ({ lotesAtivos, onViewPhotos }: PublicProduc
                       </div>
 
                       {/* Progresso */}
-                      <div className="mt-auto pt-2">
+                      <div className="pt-2">
                         <div className="text-center">
                           <p className="text-xs text-muted-foreground">
                             Semana {numeroBox} de 7

@@ -102,7 +102,7 @@ export const TraceabilityTimeline = ({
                 </div>
 
                 <Card className="sm:ml-16 border-l-4 border-l-primary">
-                  <CardContent className="p-4 sm:p-6 space-y-4">
+                  <CardContent className="p-3 sm:p-5 space-y-3">
                     {/* Cabeçalho do evento */}
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                       <div className="space-y-2">
@@ -112,7 +112,7 @@ export const TraceabilityTimeline = ({
                           </Badge>
                         </div>
                         
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
                             <span>{formatDate(evento.data)} às {evento.hora}</span>
@@ -186,38 +186,38 @@ export const TraceabilityTimeline = ({
                       mediasSensores.media_umidade_semana2 !== null || 
                       mediasSensores.media_condutividade_semana2 !== null
                     ) && (
-                      <div className="glass-light p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Activity className="w-4 h-4 text-blue-600" />
-                          <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                            Médias da Semana 2 (Sensores IoT)
+                      <div className="glass-light p-2 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Activity className="w-3 h-3 text-blue-600" />
+                          <h4 className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                            Médias da Semana 2 (IoT)
                           </h4>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                        <div className="grid grid-cols-3 gap-1.5 text-[10px]">
                           {mediasSensores.media_temperatura_semana2 !== null && (
-                            <div className="flex items-center gap-2">
-                              <Thermometer className="w-4 h-4 text-orange-500 flex-shrink-0" />
-                              <div>
-                                <p className="text-xs text-muted-foreground">Temperatura</p>
-                                <p className="font-medium">{mediasSensores.media_temperatura_semana2.toFixed(1)}°C</p>
+                            <div className="flex items-center gap-1">
+                              <Thermometer className="w-3 h-3 text-orange-500 flex-shrink-0" />
+                              <div className="flex flex-col">
+                                <span className="text-[9px] text-muted-foreground">Temp</span>
+                                <span className="font-medium">{mediasSensores.media_temperatura_semana2.toFixed(1)}°C</span>
                               </div>
                             </div>
                           )}
                           {mediasSensores.media_umidade_semana2 !== null && (
-                            <div className="flex items-center gap-2">
-                              <Droplets className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                              <div>
-                                <p className="text-xs text-muted-foreground">Umidade</p>
-                                <p className="font-medium">{mediasSensores.media_umidade_semana2.toFixed(1)}%</p>
+                            <div className="flex items-center gap-1">
+                              <Droplets className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                              <div className="flex flex-col">
+                                <span className="text-[9px] text-muted-foreground">Umid</span>
+                                <span className="font-medium">{mediasSensores.media_umidade_semana2.toFixed(1)}%</span>
                               </div>
                             </div>
                           )}
                           {mediasSensores.media_condutividade_semana2 !== null && (
-                            <div className="flex items-center gap-2">
-                              <Zap className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                              <div>
-                                <p className="text-xs text-muted-foreground">Condutividade</p>
-                                <p className="font-medium">{mediasSensores.media_condutividade_semana2.toFixed(2)} mS/cm</p>
+                            <div className="flex items-center gap-1">
+                              <Zap className="w-3 h-3 text-yellow-500 flex-shrink-0" />
+                              <div className="flex flex-col">
+                                <span className="text-[9px] text-muted-foreground">Cond</span>
+                                <span className="font-medium">{mediasSensores.media_condutividade_semana2.toFixed(2)} mS/cm</span>
                               </div>
                             </div>
                           )}
@@ -232,35 +232,35 @@ export const TraceabilityTimeline = ({
                       mediasSensores.media_potassio_semana6 !== null || 
                       mediasSensores.media_ph_semana6 !== null
                     ) && (
-                      <div className="glass-light p-3 rounded-lg border border-green-200 dark:border-green-800">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Activity className="w-4 h-4 text-green-600" />
-                          <h4 className="text-sm font-semibold text-green-700 dark:text-green-300">
-                            Médias da Semana 6 (Sensores IoT)
+                      <div className="glass-light p-2 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Activity className="w-3 h-3 text-green-600" />
+                          <h4 className="text-xs font-semibold text-green-700 dark:text-green-300">
+                            Médias da Semana 6 (IoT)
                           </h4>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                        <div className="grid grid-cols-2 gap-1.5 text-[10px]">
                           {(mediasSensores.media_nitrogenio_semana6 !== null || 
                             mediasSensores.media_fosforo_semana6 !== null || 
                             mediasSensores.media_potassio_semana6 !== null) && (
-                            <div className="flex items-center gap-2">
-                              <Leaf className="w-4 h-4 text-green-500 flex-shrink-0" />
-                              <div>
-                                <p className="text-xs text-muted-foreground">NPK</p>
-                                <p className="font-medium font-mono">
+                            <div className="flex items-center gap-1">
+                              <Leaf className="w-3 h-3 text-green-500 flex-shrink-0" />
+                              <div className="flex flex-col">
+                                <span className="text-[9px] text-muted-foreground">NPK</span>
+                                <span className="font-medium font-mono">
                                   {mediasSensores.media_nitrogenio_semana6?.toFixed(0) || '-'}/
                                   {mediasSensores.media_fosforo_semana6?.toFixed(0) || '-'}/
                                   {mediasSensores.media_potassio_semana6?.toFixed(0) || '-'}
-                                </p>
+                                </span>
                               </div>
                             </div>
                           )}
                           {mediasSensores.media_ph_semana6 !== null && (
-                            <div className="flex items-center gap-2">
-                              <FlaskConical className="w-4 h-4 text-purple-500 flex-shrink-0" />
-                              <div>
-                                <p className="text-xs text-muted-foreground">pH</p>
-                                <p className="font-medium">{mediasSensores.media_ph_semana6.toFixed(1)}</p>
+                            <div className="flex items-center gap-1">
+                              <FlaskConical className="w-3 h-3 text-purple-500 flex-shrink-0" />
+                              <div className="flex flex-col">
+                                <span className="text-[9px] text-muted-foreground">pH</span>
+                                <span className="font-medium">{mediasSensores.media_ph_semana6.toFixed(1)}</span>
                               </div>
                             </div>
                           )}

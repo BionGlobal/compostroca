@@ -116,36 +116,6 @@ export const CompostingBoxes = () => {
     return Math.min(Math.max((diasDecorridos / totalDias) * 100, 0), 100);
   };
 
-  const renderChemistryIndicators = (chemistry: CompostingBox['chemistry']) => {
-    if (!chemistry) return null;
-
-    const indicators = [
-      { label: 'pH', value: chemistry.ph, optimal: [6.5, 8.0], icon: Droplets, unit: '' },
-      { label: 'N', value: chemistry.nitrogen, optimal: [1.5, 3.0], icon: Leaf, unit: '%' },
-      { label: 'P', value: chemistry.phosphorus, optimal: [0.5, 1.2], icon: Zap, unit: '%' },
-      { label: 'K', value: chemistry.potassium, optimal: [1.0, 2.0], icon: Zap, unit: '%' },
-    ];
-
-    return (
-      <div className="grid grid-cols-2 gap-2 mt-2">
-        {indicators.map((indicator) => {
-          const hasValue = indicator.value !== null && indicator.value !== undefined;
-          const isOptimal = hasValue && indicator.value >= indicator.optimal[0] && indicator.value <= indicator.optimal[1];
-          const Icon = indicator.icon;
-          
-          return (
-            <div key={indicator.label} className="flex items-center gap-1">
-              <Icon className="h-3 w-3 text-white" />
-              <span className="text-xs font-medium text-white">{indicator.label}:</span>
-              <span className={`text-xs font-bold text-white`}>
-                {hasValue ? `${indicator.value}${indicator.unit}` : `-${indicator.unit}`}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-6">
@@ -165,53 +135,53 @@ export const CompostingBoxes = () => {
         <div className="grid grid-cols-1 gap-4 relative z-10">
           {boxes.map((box, index) => (
             <div key={box.number} className="relative">
-              <Card className="glass-light organic-hover border-0">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center text-primary-foreground font-bold">
+              <Card className="glass-light organic-hover border-0 h-[400px] sm:h-[420px]">
+                <CardContent className="p-3 h-full flex flex-col">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
                         {box.number}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-lg">Caixa {box.number}</h3>
+                        <h3 className="font-semibold text-base">Caixa {box.number}</h3>
                         {box.status !== 'vazia' ? (
                           <div>
-                            <p className="text-xs text-muted-foreground">Semana {box.week}</p>
+                            <p className="text-[10px] text-muted-foreground">Semana {box.week}</p>
                             {box.loteCode && (
-                              <p className="text-xs font-medium">{box.loteCode}</p>
+                              <p className="text-[10px] font-medium">{box.loteCode}</p>
                             )}
                             {box.loteData && (
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-[10px] text-muted-foreground">
                                 {format(new Date(box.loteData), 'dd/MM/yyyy', { locale: ptBR })}
                               </p>
                             )}
                           </div>
                         ) : (
-                          <p className="text-xs text-muted-foreground">Aguardando lote</p>
+                          <p className="text-[10px] text-muted-foreground">Aguardando lote</p>
                         )}
                       </div>
                     </div>
-                    <Badge className={getStatusColor(box.status)}>
+                    <Badge className={`${getStatusColor(box.status)} text-[10px] px-2 py-0.5`}>
                       {getStatusLabel(box.status)}
                     </Badge>
                   </div>
 
                   {/* Progresso */}
                   {box.status !== 'vazia' && (
-                    <div className="mb-3">
-                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                    <div className="mb-2">
+                      <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
                         <span>Progresso (49 dias)</span>
                         <span>{Math.round(getProgressPercentage(box))}%</span>
                       </div>
-                      <Progress value={getProgressPercentage(box)} className="h-2" />
+                      <Progress value={getProgressPercentage(box)} className="h-1.5" />
                     </div>
                   )}
 
                   {/* Peso */}
                   {box.status !== 'vazia' && (
-                    <div className="flex items-center gap-2 mb-3">
-                      <Scale className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Scale className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs font-medium">
                         {box.weight.toFixed(1)} kg
                       </span>
                     </div>
@@ -219,27 +189,46 @@ export const CompostingBoxes = () => {
 
                   {/* Dados IoT - Temperatura (Caixa 1) */}
                   {box.number === 1 && (
-                    <div className="flex items-center gap-2 p-2 bg-gradient-primary rounded-lg text-primary-foreground mb-2">
-                      <Thermometer className="h-4 w-4" />
-                      <span className="text-sm font-medium">
-                        {box.temperature ? `${box.temperature}°C` : '-°C'}
-                      </span>
-                      <span className="text-xs opacity-90">
-                        Temperatura
-                      </span>
+                    <div className="p-1.5 bg-gradient-primary rounded-lg text-primary-foreground">
+                      <div className="flex items-center gap-1.5 justify-between">
+                        <div className="flex items-center gap-1">
+                          <Thermometer className="h-3 w-3" />
+                          <span className="text-[10px] opacity-90">Temperatura</span>
+                        </div>
+                        <span className="text-xs font-bold">
+                          {box.temperature ? `${box.temperature}°C` : '-°C'}
+                        </span>
+                      </div>
                     </div>
                   )}
 
-                   {/* Dados IoT - Química (Caixa 6) */}
-                   {box.chemistry && (
-                     <div className="p-2 bg-gradient-earth rounded-lg text-white">
-                       <div className="flex items-center gap-2 mb-2">
-                         <Zap className="h-4 w-4 text-white" />
-                         <span className="text-sm font-medium text-white">Análise Química</span>
-                       </div>
-                       {renderChemistryIndicators(box.chemistry)}
-                     </div>
-                   )}
+                  {/* Dados IoT - Química (Caixa 6) */}
+                  {box.chemistry && (
+                    <div className="p-1.5 bg-gradient-earth rounded-lg text-white">
+                      <div className="flex items-center gap-1 mb-1">
+                        <Zap className="h-3 w-3" />
+                        <span className="text-[10px] font-medium">Análise Química</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1 text-[10px]">
+                        <div className="flex items-center gap-0.5">
+                          <Droplets className="h-2.5 w-2.5" />
+                          <span>pH: {box.chemistry.ph !== null ? box.chemistry.ph : '-'}</span>
+                        </div>
+                        <div className="flex items-center gap-0.5">
+                          <Leaf className="h-2.5 w-2.5" />
+                          <span>N: {box.chemistry.nitrogen !== null ? `${box.chemistry.nitrogen}%` : '-%'}</span>
+                        </div>
+                        <div className="flex items-center gap-0.5">
+                          <Zap className="h-2.5 w-2.5" />
+                          <span>P: {box.chemistry.phosphorus !== null ? `${box.chemistry.phosphorus}%` : '-%'}</span>
+                        </div>
+                        <div className="flex items-center gap-0.5">
+                          <Zap className="h-2.5 w-2.5" />
+                          <span>K: {box.chemistry.potassium !== null ? `${box.chemistry.potassium}%` : '-%'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
