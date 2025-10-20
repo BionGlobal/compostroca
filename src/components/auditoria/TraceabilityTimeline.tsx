@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, Scale, Image as ImageIcon } from 'lucide-react';
+import { Clock, User, Scale, Image as ImageIcon, MapPin } from 'lucide-react';
 import { FotosGalleryModal } from '@/components/FotosGalleryModal';
 
 interface Evento {
@@ -15,6 +15,8 @@ interface Evento {
   comentario: string;
   nota_contexto: string;
   lote_id: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface TraceabilityTimelineProps {
@@ -100,6 +102,14 @@ export const TraceabilityTimeline = ({ eventos }: TraceabilityTimelineProps) => 
                             <User className="w-3 h-3 sm:w-4 sm:h-4" />
                             <span>{evento.validador}</span>
                           </div>
+                          {(evento.latitude && evento.longitude) && (
+                            <div className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
+                              <span className="font-mono text-xs">
+                                {evento.latitude.toFixed(6)}, {evento.longitude.toFixed(6)}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 

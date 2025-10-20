@@ -19,6 +19,8 @@ interface Evento {
   comentario: string;
   nota_contexto: string;
   lote_id: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface LoteAuditoriaData {
@@ -246,7 +248,9 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             fotos: fotosEntregas,
             comentario,
             nota_contexto: '',
-            lote_id: lote.id
+            lote_id: lote.id,
+            latitude: eventoInicio.latitude,
+            longitude: eventoInicio.longitude
           });
         }
 
@@ -273,7 +277,9 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             fotos,
             comentario: m.comentario || '',
             nota_contexto: '',
-            lote_id: lote.id
+            lote_id: lote.id,
+            latitude: m.latitude,
+            longitude: m.longitude
           });
         });
 
@@ -290,9 +296,13 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           (new Date(dataFim).getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)
         );
 
-        // Dia atual do ciclo (1 = dia da criação)
+        // Dia atual do ciclo: usar data_finalizacao se certificado, senão usar hoje
+        const dataReferencia = statusLote === 'certificado' && lote.data_finalizacao 
+          ? new Date(lote.data_finalizacao)
+          : hoje;
+
         const diaAtualCiclo = Math.ceil(
-          (hoje.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)
+          (dataReferencia.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)
         ) + 1;
 
         const totalDiasCiclo = 49; // 7 semanas × 7 dias
