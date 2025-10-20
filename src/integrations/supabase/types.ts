@@ -646,21 +646,27 @@ export type Database = {
           codigo_unidade: string
           created_at: string
           id: string
+          latitude: number | null
           localizacao: string
+          longitude: number | null
           nome: string
         }
         Insert: {
           codigo_unidade: string
           created_at?: string
           id?: string
+          latitude?: number | null
           localizacao: string
+          longitude?: number | null
           nome: string
         }
         Update: {
           codigo_unidade?: string
           created_at?: string
           id?: string
+          latitude?: number | null
           localizacao?: string
+          longitude?: number | null
           nome?: string
         }
         Relationships: []
@@ -837,6 +843,10 @@ export type Database = {
           total_count: number
           unidade_nome: string
         }[]
+      }
+      calcular_distancia_metros: {
+        Args: { lat1: number; lat2: number; lon1: number; lon2: number }
+        Returns: number
       }
       calcular_impacto_lote: {
         Args: { lote_id_param: string }

@@ -109,7 +109,11 @@ export default function LoteAuditoria() {
         />
 
         {/* Seção 3: Linha do Tempo da Rastreabilidade */}
-        <TraceabilityTimeline eventos={data.eventos} />
+        <TraceabilityTimeline 
+          eventos={data.eventos}
+          unidadeLatitude={data.unidade.latitude}
+          unidadeLongitude={data.unidade.longitude}
+        />
 
         {/* Seção 4: Detalhes Adicionais */}
         <VolunteerDetails

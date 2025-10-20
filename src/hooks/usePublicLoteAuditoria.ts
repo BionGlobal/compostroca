@@ -31,6 +31,8 @@ interface LoteAuditoriaData {
     nome: string;
     codigo: string;
     localizacao: string;
+    latitude?: number | null;
+    longitude?: number | null;
   };
   data_inicio: Date;
   data_finalizacao: Date | null;
@@ -108,11 +110,13 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             hash_integridade,
             latitude,
             longitude,
-            unidades:unidade_id (
-              nome,
-              codigo_unidade,
-              localizacao
-            )
+        unidades:unidade_id (
+          nome,
+          codigo_unidade,
+          localizacao,
+          latitude,
+          longitude
+        )
           `)
           .eq('codigo_unico', codigoUnico)
           .in('status', ['em_processamento', 'encerrado'])
@@ -325,7 +329,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
         if (!unidadeData && lote.unidade) {
           const { data: unidadeFallback } = await supabase
             .from('unidades')
-            .select('nome, codigo_unidade, localizacao')
+            .select('nome, codigo_unidade, localizacao, latitude, longitude')
             .eq('codigo_unidade', lote.unidade)
             .maybeSingle();
           
@@ -336,11 +340,13 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           codigo_lote: lote.codigo,
           codigo_unico: lote.codigo_unico,
           status_lote: statusLote,
-          unidade: {
-            nome: unidadeData?.nome || 'Não disponível',
-            codigo: unidadeData?.codigo_unidade || lote.unidade,
-            localizacao: unidadeData?.localizacao || 'Não disponível'
-          },
+        unidade: {
+          nome: unidadeData?.nome || 'Não disponível',
+          codigo: unidadeData?.codigo_unidade || lote.unidade,
+          localizacao: unidadeData?.localizacao || 'Não disponível',
+          latitude: unidadeData?.latitude || null,
+          longitude: unidadeData?.longitude || null
+        },
           data_inicio: new Date(lote.data_inicio),
           data_finalizacao: lote.data_finalizacao ? new Date(lote.data_finalizacao) : null,
           hash_rastreabilidade: lote.hash_integridade || '',

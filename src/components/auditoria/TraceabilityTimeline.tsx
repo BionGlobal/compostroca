@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, Scale, Image as ImageIcon, MapPin } from 'lucide-react';
+import { Clock, User, Scale, Image as ImageIcon, MapPin, AlertTriangle, ExternalLink } from 'lucide-react';
+import { validarGeolocalizacao, gerarLinkGoogleMaps } from '@/lib/geoUtils';
 import { FotosGalleryModal } from '@/components/FotosGalleryModal';
 
 interface Evento {
@@ -21,9 +22,15 @@ interface Evento {
 
 interface TraceabilityTimelineProps {
   eventos: Evento[];
+  unidadeLatitude?: number | null;
+  unidadeLongitude?: number | null;
 }
 
-export const TraceabilityTimeline = ({ eventos }: TraceabilityTimelineProps) => {
+export const TraceabilityTimeline = ({ 
+  eventos, 
+  unidadeLatitude, 
+  unidadeLongitude 
+}: TraceabilityTimelineProps) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedLoteId, setSelectedLoteId] = useState<string>('');
   const [modalTitle, setModalTitle] = useState('');
@@ -102,13 +109,54 @@ export const TraceabilityTimeline = ({ eventos }: TraceabilityTimelineProps) => 
                             <User className="w-3 h-3 sm:w-4 sm:h-4" />
                             <span>{evento.validador}</span>
                           </div>
-                          {(evento.latitude && evento.longitude) && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
-                              <span className="font-mono text-xs">
-                                {evento.latitude.toFixed(6)}, {evento.longitude.toFixed(6)}
-                              </span>
-                            </div>
+                          {(evento.latitude && evento.longitude) ? (
+                            <>
+                              {(() => {
+                                const validacao = validarGeolocalizacao(
+                                  unidadeLatitude,
+                                  unidadeLongitude,
+                                  evento.latitude,
+                                  evento.longitude,
+                                  300 // raio de 300m
+                                );
+
+                                return (
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <div className="flex items-center gap-1">
+                                      <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
+                                      <span className="font-mono text-xs">
+                                        {evento.latitude.toFixed(6)}, {evento.longitude.toFixed(6)}
+                                      </span>
+                                    </div>
+                                    
+                                    {/* Ícone de alerta se fora do raio */}
+                                    {validacao.valido && validacao.foraDaUnidade && (
+                                      <div className="flex items-center gap-1 text-warning">
+                                        <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4" />
+                                        <span className="text-xs">
+                                          {validacao.distancia}m da unidade
+                                        </span>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Link para Google Maps */}
+                                    <a
+                                      href={gerarLinkGoogleMaps(evento.latitude, evento.longitude)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-primary hover:underline flex items-center gap-1 text-xs"
+                                    >
+                                      <ExternalLink className="w-3 h-3" />
+                                      ver no mapa
+                                    </a>
+                                  </div>
+                                );
+                              })()}
+                            </>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">
+                              Sem geolocalização registrada
+                            </p>
                           )}
                         </div>
                       </div>

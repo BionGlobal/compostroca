@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { QRCodeSVG } from 'qrcode.react';
 import QRCode from 'qrcode';
-import { Copy, MapPin, Calendar, CheckCircle2, ExternalLink, Download } from 'lucide-react';
+import { Copy, MapPin, Calendar, CheckCircle2, ExternalLink, Download, Navigation } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface LoteHeaderProps {
@@ -14,6 +14,8 @@ interface LoteHeaderProps {
     nome: string;
     codigo: string;
     localizacao: string;
+    latitude?: number | null;
+    longitude?: number | null;
   };
   dataInicio: Date;
   dataFinalizacao: Date | null;
@@ -125,18 +127,29 @@ export const LoteHeader = ({
                 <div className="text-sm sm:text-base space-y-1">
                   <p className="font-medium text-foreground">{unidade.nome}</p>
                   <p className="text-muted-foreground">Código: {unidade.codigo}</p>
-                  <p className="text-muted-foreground">{unidade.localizacao}</p>
-                  {latitude && longitude && (
-                    <a 
-                      href={`https://www.google.com/maps?q=${latitude},${longitude}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline flex items-center gap-1 text-sm"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      Ver no mapa
-                    </a>
-                  )}
+              <p className="text-muted-foreground">{unidade.localizacao}</p>
+              
+              {/* Coordenadas da Unidade */}
+              {unidade.latitude && unidade.longitude && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                  <Navigation className="w-3 h-3" />
+                  <code className="font-mono">
+                    {unidade.latitude.toFixed(6)}, {unidade.longitude.toFixed(6)}
+                  </code>
+                </div>
+              )}
+              
+              {latitude && longitude && (
+                <a 
+                  href={`https://www.google.com/maps?q=${latitude},${longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline flex items-center gap-1 text-sm mt-1"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  Ver no mapa
+                </a>
+              )}
                 </div>
               </div>
 
