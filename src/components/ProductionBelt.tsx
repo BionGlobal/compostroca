@@ -117,13 +117,13 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, o
             <div key={numeroBox} className="flex items-center">
               {/* Caixa de Compostagem - Responsiva e Otimizada */}
               <Card className={`
-                relative w-64 sm:w-72 h-[520px] sm:h-[540px] transition-all duration-300
+                relative w-64 sm:w-72 h-[420px] sm:h-[440px] transition-all duration-300
                 ${getBoxColor(numeroBox, lote)}
                 ${lote ? 'hover:shadow-lg cursor-pointer' : ''}
               `}>
                 <CardContent className="p-3 h-full flex flex-col">
                   {/* Header da Caixa */}
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-2.5">
                     <div className="flex items-center gap-2">
                       <Package className="h-4 w-4" />
                       <span className="font-semibold text-sm">Caixa {numeroBox}</span>
@@ -133,9 +133,9 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, o
 
                   {/* Conteúdo da Caixa */}
                   {lote ? (
-                    <div className="flex-1 space-y-2">
+                    <div className="flex-1 space-y-3">
                       {/* Código do Lote - Destaque Principal */}
-                      <div className="text-center bg-primary/5 rounded-lg p-1.5">
+                      <div className="text-center bg-primary/5 rounded-lg p-1.5 mb-1">
                         <p className="text-[10px] text-muted-foreground mb-0.5">Lote</p>
                         <p className="text-xs font-bold text-primary">
                           {lote.codigo}
@@ -143,7 +143,7 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, o
                       </div>
 
                       {/* Peso Atual - Destaque Secundário */}
-                      <div className="text-center">
+                      <div className="text-center mb-1">
                         <p className="text-[10px] text-muted-foreground">Peso Atual</p>
                         <p className="text-lg font-bold text-foreground">
                           {lote.peso_atual?.toFixed(1) || '0.0'}kg
@@ -151,7 +151,7 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, o
                       </div>
 
                        {/* Data de Entrada e Final */}
-                      <div className="text-center">
+                      <div className="text-center mb-1.5">
                         <p className="text-[10px] text-muted-foreground">
                           Entrada: {formatarData(lote.data_inicio)} {formatarHora(lote.data_inicio)}
                         </p>
@@ -161,7 +161,7 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, o
                       </div>
 
                       {/* Validador e Voluntários */}
-                      <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                      <div className="grid grid-cols-2 gap-1.5 text-[10px] mb-2">
                         <div>
                           <p className="text-muted-foreground flex items-center gap-1">
                             <User className="h-3 w-3" />
@@ -294,7 +294,7 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, o
                       )}
 
                       {/* Botões de Ação */}
-                      <div className="grid grid-cols-2 gap-1">
+                      <div className="grid grid-cols-2 gap-1 mb-2.5">
                         <Button
                           variant="outline"
                           size="sm"
@@ -316,7 +316,7 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, o
                       </div>
 
                       {/* Ações e Semana */}
-                      <div className="mt-auto">
+                      <div>
                         {numeroBox !== 7 && lote.statusManejo !== 'realizado' ? (
                           <div className="space-y-1">
                             <Button
