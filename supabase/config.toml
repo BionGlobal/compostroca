@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.coleta-diaria-sensores]
 verify_jwt = false
+
+[functions.calcular-medias-sensores]
+verify_jwt = false
