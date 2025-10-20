@@ -20,6 +20,7 @@ import ProductionBeltPublic from "./pages/ProductionBeltPublic";
 import { PublicFotosLote } from "./pages/PublicFotosLote";
 import AuditoriaGeral from "./pages/AuditoriaGeral";
 import LoteAuditoria from "./pages/LoteAuditoria";
+import DiagnosticoTagoIO from "./pages/DiagnosticoTagoIO";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
           <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
+          <Route path="/diagnostico-tago" element={<DiagnosticoTagoIO />} />
           <Route path="/audit" element={<AuditoriaGeral />} />
           <Route path="/lote/auditoria/:codigoUnico" element={<LoteAuditoria />} />
           <Route path="/" element={
