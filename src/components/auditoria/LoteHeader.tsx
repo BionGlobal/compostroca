@@ -139,9 +139,9 @@ export const LoteHeader = ({
                 </div>
               )}
               
-              {latitude && longitude && (
+              {unidade.latitude && unidade.longitude && (
                 <a 
-                  href={`https://www.google.com/maps?q=${latitude},${longitude}`}
+                  href={`https://www.google.com/maps?q=${unidade.latitude},${unidade.longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:underline flex items-center gap-1 text-sm mt-1"

@@ -109,7 +109,7 @@ export const TraceabilityTimeline = ({
                             <User className="w-3 h-3 sm:w-4 sm:h-4" />
                             <span>{evento.validador}</span>
                           </div>
-                          {(evento.latitude && evento.longitude) ? (
+                          {(evento.latitude != null && evento.longitude != null) ? (
                             <>
                               {(() => {
                                 const validacao = validarGeolocalizacao(
@@ -131,12 +131,7 @@ export const TraceabilityTimeline = ({
                                     
                                     {/* Ícone de alerta se fora do raio */}
                                     {validacao.valido && validacao.foraDaUnidade && (
-                                      <div className="flex items-center gap-1 text-warning">
-                                        <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4" />
-                                        <span className="text-xs">
-                                          {validacao.distancia}m da unidade
-                                        </span>
-                                      </div>
+                                      <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 text-warning" />
                                     )}
                                     
                                     {/* Link para Google Maps */}

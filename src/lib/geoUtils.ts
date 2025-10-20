@@ -42,7 +42,7 @@ export function validarGeolocalizacao(
   foraDaUnidade: boolean;
 } {
   // Se não tiver coordenadas, não pode validar
-  if (!latReferencia || !lonReferencia || !latEvento || !lonEvento) {
+  if (latReferencia == null || lonReferencia == null || latEvento == null || lonEvento == null) {
     return {
       valido: false,
       distancia: null,
