@@ -248,9 +248,9 @@ const Lotes = () => {
           variant="default"
         />
         <StatCard
-          title="CO2e Evitado"
+          title="CO2e Evitado (Ativos)"
           value={`${(metrics.co2eEvitadoAtivosKg || 0).toFixed(0)}kg`}
-          description="evitado pelos ativos"
+          description="pelos lotes na esteira"
           icon={<Leaf className="h-6 w-6" />}
           variant="earth"
         />

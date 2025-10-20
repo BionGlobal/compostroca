@@ -297,6 +297,16 @@ export const useLotesManager = () => {
     }
   };
 
+  /**
+   * REGRA DE CÁLCULO DE CO2e EVITADO
+   * 
+   * Fórmula: CO2e = peso_inicial * 0.766
+   * 
+   * - SEMPRE usar peso_inicial (não peso_atual)
+   * - Representa o impacto de desviar resíduos do aterro
+   * - Baseado em estudo Embrapa: 1kg resíduo = 0.766kg CO2e evitado
+   * - Fonte: https://www.infoteca.cnptia.embrapa.br/infoteca/handle/doc/882162
+   */
   const calculateMetrics = async (ativos: LoteExtended[], finalizados: LoteExtended[]) => {
     const totalCaixas = 7;
     const caixasOcupadas = ativos.length;
@@ -306,9 +316,9 @@ export const useLotesManager = () => {
     const pesoTotalTodosLotes = [...ativos, ...finalizados].reduce((acc, lote) => acc + lote.peso_inicial, 0);
     const pesoTotalCompostado = pesoTotalTodosLotes / 1000; // Converter para toneladas
 
-    // CO2e evitado (baseado em lotes finalizados) em toneladas
-    const pesoInicialFinalizados = finalizados.reduce((acc, lote) => acc + lote.peso_inicial, 0);
-    const co2eEvitado = (pesoInicialFinalizados * 0.766) / 1000; // 1kg = 0.766kg CO2e, converter para toneladas
+    // CO2e total (ativos + finalizados) em toneladas
+    const pesoInicialTotal = [...ativos, ...finalizados].reduce((acc, lote) => acc + lote.peso_inicial, 0);
+    const co2eEvitado = (pesoInicialTotal * 0.766) / 1000; // converter para toneladas
 
     // Buscar dados de voluntários gerais (existente)
     const voluntariosStats = await fetchVoluntariosStats();
@@ -365,6 +375,7 @@ export const useLotesManager = () => {
       totalVoluntariosUnidade = totalVolCount || 0;
     }
 
+    // CO2e evitado pelos lotes ATIVOS (em kg)
     const co2eEvitadoAtivosKg = ativos.reduce((acc, lote) => acc + (lote.peso_inicial * 0.766), 0);
 
     setMetrics({

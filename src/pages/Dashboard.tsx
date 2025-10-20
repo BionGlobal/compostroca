@@ -56,7 +56,7 @@ const Dashboard = () => {
               icon={<Leaf />}
               description="Sustentabilidade"
               variant="earth"
-              tooltip="Soma do peso atual de todos os lotes multiplicado por 0.766 (conforme estudo Embrapa: https://www.infoteca.cnptia.embrapa.br/infoteca/handle/doc/882162)."
+              tooltip="CO2e evitado calculado sobre o peso inicial de todos os lotes (ativos e finalizados) multiplicado por 0.766, conforme estudo Embrapa. Representa o impacto ambiental de desviar os resíduos do aterro sanitário."
             />
             <StatCard
               title="Composto Produzido (Ton)"
