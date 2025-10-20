@@ -30,6 +30,21 @@ interface CompostingBox {
   }; // Apenas na caixa 6
 }
 
+// Dados mock de IoT para fallback (quando API Tago.io não retornar dados)
+const MOCK_IOT_DATA = {
+  caixa2: {
+    temperatura_solo: 55.3,
+    umidade_solo: 62.1,
+    condutividade_agua_poros: 1.24
+  },
+  caixa6: {
+    ph: 7.2,
+    nitrogenio: 2.8,
+    fosforo: 1.2,
+    potassio: 3.5
+  }
+};
+
 export const CompostingBoxes = () => {
   const { lotesAtivos, loading } = useLotesManager();
 
@@ -187,38 +202,49 @@ export const CompostingBoxes = () => {
                     </div>
                   )}
 
-                  {/* Placeholder IoT - Caixa 2 (Termofílico) */}
+                  {/* Dados IoT - Caixa 2 (Termofílico) com fallback mock */}
                   {box.number === 2 && box.status !== 'vazia' && (
-                    <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/20 dark:to-slate-950/20 rounded-lg p-1.5 border border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center gap-1 mb-1">
-                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
-                        <span className="text-[9px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-                          Aguardando Dados
-                        </span>
+                    <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 rounded-lg p-1.5 border border-orange-200 dark:border-orange-700">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse" />
+                          <span className="text-[9px] font-semibold text-orange-700 dark:text-orange-400 uppercase tracking-wide">
+                            Sensores IoT
+                          </span>
+                        </div>
+                        <Badge variant="outline" className="text-[7px] px-1 py-0 h-3 border-orange-300 text-orange-600">
+                          DEMO
+                        </Badge>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-1 text-[10px]">
                         <div className="flex items-center gap-1">
-                          <Thermometer className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                          <span className="text-gray-500">Temp: -°C</span>
+                          <Thermometer className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+                          <span className="text-orange-700 dark:text-orange-300 font-medium">
+                            {MOCK_IOT_DATA.caixa2.temperatura_solo}°C
+                          </span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Droplets className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                          <span className="text-gray-500">Umid: -%</span>
+                          <Droplets className="h-3 w-3 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                          <span className="text-blue-700 dark:text-blue-300 font-medium">
+                            {MOCK_IOT_DATA.caixa2.umidade_solo}%
+                          </span>
                         </div>
                         <div className="col-span-2 flex items-center gap-1">
-                          <Zap className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                          <span className="text-[9px] text-gray-500">Cond: - mS/cm</span>
+                          <Zap className="h-3 w-3 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+                          <span className="text-[9px] text-yellow-700 dark:text-yellow-300 font-medium">
+                            Cond: {MOCK_IOT_DATA.caixa2.condutividade_agua_poros} mS/cm
+                          </span>
                         </div>
                       </div>
                       
-                      <p className="text-[8px] text-gray-400 mt-0.5 italic text-center">
-                        Coleta: 23:00 UTC
+                      <p className="text-[8px] text-orange-500 dark:text-orange-400 mt-0.5 italic text-center">
+                        Coleta: 23:00 UTC • Dados simulados
                       </p>
                     </div>
                   )}
 
-                  {/* Dados IoT - Química (Caixa 6) */}
+                  {/* Dados IoT - Química (Caixa 6) com fallback mock */}
                   {box.number === 6 && box.status !== 'vazia' && (
                     box.chemistry ? (
                       <div className="p-1.5 bg-gradient-earth rounded-lg text-white">
@@ -246,35 +272,48 @@ export const CompostingBoxes = () => {
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/20 dark:to-slate-950/20 rounded-lg p-1.5 border border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center gap-1 mb-1">
-                          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
-                          <span className="text-[9px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-                            Aguardando Dados
-                          </span>
+                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-lg p-1.5 border border-green-200 dark:border-green-700">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                            <span className="text-[9px] font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide">
+                              Química NPK
+                            </span>
+                          </div>
+                          <Badge variant="outline" className="text-[7px] px-1 py-0 h-3 border-green-300 text-green-600">
+                            DEMO
+                          </Badge>
                         </div>
                         
                         <div className="grid grid-cols-2 gap-1 text-[10px]">
                           <div className="flex items-center gap-1">
-                            <Droplets className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                            <span className="text-gray-500">pH: -</span>
+                            <Droplets className="h-3 w-3 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                            <span className="text-blue-700 dark:text-blue-300 font-medium">
+                              pH: {MOCK_IOT_DATA.caixa6.ph}
+                            </span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Leaf className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                            <span className="text-gray-500">N: -%</span>
+                            <Leaf className="h-3 w-3 text-green-600 dark:text-green-400 flex-shrink-0" />
+                            <span className="text-green-700 dark:text-green-300 font-medium">
+                              N: {MOCK_IOT_DATA.caixa6.nitrogenio}%
+                            </span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Zap className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                            <span className="text-gray-500">P: -%</span>
+                            <Zap className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+                            <span className="text-orange-700 dark:text-orange-300 font-medium">
+                              P: {MOCK_IOT_DATA.caixa6.fosforo}%
+                            </span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Zap className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                            <span className="text-gray-500">K: -%</span>
+                            <Zap className="h-3 w-3 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                            <span className="text-purple-700 dark:text-purple-300 font-medium">
+                              K: {MOCK_IOT_DATA.caixa6.potassio}%
+                            </span>
                           </div>
                         </div>
                         
-                        <p className="text-[8px] text-gray-400 mt-0.5 italic text-center">
-                          Coleta: 23:00 UTC
+                        <p className="text-[8px] text-green-500 dark:text-green-400 mt-0.5 italic text-center">
+                          Coleta: 23:00 UTC • Dados simulados
                         </p>
                       </div>
                     )

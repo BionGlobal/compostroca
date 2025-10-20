@@ -21,5 +21,11 @@ verify_jwt = false
 [functions.coleta-diaria-sensores]
 verify_jwt = false
 
+[functions.coleta-diaria-sensores.schedule]
+cron = "0 23 * * *"
+
 [functions.calcular-medias-sensores]
+verify_jwt = false
+
+[functions.testar-tago-io]
 verify_jwt = false

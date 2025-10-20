@@ -5,6 +5,42 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Função auxiliar para retry automático em erros 503
+async function fetchComRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      console.log(`📡 Tentativa ${i + 1}/${maxRetries} - Chamando API Tago.io...`)
+      const response = await fetch(url, options)
+      
+      // Se sucesso, retornar imediatamente
+      if (response.ok) {
+        console.log(`✅ Sucesso na tentativa ${i + 1}`)
+        return response
+      }
+      
+      // Se 503 e ainda tem tentativas, aguardar e tentar novamente
+      if (response.status === 503 && i < maxRetries - 1) {
+        const waitTime = (i + 1) * 2000 // 2s, 4s, 6s
+        console.warn(`⚠️ Tentativa ${i + 1} retornou 503. Aguardando ${waitTime/1000}s antes de tentar novamente...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
+        continue
+      }
+      
+      // Para outros erros ou última tentativa, retornar a resposta
+      return response
+    } catch (error) {
+      console.error(`❌ Erro na tentativa ${i + 1}:`, error)
+      if (i === maxRetries - 1) throw error
+      
+      const waitTime = (i + 1) * 2000
+      console.warn(`⏳ Aguardando ${waitTime/1000}s antes de tentar novamente...`)
+      await new Promise(resolve => setTimeout(resolve, waitTime))
+    }
+  }
+  
+  throw new Error('Máximo de tentativas excedido')
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -12,7 +48,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('🤖 Iniciando coleta diária de sensores...')
+    const execucaoInicio = new Date().toISOString()
+    console.log('🤖 ===== INICIANDO COLETA DIÁRIA DE SENSORES =====')
+    console.log(`⏰ Horário de execução: ${execucaoInicio}`)
 
     // Criar cliente Supabase com service_role para permissões de escrita
     const supabase = createClient(
@@ -26,10 +64,10 @@ Deno.serve(async (req) => {
       throw new Error('TAGO_DEVICE_TOKEN não configurado nas variáveis de ambiente')
     }
 
-    console.log('📡 Buscando dados da API Tago.io...')
+    console.log('📡 Buscando dados da API Tago.io com retry automático...')
 
-    // Fazer requisição GET para API Tago.io
-    const tagoResponse = await fetch(
+    // Fazer requisição GET para API Tago.io com retry
+    const tagoResponse = await fetchComRetry(
       'https://api.tago.io/data?variable=data&query=last_value',
       {
         method: 'GET',
@@ -37,18 +75,23 @@ Deno.serve(async (req) => {
           'Content-Type': 'application/json',
           'Device-Token': tagoToken
         }
-      }
+      },
+      3 // máximo 3 tentativas
     )
 
     if (!tagoResponse.ok) {
       const errorText = await tagoResponse.text()
       const status = tagoResponse.status
       
-      console.error('❌ Erro na API Tago.io:', {
+      console.error('❌ ===== ERRO DETALHADO NA API TAGO.IO =====')
+      console.error(JSON.stringify({
         status,
         statusText: tagoResponse.statusText,
-        body: errorText
-      })
+        headers: Object.fromEntries(tagoResponse.headers.entries()),
+        body: errorText,
+        url: tagoResponse.url,
+        timestamp: new Date().toISOString()
+      }, null, 2))
       
       // Mensagens específicas para erros de autenticação
       if (status === 401 || status === 403) {
@@ -75,10 +118,12 @@ Detalhes do erro: ${errorText}
     const metadata = tagoData.result?.[0]?.metadata
 
     if (!metadata) {
+      console.error('❌ Estrutura da resposta Tago.io:', JSON.stringify(tagoData, null, 2))
       throw new Error('Metadados não encontrados na resposta da Tago.io')
     }
 
-    console.log('✅ Dados recebidos da Tago.io:', JSON.stringify(metadata, null, 2))
+    console.log('✅ Dados recebidos da Tago.io:')
+    console.log(JSON.stringify(metadata, null, 2))
 
     // Validar campos esperados
     const camposEsperados = {
@@ -100,6 +145,7 @@ Detalhes do erro: ${errorText}
     }
 
     // Buscar lote ativo na Caixa 2
+    console.log('🔍 Buscando lote ativo na Caixa 2...')
     const { data: loteCaixa2, error: errorCaixa2 } = await supabase
       .from('lotes')
       .select('id, codigo')
@@ -109,10 +155,11 @@ Detalhes do erro: ${errorText}
       .maybeSingle()
 
     if (errorCaixa2) {
-      console.error('Erro ao buscar lote da Caixa 2:', errorCaixa2)
+      console.error('❌ Erro ao buscar lote da Caixa 2:', errorCaixa2)
     }
 
     // Buscar lote ativo na Caixa 6
+    console.log('🔍 Buscando lote ativo na Caixa 6...')
     const { data: loteCaixa6, error: errorCaixa6 } = await supabase
       .from('lotes')
       .select('id, codigo')
@@ -122,7 +169,7 @@ Detalhes do erro: ${errorText}
       .maybeSingle()
 
     if (errorCaixa6) {
-      console.error('Erro ao buscar lote da Caixa 6:', errorCaixa6)
+      console.error('❌ Erro ao buscar lote da Caixa 6:', errorCaixa6)
     }
 
     // Preparar registros para inserção
@@ -170,7 +217,8 @@ Detalhes do erro: ${errorText}
           message: 'Nenhum lote ativo encontrado nas caixas 2 ou 6. Nenhum dado foi salvo.',
           detalhes: {
             caixa2_presente: false,
-            caixa6_presente: false
+            caixa6_presente: false,
+            timestamp: execucaoInicio
           }
         }),
         { 
@@ -193,8 +241,11 @@ Detalhes do erro: ${errorText}
       throw error
     }
 
+    const execucaoFim = new Date().toISOString()
     console.log(`✅ ${registros.length} leitura(s) salva(s) com sucesso!`)
-    console.log('Dados salvos:', JSON.stringify(data, null, 2))
+    console.log('📊 Dados salvos:', JSON.stringify(data, null, 2))
+    console.log(`⏱️ Tempo de execução: ${execucaoInicio} → ${execucaoFim}`)
+    console.log('🤖 ===== COLETA FINALIZADA COM SUCESSO =====')
 
     return new Response(
       JSON.stringify({ 
@@ -203,7 +254,9 @@ Detalhes do erro: ${errorText}
         detalhes: {
           caixa2_presente: !!loteCaixa2,
           caixa6_presente: !!loteCaixa6,
-          lotes_processados: data
+          lotes_processados: data,
+          timestamp_inicio: execucaoInicio,
+          timestamp_fim: execucaoFim
         }
       }),
       { 
@@ -213,11 +266,17 @@ Detalhes do erro: ${errorText}
     )
 
   } catch (error) {
-    console.error('❌ Erro na coleta de sensores:', error)
+    console.error('❌ ===== ERRO CRÍTICO NA COLETA DE SENSORES =====')
+    console.error('Tipo:', error.constructor.name)
+    console.error('Mensagem:', (error as Error).message)
+    console.error('Stack:', (error as Error).stack)
+    console.error('Timestamp:', new Date().toISOString())
+    
     return new Response(
       JSON.stringify({ 
         error: 'Erro ao coletar dados dos sensores',
-        details: (error as Error).message 
+        details: (error as Error).message,
+        timestamp: new Date().toISOString()
       }),
       { 
         status: 500, 
