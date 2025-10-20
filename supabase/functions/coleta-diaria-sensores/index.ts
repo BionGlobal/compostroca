@@ -42,8 +42,33 @@ Deno.serve(async (req) => {
 
     if (!tagoResponse.ok) {
       const errorText = await tagoResponse.text()
-      console.error('❌ Erro na API Tago.io:', errorText)
-      throw new Error(`Erro na API Tago.io: ${tagoResponse.status} - ${errorText}`)
+      const status = tagoResponse.status
+      
+      console.error('❌ Erro na API Tago.io:', {
+        status,
+        statusText: tagoResponse.statusText,
+        body: errorText
+      })
+      
+      // Mensagens específicas para erros de autenticação
+      if (status === 401 || status === 403) {
+        const errorMessage = `
+Erro de autenticação com Tago.io (${status}):
+
+AÇÃO NECESSÁRIA:
+1. Verifique se a variável TAGO_DEVICE_TOKEN está configurada corretamente no Supabase
+2. Acesse: Supabase Dashboard > Edge Functions > Secrets
+3. Confirme que o token da Tago.io está válido e ativo
+4. O token deve ter o formato correto da Tago.io
+
+Detalhes do erro: ${errorText}
+        `.trim()
+        
+        console.error(errorMessage)
+        throw new Error(errorMessage)
+      }
+      
+      throw new Error(`Erro na API Tago.io: ${status} - ${errorText}`)
     }
 
     const tagoData = await tagoResponse.json()
@@ -54,6 +79,25 @@ Deno.serve(async (req) => {
     }
 
     console.log('✅ Dados recebidos da Tago.io:', JSON.stringify(metadata, null, 2))
+
+    // Validar campos esperados
+    const camposEsperados = {
+      caixa2: ['temperatura_solo1', 'umidade_solo1', 'pore_water_ec1'],
+      caixa6: ['nitrogenio1', 'fosforo1', 'potassio1', 'ph1']
+    }
+
+    const camposFaltantes: string[] = []
+    Object.entries(camposEsperados).forEach(([caixa, campos]) => {
+      campos.forEach(campo => {
+        if (!(campo in metadata)) {
+          camposFaltantes.push(`${campo} (${caixa})`)
+        }
+      })
+    })
+
+    if (camposFaltantes.length > 0) {
+      console.warn(`⚠️ Campos ausentes nos metadados da Tago.io: ${camposFaltantes.join(', ')}`)
+    }
 
     // Buscar lote ativo na Caixa 2
     const { data: loteCaixa2, error: errorCaixa2 } = await supabase
