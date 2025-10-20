@@ -243,6 +243,57 @@ export const ProductionBelt = ({ lotesAtivos, onManejoClick, onFinalizarClick, o
                         </div>
                       )}
 
+                      {/* Fallback: Placeholder de Sensores (quando não há dados live) */}
+                      {!lote.ultima_leitura_sensores && (numeroBox === 2 || numeroBox === 6) && (
+                        <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/20 dark:to-slate-950/20 rounded-lg p-2 border border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center gap-1 mb-1.5">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                            <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                              Aguardando Dados
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-1.5 text-xs">
+                            {numeroBox === 2 && (
+                              <>
+                                <div className="flex items-center gap-1">
+                                  <Thermometer className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                                  <span className="font-medium text-muted-foreground">-°C</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Droplets className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                                  <span className="font-medium text-muted-foreground">-%</span>
+                                </div>
+                                <div className="col-span-2 flex items-center gap-1">
+                                  <Zap className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                                  <span className="text-[10px] text-muted-foreground">Condutividade:</span>
+                                  <span className="font-medium text-muted-foreground">- mS/cm</span>
+                                </div>
+                              </>
+                            )}
+                            
+                            {numeroBox === 6 && (
+                              <>
+                                <div className="col-span-2 flex items-center gap-1">
+                                  <Leaf className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                                  <span className="text-[10px] text-muted-foreground">NPK:</span>
+                                  <span className="font-medium text-muted-foreground font-mono">-/-/-</span>
+                                </div>
+                                <div className="col-span-2 flex items-center gap-1">
+                                  <FlaskConical className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                                  <span className="text-[10px] text-muted-foreground">pH:</span>
+                                  <span className="font-medium text-muted-foreground">-</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          
+                          <p className="text-[9px] text-muted-foreground mt-1 italic text-center">
+                            Primeira coleta às 23:00 UTC
+                          </p>
+                        </div>
+                      )}
+
                       {/* Botões de Ação */}
                       <div className="space-y-1.5">
                         <Button
