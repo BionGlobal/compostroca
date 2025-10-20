@@ -45,6 +45,27 @@ export const EditEntregaModal = ({ entrega, isOpen, onClose, onSuccess }: EditEn
     }
     return normalized;
   };
+
+  const validatePeso = (value: string): { valid: boolean; message?: string } => {
+    const normalized = normalizePesoInput(value);
+    const num = parseFloat(normalized);
+    
+    if (isNaN(num) || num <= 0) {
+      return { valid: false, message: 'Peso deve ser maior que zero' };
+    }
+    
+    if (num > 50) {
+      return { valid: false, message: 'Peso muito alto (máximo 50kg por entrega)' };
+    }
+    
+    // Verificar se tem mais de 3 casas decimais
+    const decimalPart = normalized.split('.')[1];
+    if (decimalPart && decimalPart.length > 3) {
+      return { valid: false, message: 'Use exatamente 3 casas decimais (ex: 10.123)' };
+    }
+    
+    return { valid: true };
+  };
   
   const { toast } = useToast();
   const { fotos, uploadFoto, deleteFoto, getFotosByTipo } = useEntregaFotos(entrega?.id);
@@ -61,17 +82,21 @@ export const EditEntregaModal = ({ entrega, isOpen, onClose, onSuccess }: EditEn
 
     setLoading(true);
     try {
-      // Normalizar e validar peso
+      // Normalizar e validar peso com 3 casas decimais
       const pesoNormalizado = normalizePesoInput(peso);
+      const pesoValidation = validatePeso(pesoNormalizado);
+      
+      if (!pesoValidation.valid) {
+        toast({
+          title: "Peso inválido",
+          description: pesoValidation.message,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      
       const pesoNumerico = parseFloat(pesoNormalizado);
-      
-      if (isNaN(pesoNumerico) || pesoNumerico <= 0) {
-        throw new Error('Peso deve ser um número válido maior que zero');
-      }
-      
-      if (pesoNumerico > 50) {
-        throw new Error('Peso parece muito alto. Verifique se inseriu corretamente (máximo 50kg)');
-      }
 
       const { error } = await supabase
         .from('entregas')
@@ -230,19 +255,28 @@ export const EditEntregaModal = ({ entrega, isOpen, onClose, onSuccess }: EditEn
           {/* Dados da Entrega */}
           <div className="space-y-4">
             <div>
-              <Label htmlFor="peso">Peso (kg)</Label>
+              <Label htmlFor="peso">Peso (kg) - Exatamente 3 casas decimais</Label>
               <Input
                 id="peso"
-                type="text"
+                type="number"
+                step="0.001"
                 value={peso}
                 onChange={(e) => {
-                  const normalized = normalizePesoInput(e.target.value);
-                  setPeso(normalized);
+                  const value = e.target.value;
+                  setPeso(value);
+                  // Validar ao digitar para dar feedback visual
+                  if (value && !validatePeso(value).valid) {
+                    e.target.setCustomValidity(validatePeso(value).message || '');
+                  } else {
+                    e.target.setCustomValidity('');
+                  }
                 }}
-                placeholder="Ex: 2.500"
+                placeholder="Ex: 10.123"
+                min="0.001"
+                max="50"
               />
               <p className="text-sm text-muted-foreground mt-1">
-                Peso atual: {formatPesoDisplay(Number(entrega.peso))}
+                Peso atual: {formatPesoDisplay(Number(entrega.peso))} | Use até 3 casas decimais
               </p>
             </div>
 

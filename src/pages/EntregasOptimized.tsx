@@ -59,6 +59,27 @@ const EntregasOptimized = () => {
     
     return normalized;
   };
+
+  const validatePeso = (value: string): { valid: boolean; message?: string } => {
+    const normalized = normalizePesoInput(value);
+    const num = parseFloat(normalized);
+    
+    if (isNaN(num) || num <= 0) {
+      return { valid: false, message: 'Peso deve ser maior que zero' };
+    }
+    
+    if (num > 50) {
+      return { valid: false, message: 'Peso muito alto (máximo 50kg por entrega)' };
+    }
+    
+    // Verificar se tem mais de 3 casas decimais
+    const decimalPart = normalized.split('.')[1];
+    if (decimalPart && decimalPart.length > 3) {
+      return { valid: false, message: 'Use exatamente 3 casas decimais (ex: 10.123)' };
+    }
+    
+    return { valid: true };
+  };
   const [qualidadeResiduo, setQualidadeResiduo] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
@@ -132,6 +153,17 @@ const EntregasOptimized = () => {
         title: "Campos Obrigatórios", 
         description: "Preencha todos os campos antes de continuar", 
         variant: "destructive" 
+      });
+      return;
+    }
+
+    // Validar peso com 3 casas decimais
+    const pesoValidation = validatePeso(peso);
+    if (!pesoValidation.valid) {
+      toast({
+        title: "Peso inválido",
+        description: pesoValidation.message,
+        variant: "destructive",
       });
       return;
     }
@@ -404,18 +436,30 @@ const EntregasOptimized = () => {
           </div>
 
           <div>
-            <Label htmlFor="peso">Peso (kg)</Label>
+            <Label htmlFor="peso">Peso (kg) - Exatamente 3 casas decimais</Label>
             <Input 
               id="peso" 
-              type="text" 
+              type="number"
+              step="0.001"
               value={peso} 
               onChange={(e) => {
-                const normalized = normalizePesoInput(e.target.value);
-                setPeso(normalized);
+                const value = e.target.value;
+                setPeso(value);
+                // Validar ao digitar para dar feedback visual
+                if (value && !validatePeso(value).valid) {
+                  e.target.setCustomValidity(validatePeso(value).message || '');
+                } else {
+                  e.target.setCustomValidity('');
+                }
               }} 
-              placeholder="Ex: 2.500" 
-              disabled={isFormDisabled} 
+              placeholder="Ex: 10.123" 
+              disabled={isFormDisabled}
+              min="0.001"
+              max="50"
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Digite o peso com até 3 casas decimais (ex: 10.123)
+            </p>
           </div>
 
           <div>
