@@ -67,6 +67,20 @@ export default function LoteAuditoria() {
 
       {/* Conteúdo principal */}
       <main className="container mx-auto px-4 py-6 sm:py-8 lg:py-12 space-y-6 sm:space-y-8 lg:space-y-12">
+        {/* Logo e Título Principal */}
+        <div className="text-center space-y-4">
+          <div className="flex justify-center">
+            <img
+              src="/lovable-uploads/compostroca-app-logo.png"
+              alt="Compostroca"
+              className="h-16 sm:h-20 w-auto animate-fade-in"
+            />
+          </div>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            Certificado de Compostagem Comunitária
+          </h1>
+        </div>
+
         {/* Seção 1: Cabeçalho do Lote */}
         <LoteHeader
           codigoLote={data.codigo_lote}

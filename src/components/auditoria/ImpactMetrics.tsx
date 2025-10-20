@@ -113,10 +113,10 @@ export const ImpactMetrics = ({
           <div className="pt-2 border-t border-border">
             <p className="text-xs sm:text-sm text-muted-foreground">Créditos CAU</p>
             <p className="text-lg sm:text-xl font-semibold text-success">
-              {creditosCau.toFixed(3)}
+              {creditosCau.toFixed(4)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Créditos de Compostagem + Agricultura Urbana
+              Créditos de Compostagem + Agricultura Urbana (em toneladas)
             </p>
           </div>
         </CardContent>

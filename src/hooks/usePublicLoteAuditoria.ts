@@ -41,8 +41,8 @@ interface LoteAuditoriaData {
   duracao_dias: number;
   dia_atual_ciclo: number;
   total_dias_ciclo: number;
-  co2eq_evitado: number;
-  creditos_cau: number;
+  co2eq_evitado: number; // 3 casas decimais - kg CO2e
+  creditos_cau: number;  // 4 casas decimais - toneladas
 
   voluntarios: Voluntario[];
   total_voluntarios: number;
@@ -302,9 +302,11 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           ? Number((lote.peso_final || lote.peso_inicial * 0.78).toFixed(3))
           : Number((lote.peso_inicial * 0.78).toFixed(3));
 
-        // Cálculos ambientais baseados no peso final
-        const co2eqEvitado = Number((pesoFinal * 0.766).toFixed(3));
-        const creditosCau = Number((pesoFinal / 1000).toFixed(3));
+        // Cálculos ambientais baseados no peso INICIAL
+        // CO2e Evitado = peso_inicial * 0.766 (3 casas decimais)
+        const co2eqEvitado = Number((lote.peso_inicial * 0.766).toFixed(3));
+        // Créditos CAU = peso_inicial / 1000 (4 casas decimais)
+        const creditosCau = Number((lote.peso_inicial / 1000).toFixed(4));
 
         // Buscar dados da unidade com fallback
         let unidadeData = lote.unidades;
