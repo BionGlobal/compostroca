@@ -320,15 +320,45 @@ export const useManejoSemanal = () => {
 
       console.log('✅ Todas as etapas processadas com sucesso');
 
+      // Acionar cálculo de médias de sensores
+      console.log('Verificando lotes que saíram das caixas monitoradas...');
+      
+      for (const etapa of etapasValidas) {
+        // Apenas processar se o lote saiu da Caixa 2 ou Caixa 6
+        if (etapa.caixaOrigem === 2 || etapa.caixaOrigem === 6) {
+          console.log(`Disparando cálculo de médias para o lote ${etapa.loteNome} da Caixa ${etapa.caixaOrigem}`);
+          
+          try {
+            const { data: calcResult, error: invokeError } = await supabase.functions.invoke(
+              'calcular-medias-sensores',
+              {
+                body: {
+                  lote_id: etapa.loteId,
+                  caixa_origem: etapa.caixaOrigem,
+                },
+              }
+            );
+            
+            if (invokeError) {
+              console.error(`Erro ao calcular médias para o lote ${etapa.loteNome}:`, invokeError);
+            } else {
+              console.log(`Médias calculadas com sucesso para ${etapa.loteNome}:`, calcResult);
+            }
+          } catch (err) {
+            console.error(`Exceção ao calcular médias para ${etapa.loteNome}:`, err);
+          }
+        }
+      }
+
       localStorage.removeItem('manejo_em_andamento');
       setEstadoManejo(null);
 
       toast({
-        title: "Manejo Finalizado!",
+        title: "Manejo Finalizado",
         description: `${etapasValidas.length} operações concluídas. Sessão única: ${sessao.id.slice(0, 8)}...`,
       });
 
-      console.log('🎉 Manejo semanal finalizado - 1 sessão compartilhada para toda a esteira');
+      console.log('Manejo semanal finalizado - 1 sessão compartilhada para toda a esteira');
 
     } catch (error: any) {
       console.error('💥 Erro ao finalizar manejo:', error);

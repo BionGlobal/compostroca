@@ -54,6 +54,18 @@ interface LoteAuditoriaData {
 
   eventos: Evento[];
   validadores: string[];
+
+  // Médias de sensores IoT
+  medias_sensores?: {
+    media_temperatura_semana2?: number | null;
+    media_umidade_semana2?: number | null;
+    media_condutividade_semana2?: number | null;
+    media_nitrogenio_semana6?: number | null;
+    media_fosforo_semana6?: number | null;
+    media_potassio_semana6?: number | null;
+    media_ph_semana6?: number | null;
+    updated_at?: string | null;
+  } | null;
 }
 
 const BUCKET_URL = 'https://yfcxdbhrtjdmwyifgptf.supabase.co/storage/v1/object/public';
@@ -93,7 +105,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
         setLoading(true);
         setError(null);
 
-        // 1) Lote + Unidade
+        // 1) Lote + Unidade + Médias de Sensores
         const { data: lote, error: loteError } = await supabase
           .from('lotes')
           .select(`
@@ -110,13 +122,23 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             hash_integridade,
             latitude,
             longitude,
-        unidades:unidade_id (
-          nome,
-          codigo_unidade,
-          localizacao,
-          latitude,
-          longitude
-        )
+            unidades:unidade_id (
+              nome,
+              codigo_unidade,
+              localizacao,
+              latitude,
+              longitude
+            ),
+            medias_sensores_lote!medias_sensores_lote_lote_id_fkey (
+              media_temperatura_semana2,
+              media_umidade_semana2,
+              media_condutividade_semana2,
+              media_nitrogenio_semana6,
+              media_fosforo_semana6,
+              media_potassio_semana6,
+              media_ph_semana6,
+              updated_at
+            )
           `)
           .eq('codigo_unico', codigoUnico)
           .in('status', ['em_processamento', 'encerrado'])
@@ -340,13 +362,13 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           codigo_lote: lote.codigo,
           codigo_unico: lote.codigo_unico,
           status_lote: statusLote,
-        unidade: {
-          nome: unidadeData?.nome || 'Não disponível',
-          codigo: unidadeData?.codigo_unidade || lote.unidade,
-          localizacao: unidadeData?.localizacao || 'Não disponível',
-          latitude: unidadeData?.latitude || null,
-          longitude: unidadeData?.longitude || null
-        },
+          unidade: {
+            nome: unidadeData?.nome || 'Não disponível',
+            codigo: unidadeData?.codigo_unidade || lote.unidade,
+            localizacao: unidadeData?.localizacao || 'Não disponível',
+            latitude: unidadeData?.latitude || null,
+            longitude: unidadeData?.longitude || null
+          },
           data_inicio: new Date(lote.data_inicio),
           data_finalizacao: lote.data_finalizacao ? new Date(lote.data_finalizacao) : null,
           hash_rastreabilidade: lote.hash_integridade || '',
@@ -363,7 +385,8 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           total_voluntarios: voluntarios.length,
           media_rating: countRatings > 0 ? Math.round((somaRatings / countRatings) * 10) / 10 : 0,
           eventos,
-          validadores: Array.from(validadores)
+          validadores: Array.from(validadores),
+          medias_sensores: lote.medias_sensores_lote || null
         };
 
         setData(resultado);

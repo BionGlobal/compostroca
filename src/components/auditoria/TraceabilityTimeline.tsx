@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, User, Scale, Image as ImageIcon, MapPin, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Clock, User, Scale, Image as ImageIcon, MapPin, AlertTriangle, ExternalLink, Activity, Thermometer, Droplets, Zap, Leaf, FlaskConical } from 'lucide-react';
 import { validarGeolocalizacao, gerarLinkGoogleMaps } from '@/lib/geoUtils';
 import { FotosGalleryModal } from '@/components/FotosGalleryModal';
 
@@ -20,16 +20,28 @@ interface Evento {
   longitude?: number | null;
 }
 
+interface MediasSensores {
+  media_temperatura_semana2?: number | null;
+  media_umidade_semana2?: number | null;
+  media_condutividade_semana2?: number | null;
+  media_nitrogenio_semana6?: number | null;
+  media_fosforo_semana6?: number | null;
+  media_potassio_semana6?: number | null;
+  media_ph_semana6?: number | null;
+}
+
 interface TraceabilityTimelineProps {
   eventos: Evento[];
   unidadeLatitude?: number | null;
   unidadeLongitude?: number | null;
+  mediasSensores?: MediasSensores | null;
 }
 
 export const TraceabilityTimeline = ({ 
   eventos, 
   unidadeLatitude, 
-  unidadeLongitude 
+  unidadeLongitude,
+  mediasSensores
 }: TraceabilityTimelineProps) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedLoteId, setSelectedLoteId] = useState<string>('');
@@ -167,6 +179,94 @@ export const TraceabilityTimeline = ({
                         </p>
                       </div>
                     </div>
+
+                    {/* Médias de Sensores (Semana 2) */}
+                    {evento.semana === 2 && mediasSensores && (
+                      mediasSensores.media_temperatura_semana2 !== null || 
+                      mediasSensores.media_umidade_semana2 !== null || 
+                      mediasSensores.media_condutividade_semana2 !== null
+                    ) && (
+                      <div className="glass-light p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Activity className="w-4 h-4 text-blue-600" />
+                          <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                            Médias da Semana 2 (Sensores IoT)
+                          </h4>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                          {mediasSensores.media_temperatura_semana2 !== null && (
+                            <div className="flex items-center gap-2">
+                              <Thermometer className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                              <div>
+                                <p className="text-xs text-muted-foreground">Temperatura</p>
+                                <p className="font-medium">{mediasSensores.media_temperatura_semana2.toFixed(1)}°C</p>
+                              </div>
+                            </div>
+                          )}
+                          {mediasSensores.media_umidade_semana2 !== null && (
+                            <div className="flex items-center gap-2">
+                              <Droplets className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                              <div>
+                                <p className="text-xs text-muted-foreground">Umidade</p>
+                                <p className="font-medium">{mediasSensores.media_umidade_semana2.toFixed(1)}%</p>
+                              </div>
+                            </div>
+                          )}
+                          {mediasSensores.media_condutividade_semana2 !== null && (
+                            <div className="flex items-center gap-2">
+                              <Zap className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                              <div>
+                                <p className="text-xs text-muted-foreground">Condutividade</p>
+                                <p className="font-medium">{mediasSensores.media_condutividade_semana2.toFixed(2)} mS/cm</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Médias de Sensores (Semana 6) */}
+                    {evento.semana === 6 && mediasSensores && (
+                      mediasSensores.media_nitrogenio_semana6 !== null || 
+                      mediasSensores.media_fosforo_semana6 !== null || 
+                      mediasSensores.media_potassio_semana6 !== null || 
+                      mediasSensores.media_ph_semana6 !== null
+                    ) && (
+                      <div className="glass-light p-3 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Activity className="w-4 h-4 text-green-600" />
+                          <h4 className="text-sm font-semibold text-green-700 dark:text-green-300">
+                            Médias da Semana 6 (Sensores IoT)
+                          </h4>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                          {(mediasSensores.media_nitrogenio_semana6 !== null || 
+                            mediasSensores.media_fosforo_semana6 !== null || 
+                            mediasSensores.media_potassio_semana6 !== null) && (
+                            <div className="flex items-center gap-2">
+                              <Leaf className="w-4 h-4 text-green-500 flex-shrink-0" />
+                              <div>
+                                <p className="text-xs text-muted-foreground">NPK</p>
+                                <p className="font-medium font-mono">
+                                  {mediasSensores.media_nitrogenio_semana6?.toFixed(0) || '-'}/
+                                  {mediasSensores.media_fosforo_semana6?.toFixed(0) || '-'}/
+                                  {mediasSensores.media_potassio_semana6?.toFixed(0) || '-'}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          {mediasSensores.media_ph_semana6 !== null && (
+                            <div className="flex items-center gap-2">
+                              <FlaskConical className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                              <div>
+                                <p className="text-xs text-muted-foreground">pH</p>
+                                <p className="font-medium">{mediasSensores.media_ph_semana6.toFixed(1)}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Galeria de fotos */}
                     <div className="space-y-2">

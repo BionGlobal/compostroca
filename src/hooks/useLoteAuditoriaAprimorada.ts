@@ -64,6 +64,18 @@ export interface LoteAuditoriaAprimorada {
   // Fotos unificadas
   total_fotos: number;
   fotos_por_tipo: Record<string, number>;
+  
+  // Médias de sensores consolidadas
+  medias_sensores?: {
+    media_temperatura_semana2?: number | null;
+    media_umidade_semana2?: number | null;
+    media_condutividade_semana2?: number | null;
+    media_nitrogenio_semana6?: number | null;
+    media_fosforo_semana6?: number | null;
+    media_potassio_semana6?: number | null;
+    media_ph_semana6?: number | null;
+    updated_at?: string | null;
+  } | null;
 }
 
 export const useLoteAuditoriaAprimorada = (codigoUnico: string) => {
@@ -85,6 +97,16 @@ export const useLoteAuditoriaAprimorada = (codigoUnico: string) => {
           unidades:unidade_id (
             nome,
             codigo_unidade
+          ),
+          medias_sensores_lote!medias_sensores_lote_lote_id_fkey (
+            media_temperatura_semana2,
+            media_umidade_semana2,
+            media_condutividade_semana2,
+            media_nitrogenio_semana6,
+            media_fosforo_semana6,
+            media_potassio_semana6,
+            media_ph_semana6,
+            updated_at
           )
         `)
         .eq('codigo_unico', codigoUnico)
@@ -216,7 +238,8 @@ export const useLoteAuditoriaAprimorada = (codigoUnico: string) => {
         status_integridade: status,
         mensagens_integridade: mensagens,
         total_fotos: totalFotos || 0,
-        fotos_por_tipo: fotosPorTipoCount
+        fotos_por_tipo: fotosPorTipoCount,
+        medias_sensores: loteData.medias_sensores_lote || null
       };
 
       setLoteAuditoria(auditoriaData);

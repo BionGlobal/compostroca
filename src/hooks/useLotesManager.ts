@@ -43,6 +43,20 @@ export interface LoteExtended {
   nitrogenio?: number | null;
   fosforo?: number | null;
   potassio?: number | null;
+  
+  // Última leitura de sensores (IoT)
+  ultima_leitura_sensores?: {
+    id: string;
+    created_at: string;
+    numero_caixa: number;
+    temperatura_solo?: number | null;
+    umidade_solo?: number | null;
+    condutividade_agua_poros?: number | null;
+    nitrogenio?: number | null;
+    fosforo?: number | null;
+    potassio?: number | null;
+    ph?: number | null;
+  } | null;
 }
 
 export interface ManejoRecord {
@@ -227,6 +241,9 @@ export const useLotesManager = () => {
 
       const progressoPercentual = (lote.semana_atual / 7) * 100;
 
+      // Pegar a última leitura de sensores (se houver)
+      const ultimaLeitura = lote.leituras_diarias_sensores?.[0] || null;
+
       return {
         ...lote,
         diasParaTransferencia,
@@ -235,16 +252,17 @@ export const useLotesManager = () => {
         voluntariosUnicos: voluntariosData[lote.codigo] || 0,
         statusManejo,
         progressoPercentual,
-        dataEntradaCaixa: lote.data_inicio, // Placeholder - em produção seria calculado
+        dataEntradaCaixa: lote.data_inicio,
         validadorNome: lote.criado_por_nome,
-        // Dados IoT (placeholders até integração)
-        temperatura: null,
-        umidade: null,
-        ph: null,
-        condutividade: null,
-        nitrogenio: null,
-        fosforo: null,
-        potassio: null,
+        // Dados IoT - Popular com dados reais de sensores
+        temperatura: ultimaLeitura?.temperatura_solo || null,
+        umidade: ultimaLeitura?.umidade_solo || null,
+        ph: ultimaLeitura?.ph || null,
+        condutividade: ultimaLeitura?.condutividade_agua_poros || null,
+        nitrogenio: ultimaLeitura?.nitrogenio || null,
+        fosforo: ultimaLeitura?.fosforo || null,
+        potassio: ultimaLeitura?.potassio || null,
+        ultima_leitura_sensores: ultimaLeitura,
       };
     });
   };
@@ -262,9 +280,28 @@ export const useLotesManager = () => {
 
       const { data, error } = await supabase
         .from('lotes')
-        .select('*')
+        .select(`
+          *,
+          leituras_diarias_sensores!leituras_diarias_sensores_lote_id_fkey (
+            id,
+            created_at,
+            numero_caixa,
+            temperatura_solo,
+            umidade_solo,
+            condutividade_agua_poros,
+            nitrogenio,
+            fosforo,
+            potassio,
+            ph
+          )
+        `)
         .eq('unidade', profile.organization_code)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .order('created_at', { 
+          referencedTable: 'leituras_diarias_sensores', 
+          ascending: false 
+        })
+        .limit(1, { referencedTable: 'leituras_diarias_sensores' });
 
       if (error) throw error;
 

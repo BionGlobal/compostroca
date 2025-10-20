@@ -113,6 +113,7 @@ export default function LoteAuditoria() {
           eventos={data.eventos}
           unidadeLatitude={data.unidade.latitude}
           unidadeLongitude={data.unidade.longitude}
+          mediasSensores={data.medias_sensores}
         />
 
         {/* Seção 4: Detalhes Adicionais */}
