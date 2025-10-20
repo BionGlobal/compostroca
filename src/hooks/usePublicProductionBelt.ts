@@ -28,10 +28,23 @@ export interface LoteExtended {
   // Dados calculados para o componente
   validadorNome: string;
   voluntariosUnicos: number;
-  temperatura: number;
-  umidade: number;
+  temperatura: number | null;
+  umidade: number | null;
   progressoPercentual: number;
   statusManejo: string;
+  // Dados de sensores IoT reais
+  ultima_leitura_sensores?: {
+    id: string;
+    created_at: string;
+    numero_caixa: number;
+    temperatura_solo?: number | null;
+    umidade_solo?: number | null;
+    condutividade_agua_poros?: number | null;
+    nitrogenio?: number | null;
+    fosforo?: number | null;
+    potassio?: number | null;
+    ph?: number | null;
+  } | null;
 }
 
 export interface PublicMetrics extends UnifiedKPIs {
@@ -62,10 +75,24 @@ export const usePublicProductionBelt = (unitCode: string) => {
       setLoading(true);
       setError(null);
 
-      // Buscar lotes ativos da unidade específica
+      // Buscar lotes ativos da unidade específica COM dados de sensores
       const { data: lotes, error: lotesError } = await supabase
         .from('lotes')
-        .select('*')
+        .select(`
+          *,
+          leituras_diarias_sensores!leituras_diarias_sensores_lote_id_fkey (
+            id,
+            created_at,
+            numero_caixa,
+            temperatura_solo,
+            umidade_solo,
+            condutividade_agua_poros,
+            nitrogenio,
+            fosforo,
+            potassio,
+            ph
+          )
+        `)
         .eq('unidade', unitCode)
         .in('status', ['ativo', 'em_processamento'])
         .gte('caixa_atual', 1)
@@ -96,10 +123,18 @@ export const usePublicProductionBelt = (unitCode: string) => {
         // Calcular voluntários únicos do lote
         const voluntariosUnicos = new Set(entregas?.map(e => e.voluntario_id) || []).size;
 
-        // Dados IoT (placeholders até integração)
+        // Pegar última leitura de sensores (se houver) - ordenar por data mais recente
+        const leiturasSensores = (lote as any).leituras_diarias_sensores || [];
+        const ultimaLeitura = leiturasSensores.length > 0 
+          ? leiturasSensores.sort((a: any, b: any) => 
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            )[0]
+          : null;
+
+        // Priorizar dados reais de sensores, fallback para iot_data
         const iotData = lote.iot_data as any;
-        const temperatura = iotData?.temperatura || null;
-        const umidade = iotData?.umidade || null;
+        const temperatura = ultimaLeitura?.temperatura_solo ?? iotData?.temperatura ?? null;
+        const umidade = ultimaLeitura?.umidade_solo ?? iotData?.umidade ?? null;
 
         // Calcular progresso baseado na semana atual
         const progressoPercentual = Math.min((lote.semana_atual / 7) * 100, 100);
@@ -115,6 +150,7 @@ export const usePublicProductionBelt = (unitCode: string) => {
           umidade,
           progressoPercentual,
           statusManejo,
+          ultima_leitura_sensores: ultimaLeitura,
         });
       }
 

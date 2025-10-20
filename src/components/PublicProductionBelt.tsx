@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, ArrowRight, User, Thermometer, Droplets, Camera, FileText } from 'lucide-react';
+import { Package, ArrowRight, User, Thermometer, Droplets, Camera, FileText, Leaf, FlaskConical, Zap } from 'lucide-react';
 import { formatPesoDisplay } from '@/lib/organizationUtils';
 import type { LoteExtended } from '@/hooks/usePublicProductionBelt';
 import { useNavigate } from 'react-router-dom';
@@ -155,19 +155,84 @@ export const PublicProductionBelt = ({ lotesAtivos, onViewPhotos }: PublicProduc
                         </div>
                       </div>
 
-                      {/* Dados IoT Simplificados */}
-                      <div className="bg-muted/30 rounded-lg p-2">
-                        <div className="grid grid-cols-2 gap-2 text-xs">
+                {/* Dados de Sensores IoT - LIVE */}
+                {lote.ultima_leitura_sensores && (numeroBox === 2 || numeroBox === 6) && (
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 rounded-lg p-2 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-1 mb-1.5">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                      <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">
+                        Monitoramento Live
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-1.5 text-xs">
+                      {numeroBox === 2 && (
+                        <>
                           <div className="flex items-center gap-1">
-                            <Thermometer className="h-3 w-3 text-orange-500" />
-                            <span>{lote.temperatura ? `${lote.temperatura}°C` : '-°C'}</span>
+                            <Thermometer className="h-3 w-3 text-orange-500 flex-shrink-0" />
+                            <span className="font-medium text-foreground">
+                              {lote.ultima_leitura_sensores.temperatura_solo?.toFixed(1) || '-'}°C
+                            </span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Droplets className="h-3 w-3 text-blue-500" />
-                            <span>{lote.umidade ? `${lote.umidade}%` : '-%'}</span>
+                            <Droplets className="h-3 w-3 text-blue-500 flex-shrink-0" />
+                            <span className="font-medium text-foreground">
+                              {lote.ultima_leitura_sensores.umidade_solo?.toFixed(1) || '-'}%
+                            </span>
                           </div>
-                        </div>
+                          <div className="col-span-2 flex items-center gap-1">
+                            <Zap className="h-3 w-3 text-yellow-500 flex-shrink-0" />
+                            <span className="text-[10px] text-muted-foreground">Condutividade:</span>
+                            <span className="font-medium text-foreground">
+                              {lote.ultima_leitura_sensores.condutividade_agua_poros?.toFixed(2) || '-'} mS/cm
+                            </span>
+                          </div>
+                        </>
+                      )}
+                      
+                      {numeroBox === 6 && (
+                        <>
+                          <div className="col-span-2 flex items-center gap-1">
+                            <Leaf className="h-3 w-3 text-green-500 flex-shrink-0" />
+                            <span className="text-[10px] text-muted-foreground">NPK:</span>
+                            <span className="font-medium text-foreground font-mono">
+                              {lote.ultima_leitura_sensores.nitrogenio?.toFixed(0) || '-'}/
+                              {lote.ultima_leitura_sensores.fosforo?.toFixed(0) || '-'}/
+                              {lote.ultima_leitura_sensores.potassio?.toFixed(0) || '-'}
+                            </span>
+                          </div>
+                          <div className="col-span-2 flex items-center gap-1">
+                            <FlaskConical className="h-3 w-3 text-purple-500 flex-shrink-0" />
+                            <span className="text-[10px] text-muted-foreground">pH:</span>
+                            <span className="font-medium text-foreground">
+                              {lote.ultima_leitura_sensores.ph?.toFixed(1) || '-'}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    
+                    <p className="text-[9px] text-muted-foreground mt-1 italic text-center">
+                      Atualizado: {new Date(lote.ultima_leitura_sensores.created_at).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                )}
+
+                {/* Fallback: Dados IoT Simplificados (se não houver leitura de sensores) */}
+                {!lote.ultima_leitura_sensores && (
+                  <div className="bg-muted/30 rounded-lg p-2">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex items-center gap-1">
+                        <Thermometer className="h-3 w-3 text-orange-500" />
+                        <span>{lote.temperatura ? `${lote.temperatura}°C` : '-°C'}</span>
                       </div>
+                      <div className="flex items-center gap-1">
+                        <Droplets className="h-3 w-3 text-blue-500" />
+                        <span>{lote.umidade ? `${lote.umidade}%` : '-%'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                       {/* Botões de Ação */}
                       <div className="space-y-1.5">
