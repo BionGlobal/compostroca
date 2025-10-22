@@ -228,28 +228,28 @@ const Lotes = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Lotes Ativos"
-          value={`${metrics.totalLotesAtivos}`}
+          value={`${metrics?.totalLotesAtivos ?? 0}`}
           description="na esteira"
           icon={<Package className="h-6 w-6" />}
           variant="default"
         />
         <StatCard
           title="Peso Total"
-          value={`${(metrics.pesoBrutoProcessamento || 0).toFixed(1)}kg`}
+          value={`${(metrics?.pesoBrutoProcessamento ?? 0).toFixed(1)}kg`}
           description="peso atual dos ativos"
           icon={<Scale className="h-6 w-6" />}
           variant="primary"
         />
         <StatCard
           title="Voluntários"
-          value={`${metrics.voluntariosEngajadosAtivos || 0}`}
-          description={`${metrics.totalVoluntariosUnidade > 0 ? Math.round(((metrics.voluntariosEngajadosAtivos || 0) / metrics.totalVoluntariosUnidade) * 100) : 0}% engajados (${metrics.voluntariosEngajadosAtivos || 0}/${metrics.totalVoluntariosUnidade || 0})`}
+          value={`${metrics?.voluntariosEngajadosAtivos ?? 0}`}
+          description={`${(metrics?.totalVoluntariosUnidade ?? 0) > 0 ? Math.round(((metrics?.voluntariosEngajadosAtivos ?? 0) / (metrics?.totalVoluntariosUnidade ?? 1)) * 100) : 0}% engajados (${metrics?.voluntariosEngajadosAtivos ?? 0}/${metrics?.totalVoluntariosUnidade ?? 0})`}
           icon={<Users className="h-6 w-6" />}
           variant="default"
         />
         <StatCard
           title="CO2e Evitado (Ativos)"
-          value={`${(metrics.co2eEvitadoAtivosKg || 0).toFixed(0)}kg`}
+          value={`${(metrics?.co2eEvitadoAtivosKg ?? 0).toFixed(0)}kg`}
           description="pelos lotes na esteira"
           icon={<Leaf className="h-6 w-6" />}
           variant="earth"
@@ -310,12 +310,18 @@ const Lotes = () => {
               </p>
             </CardHeader>
             <CardContent>
-              <ProductionBelt
-                lotesAtivos={lotesAtivos}
-                onManejoClick={handleManejoClick}
-                onFinalizarClick={handleFinalizarClick}
-                onViewPhotos={handleViewPhotos}
-              />
+              {lotesAtivos && lotesAtivos.length > 0 ? (
+                <ProductionBelt
+                  lotesAtivos={lotesAtivos}
+                  onManejoClick={handleManejoClick}
+                  onFinalizarClick={handleFinalizarClick}
+                  onViewPhotos={handleViewPhotos}
+                />
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nenhum lote ativo no momento
+                </div>
+              )}
             </CardContent>
           </Card>
 

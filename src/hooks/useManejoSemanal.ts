@@ -220,22 +220,23 @@ export const useManejoSemanal = () => {
       console.log(`✅ Sessão única criada: ${sessao.id} com ${todasFotosUnicas.length} fotos consolidadas`);
 
       // 3. Salvar fotos individuais em lote_fotos (vinculadas aos lotes específicos)
-      if (etapasValidas.length > 0) {
-        const { error: fotosError } = await supabase
+      const fotosParaInserir = etapasValidas.map((etapa, idx) => ({
+        lote_id: etapa.loteId,
+        foto_url: etapa.foto!,
+        tipo_foto: 'manejo_semanal',
+        ordem_foto: idx + 1
+      }));
+
+      if (fotosParaInserir.length > 0) {
+        const { data: fotosInseridas, error: fotosError } = await supabase
           .from('lote_fotos')
-          .insert(
-            etapasValidas.map((etapa, idx) => ({
-              lote_id: etapa.loteId,
-              foto_url: etapa.foto!,
-              tipo_foto: 'manejo_semanal',
-              ordem_foto: idx + 1
-            }))
-          );
+          .insert(fotosParaInserir)
+          .select('id, foto_url, lote_id');
 
         if (fotosError) {
           console.warn('⚠️ Erro ao salvar fotos, mas continuando:', fotosError);
         } else {
-          console.log(`📸 ${etapasValidas.length} fotos individuais salvas em lote_fotos`);
+          console.log(`📸 ${fotosInseridas?.length || 0} fotos individuais salvas em lote_fotos`);
         }
       }
 
@@ -301,7 +302,7 @@ export const useManejoSemanal = () => {
           }
 
           // Registrar em manejo_semanal para compatibilidade
-          await supabase.from('manejo_semanal').insert({
+          const { data: manejoData } = await supabase.from('manejo_semanal').insert({
             lote_id: etapa.loteId,
             user_id: user.id,
             caixa_origem: etapa.caixaOrigem,
@@ -310,7 +311,17 @@ export const useManejoSemanal = () => {
             peso_depois: etapa.pesoNovo || etapa.pesoAnterior,
             foto_url: etapa.foto,
             observacoes: etapa.observacoes || null
-          });
+          }).select('id').single();
+
+          // Vincular manejo_id em lote_fotos se foto existir
+          if (manejoData?.id && etapa.foto) {
+            await supabase
+              .from('lote_fotos')
+              .update({ manejo_id: manejoData.id })
+              .eq('lote_id', etapa.loteId)
+              .eq('foto_url', etapa.foto)
+              .is('manejo_id', null);
+          }
         }));
         
         if (i + batchSize < etapasValidas.length) {
