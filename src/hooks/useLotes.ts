@@ -342,6 +342,50 @@ export const useLotes = () => {
 
       if (error) throw error;
 
+      // Capturar geolocalização para o evento de início
+      let latitude = loteAtivoCaixa01?.latitude;
+      let longitude = loteAtivoCaixa01?.longitude;
+      try {
+        const position = await getCurrentLocation();
+        latitude = position.coords.latitude;
+        longitude = position.coords.longitude;
+      } catch (geoError) {
+        console.warn('⚠️ Não foi possível capturar geolocalização, usando coordenadas do lote:', geoError);
+      }
+
+      // Criar evento de etapa 1 (INICIO) em lote_eventos
+      const { error: eventoError } = await supabase
+        .from('lote_eventos')
+        .insert({
+          lote_id: loteId,
+          tipo_evento: 'inicio',
+          etapa_numero: 1,
+          data_evento: new Date().toISOString(),
+          peso_antes: 0,
+          peso_depois: pesoInicialTotal,
+          caixa_origem: 1,
+          caixa_destino: 1,
+          administrador_id: user.id,
+          administrador_nome: profile?.full_name || user.email || 'Usuário',
+          observacoes: `Lote iniciado com ${voluntariosCount} voluntários • ${pesoEntregas.toFixed(3)} kg resíduos + ${(pesoEntregas * 0.35).toFixed(3)} kg cepilho`,
+          latitude,
+          longitude,
+          fotos_compartilhadas: [],
+          dados_especificos: {
+            peso_residuos: pesoEntregas,
+            peso_cepilho: pesoEntregas * 0.35,
+            total_voluntarios: voluntariosCount,
+            fonte: 'encerramento_entregas'
+          }
+        });
+
+      if (eventoError) {
+        console.error('❌ Erro ao criar evento de início:', eventoError);
+        // Não bloquear o fluxo, apenas logar
+      } else {
+        console.log('✅ Evento de início (etapa 1) criado com sucesso');
+      }
+
       console.log('✅ Entregas finalizadas - lote transferido para esteira de produção');
       setLoteAtivoCaixa01(null);
       setVoluntariosCount(0);
