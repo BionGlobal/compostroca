@@ -190,7 +190,24 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           .eq('lote_codigo', lote.codigo)
           .is('deleted_at', null);
 
-        // 4) Fotos complementares de lote_fotos
+        // 4) Buscar fotos de entregas para a semana 0
+        let fotosEntregas: string[] = [];
+        if (entregas && entregas.length > 0) {
+          const entregaIds = entregas.map(e => e.id);
+          const { data: entregaFotos } = await supabase
+            .from('entrega_fotos')
+            .select('foto_url')
+            .in('entrega_id', entregaIds)
+            .is('deleted_at', null);
+          
+          if (entregaFotos) {
+            fotosEntregas = entregaFotos
+              .map(f => processPhotoUrl(f.foto_url))
+              .filter(Boolean);
+          }
+        }
+
+        // 5) Fotos complementares de lote_fotos
         const { data: fotosSuplementares } = await supabase
           .from('lote_fotos')
           .select('foto_url, tipo_foto, created_at')
@@ -199,7 +216,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           .is('deleted_at', null)
           .order('created_at', { ascending: true });
 
-        // 5) Processar voluntários
+        // 6) Processar voluntários
         const voluntariosMap = new Map<number, Voluntario>();
         let somaRatings = 0;
         let countRatings = 0;
@@ -226,7 +243,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           (a, b) => a.numero_balde - b.numero_balde
         );
 
-        // 6) Construir timeline a partir de lote_eventos
+        // 7) Construir timeline a partir de lote_eventos
         const eventos: Evento[] = [];
         const validadores = new Set<string>();
 
@@ -254,11 +271,9 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
               fotosEvento = fotosArray.map(processPhotoUrl).filter(Boolean);
             }
 
-            // Para semana 0, adicionar fotos de entregas se disponíveis
-            if (semana === 0 && entregas && entregas.length > 0) {
-              const entregaIds = entregas.map(e => e.id);
-              // Buscar fotos de entrega (já foi feito acima, usar fotosEntregas)
-              // Mas como não temos fotosEntregas aqui, vamos simplificar
+            // Para semana 0, adicionar fotos de entregas
+            if (semana === 0 && fotosEntregas.length > 0) {
+              fotosEvento = [...fotosEvento, ...fotosEntregas];
             }
 
             const dataEvt = new Date(evt.data_evento);
@@ -287,7 +302,7 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
 
         eventos.sort((a, b) => a.semana - b.semana);
 
-        // 7) Métricas
+        // 8) Métricas
         const statusLote = lote.status === 'encerrado' && lote.data_finalizacao ? 'certificado' : 'em_producao';
         const dataFim = lote.data_finalizacao || lote.data_encerramento || new Date().toISOString();
         const hoje = new Date();
