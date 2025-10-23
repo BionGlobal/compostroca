@@ -272,7 +272,9 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
               data: dataEvt,
               hora: dataEvt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
               validador,
-              peso_calculado: evt.peso_depois ?? null,
+              peso_calculado: semana === 0 && evt.peso_depois === 0 
+                ? lote.peso_inicial
+                : evt.peso_depois ?? null,
               fotos: fotosEvento,
               comentario,
               nota_contexto: '',

@@ -24,7 +24,7 @@ export type Database = {
           device_orientation: string | null
           entrega_id: string
           foto_url: string
-          gps_coords: unknown | null
+          gps_coords: unknown
           id: string
           image_quality: number | null
           metadata: Json | null
@@ -40,7 +40,7 @@ export type Database = {
           device_orientation?: string | null
           entrega_id: string
           foto_url: string
-          gps_coords?: unknown | null
+          gps_coords?: unknown
           id?: string
           image_quality?: number | null
           metadata?: Json | null
@@ -56,7 +56,7 @@ export type Database = {
           device_orientation?: string | null
           entrega_id?: string
           foto_url?: string
-          gps_coords?: unknown | null
+          gps_coords?: unknown
           id?: string
           image_quality?: number | null
           metadata?: Json | null
@@ -857,10 +857,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      associar_entregas_lotes_finalizados: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      associar_entregas_lotes_finalizados: { Args: never; Returns: undefined }
       associar_sessao_aos_lotes_ativos: {
         Args: { p_data_sessao?: string; p_sessao_id: string }
         Returns: {
@@ -869,9 +866,25 @@ export type Database = {
           sucesso: boolean
         }[]
       }
-      buscar_lotes_finalizados: {
-        Args:
-          | {
+      buscar_lotes_finalizados:
+        | {
+            Args: { pagina?: number; termo_busca?: string }
+            Returns: {
+              co2eq_evitado: number
+              codigo: string
+              codigo_unico: string
+              data_finalizacao: string
+              hash_integridade: string
+              id: string
+              peso_final: number
+              peso_inicial: number
+              total_count: number
+              unidade_codigo: string
+              unidade_nome: string
+            }[]
+          }
+        | {
+            Args: {
               data_fim?: string
               data_inicio?: string
               pagina?: number
@@ -879,21 +892,23 @@ export type Database = {
               unidade_filter?: string
               validador_filter?: string
             }
-          | { pagina?: number; termo_busca?: string }
-        Returns: {
-          co2eq_evitado: number
-          codigo: string
-          codigo_unico: string
-          data_finalizacao: string
-          hash_integridade: string
-          id: string
-          peso_final: number
-          peso_inicial: number
-          total_count: number
-          unidade_codigo: string
-          unidade_nome: string
-        }[]
-      }
+            Returns: {
+              co2eq_evitado: number
+              codigo: string
+              codigo_unico: string
+              criado_por_nome: string
+              data_finalizacao: string
+              hash_integridade: string
+              id: string
+              peso_final: number
+              peso_inicial: number
+              total_count: number
+              total_entregas: number
+              total_fotos: number
+              unidade_codigo: string
+              unidade_nome: string
+            }[]
+          }
       buscar_lotes_por_status: {
         Args: {
           data_fim?: string
@@ -953,22 +968,16 @@ export type Database = {
         Args: { peso_anterior: number; taxa_decaimento?: number }
         Returns: number
       }
-      can_modify_data: {
-        Args: { user_id?: string }
-        Returns: boolean
-      }
+      can_modify_data: { Args: { user_id?: string }; Returns: boolean }
       generate_missing_hashes: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           hash_generated: string
           lote_codigo: string
           lote_id: string
         }[]
       }
-      get_last_chain_hash: {
-        Args: { unit_code: string }
-        Returns: string
-      }
+      get_last_chain_hash: { Args: { unit_code: string }; Returns: string }
       get_lotes_ativos_na_data: {
         Args: { data_ref: string }
         Returns: {
@@ -978,12 +987,9 @@ export type Database = {
           peso_atual: number
         }[]
       }
-      get_next_chain_index: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      get_next_chain_index: { Args: never; Returns: number }
       get_todas_unidades: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           codigo_unidade: string
           id: string
@@ -1015,10 +1021,7 @@ export type Database = {
         Args: { unit_code: string; user_id?: string }
         Returns: boolean
       }
-      is_super_admin: {
-        Args: { user_id?: string }
-        Returns: boolean
-      }
+      is_super_admin: { Args: { user_id?: string }; Returns: boolean }
       log_user_activity: {
         Args: {
           p_action_description: string
@@ -1034,7 +1037,7 @@ export type Database = {
         Returns: boolean
       }
       migrar_fotos_manejo_para_lote_fotos: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           ja_existentes: number
           migradas: number
