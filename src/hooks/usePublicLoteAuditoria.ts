@@ -318,9 +318,11 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           ? new Date(lote.data_finalizacao)
           : hoje;
 
-        const diaAtualCiclo = Math.ceil(
+        // Calcular dias decorridos e adicionar 1 para começar em "Dia 1"
+        const diasDecorridos = Math.floor(
           (dataReferencia.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24)
-        ) + 1;
+        );
+        const diaAtualCiclo = diasDecorridos + 1;
 
         const totalDiasCiclo = 49; // 7 semanas × 7 dias
 
