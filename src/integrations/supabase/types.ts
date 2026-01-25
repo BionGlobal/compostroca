@@ -977,6 +977,7 @@ export type Database = {
           lote_id: string
         }[]
       }
+      get_impact_metrics: { Args: never; Returns: Json }
       get_last_chain_hash: { Args: { unit_code: string }; Returns: string }
       get_lotes_ativos_na_data: {
         Args: { data_ref: string }

@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.testar-tago-io]
 verify_jwt = false
+
+[functions.impact-metrics]
+verify_jwt = false
