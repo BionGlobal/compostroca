@@ -168,7 +168,8 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             fotos_compartilhadas,
             latitude,
             longitude,
-            sessao_manutencao_id
+            sessao_manutencao_id,
+            dados_especificos
           `)
           .eq('lote_id', lote.id)
           .is('deleted_at', null)
