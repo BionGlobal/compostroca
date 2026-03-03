@@ -40,6 +40,7 @@ export interface LoteHistorico {
   latitude?: number | null;
   longitude?: number | null;
   hash_integridade?: string; // Hash de integridade para lotes finalizados
+  codigo_unico?: string;
 }
 
 export interface SearchFilters {
