@@ -30,6 +30,8 @@ export const LoteHeader = ({
   codigoLote,
   codigoUnico,
   statusLote,
+  encerramentoAdministrativo = false,
+  motivoAdministrativo,
   unidade,
   dataInicio,
   dataFinalizacao,
