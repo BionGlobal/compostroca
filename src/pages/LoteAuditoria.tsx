@@ -86,6 +86,8 @@ export default function LoteAuditoria() {
           codigoLote={data.codigo_lote}
           codigoUnico={data.codigo_unico}
           statusLote={data.status_lote}
+          encerramentoAdministrativo={data.encerramento_administrativo}
+          motivoAdministrativo={data.motivo_administrativo}
           unidade={data.unidade}
           dataInicio={data.data_inicio}
           dataFinalizacao={data.data_finalizacao}

@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.impact-metrics]
 verify_jwt = false
+
+[functions.encerrar-lotes-ferias]
+verify_jwt = false

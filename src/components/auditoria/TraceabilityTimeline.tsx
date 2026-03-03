@@ -57,8 +57,12 @@ export const TraceabilityTimeline = ({
 
   const getTipoLabel = (tipo: string, semana: number) => {
     if (tipo === 'INICIO') return 'Semana 0 - Entrega';
-    if (tipo === 'FINALIZACAO') return 'Semana 7 - Lote Pronto!';
+    if (tipo === 'FINALIZACAO') return semana === 7 ? 'Semana 7 - Lote Pronto!' : `Semana ${semana} - Finalização`;
     return `Semana ${semana} - Manutenção`;
+  };
+
+  const isAdminFinalization = (evento: Evento) => {
+    return evento.tipo === 'FINALIZACAO' && evento.nota_contexto?.includes('Encerramento Administrativo');
   };
 
   const getTipoBadgeVariant = (tipo: string) => {
@@ -101,7 +105,7 @@ export const TraceabilityTimeline = ({
                   </div>
                 </div>
 
-                <Card className="sm:ml-16 border-l-4 border-l-primary">
+                <Card className={`sm:ml-16 border-l-4 ${isAdminFinalization(evento) ? 'border-l-warning bg-warning/5' : 'border-l-primary'}`}>
                   <CardContent className="p-3 sm:p-5 space-y-3">
                     {/* Cabeçalho do evento */}
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">

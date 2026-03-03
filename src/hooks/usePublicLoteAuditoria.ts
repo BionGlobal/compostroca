@@ -27,6 +27,8 @@ interface LoteAuditoriaData {
   codigo_lote: string;
   codigo_unico: string;
   status_lote: 'em_producao' | 'certificado';
+  encerramento_administrativo: boolean;
+  motivo_administrativo?: string;
   unidade: {
     nome: string;
     codigo: string;
@@ -166,7 +168,8 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
             fotos_compartilhadas,
             latitude,
             longitude,
-            sessao_manutencao_id
+            sessao_manutencao_id,
+            dados_especificos
           `)
           .eq('lote_id', lote.id)
           .is('deleted_at', null)
@@ -351,10 +354,28 @@ export const usePublicLoteAuditoria = (codigoUnico: string | undefined) => {
           unidadeData = unidadeFallback;
         }
 
+        // Detect administrative closure
+        const eventoAdmin = eventosLote?.find(
+          (evt) => evt.tipo_evento === 'finalizacao_administrativa'
+        );
+        const isEncerramentoAdministrativo = !!eventoAdmin;
+        const motivoAdministrativo = eventoAdmin?.observacoes || '';
+
+        // For admin-closed lots, pass nota_contexto to the finalization event
+        if (isEncerramentoAdministrativo) {
+          const adminEvento = eventos.find(e => e.tipo === 'FINALIZACAO');
+          if (adminEvento) {
+            const dados = eventoAdmin?.dados_especificos as Record<string, unknown> | null;
+            adminEvento.nota_contexto = `⚠️ Encerramento Administrativo — ${(dados?.motivo as string) || motivoAdministrativo}. Peso final estimado por decaimento composto (${(dados?.semanas_decaimento as number) || '?'} semanas, taxa ${((dados?.taxa_decaimento as number) || 0.0366 * 100).toFixed(2)}%).`;
+          }
+        }
+
         const resultado: LoteAuditoriaData = {
           codigo_lote: lote.codigo,
           codigo_unico: lote.codigo_unico,
           status_lote: statusLote,
+          encerramento_administrativo: isEncerramentoAdministrativo,
+          motivo_administrativo: motivoAdministrativo,
           unidade: {
             nome: unidadeData?.nome || 'Não disponível',
             codigo: unidadeData?.codigo_unidade || lote.unidade,
