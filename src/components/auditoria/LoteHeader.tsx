@@ -10,6 +10,8 @@ interface LoteHeaderProps {
   codigoLote: string;
   codigoUnico: string;
   statusLote: 'em_producao' | 'certificado';
+  encerramentoAdministrativo?: boolean;
+  motivoAdministrativo?: string;
   unidade: {
     nome: string;
     codigo: string;
