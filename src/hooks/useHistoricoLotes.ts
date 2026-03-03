@@ -168,6 +168,7 @@ export const useHistoricoLotes = () => {
         novosLotesProcessados.push({
           id: lote.id,
           codigo: lote.codigo,
+          codigo_unico: lote.codigo_unico,
           status: lote.status,
           caixa_atual: lote.caixa_atual,
           peso_inicial: lote.peso_inicial,
