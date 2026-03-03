@@ -57,8 +57,12 @@ export const TraceabilityTimeline = ({
 
   const getTipoLabel = (tipo: string, semana: number) => {
     if (tipo === 'INICIO') return 'Semana 0 - Entrega';
-    if (tipo === 'FINALIZACAO') return 'Semana 7 - Lote Pronto!';
+    if (tipo === 'FINALIZACAO') return semana === 7 ? 'Semana 7 - Lote Pronto!' : `Semana ${semana} - Finalização`;
     return `Semana ${semana} - Manutenção`;
+  };
+
+  const isAdminFinalization = (evento: Evento) => {
+    return evento.tipo === 'FINALIZACAO' && evento.nota_contexto?.includes('Encerramento Administrativo');
   };
 
   const getTipoBadgeVariant = (tipo: string) => {
