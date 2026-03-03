@@ -27,6 +27,8 @@ interface LoteAuditoriaData {
   codigo_lote: string;
   codigo_unico: string;
   status_lote: 'em_producao' | 'certificado';
+  encerramento_administrativo: boolean;
+  motivo_administrativo?: string;
   unidade: {
     nome: string;
     codigo: string;
