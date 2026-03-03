@@ -1,5 +1,6 @@
 import { StatCard } from '@/components/StatCard';
 import { CompostingBoxes } from '@/components/CompostingBoxes';
+import { AdminEncerramento } from '@/components/AdminEncerramento';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Package, RotateCcw, CheckCircle, Clock, MapPin, Home, Leaf, Sprout } from 'lucide-react';
 import { useOrganizationData } from '@/hooks/useOrganizationData';
@@ -84,6 +85,9 @@ const Dashboard = () => {
 
       {/* Processo de Compostagem */}
       <CompostingBoxes />
+
+      {/* Botão Admin Temporário - Encerramento de Recesso */}
+      <AdminEncerramento />
 
     </div>
   );
