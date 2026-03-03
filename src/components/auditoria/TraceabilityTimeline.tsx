@@ -105,7 +105,7 @@ export const TraceabilityTimeline = ({
                   </div>
                 </div>
 
-                <Card className="sm:ml-16 border-l-4 border-l-primary">
+                <Card className={`sm:ml-16 border-l-4 ${isAdminFinalization(evento) ? 'border-l-warning bg-warning/5' : 'border-l-primary'}`}>
                   <CardContent className="p-3 sm:p-5 space-y-3">
                     {/* Cabeçalho do evento */}
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">

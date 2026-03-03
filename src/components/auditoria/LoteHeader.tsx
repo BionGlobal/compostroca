@@ -102,7 +102,19 @@ export const LoteHeader = ({
                 <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 {statusLote === 'certificado' ? 'Lote Certificado' : 'Lote em Produção'}
               </Badge>
+              {encerramentoAdministrativo && (
+                <Badge variant="outline" className="text-xs sm:text-sm border-warning text-warning">
+                  ⚠️ Encerrado Administrativamente
+                </Badge>
+              )}
             </div>
+
+            {encerramentoAdministrativo && motivoAdministrativo && (
+              <div className="p-3 rounded-lg border border-warning/30 bg-warning/5 text-xs sm:text-sm text-muted-foreground">
+                <p className="font-medium text-warning mb-1">Nota administrativa:</p>
+                <p>{motivoAdministrativo}</p>
+              </div>
+            )}
 
             <div>
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2">
