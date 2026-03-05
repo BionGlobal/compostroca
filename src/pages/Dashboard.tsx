@@ -86,8 +86,6 @@ const Dashboard = () => {
       {/* Processo de Compostagem */}
       <CompostingBoxes />
 
-      {/* Botão Admin Temporário - Encerramento de Recesso */}
-      <AdminEncerramento />
 
     </div>
   );
