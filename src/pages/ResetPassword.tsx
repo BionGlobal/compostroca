@@ -20,22 +20,30 @@ const ResetPassword = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Supabase automatically processes the recovery token from the URL hash
-    // and establishes a session. We listen for that event.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setSessionReady(true);
       }
     });
 
-    // Also check if there's already a session (user might have landed with token already processed)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setSessionReady(true);
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Timeout: if no session after 8s, show expired message
+    const timeout = setTimeout(() => {
+      setSessionReady((prev) => {
+        if (!prev) setError('expired');
+        return prev;
+      });
+    }, 8000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const passwordsMatch = newPassword === confirmPassword;
