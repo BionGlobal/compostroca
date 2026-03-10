@@ -8,6 +8,7 @@ import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoteProvider } from "./contexts/LoteContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { supabase } from "./integrations/supabase/client";
 import Dashboard from "./pages/Dashboard";
 import Voluntarios from "./pages/Voluntarios";
 import EntregasOptimized from "./pages/EntregasOptimized";
@@ -26,6 +27,24 @@ import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
+// Global listener: if a PASSWORD_RECOVERY event fires on any page other than /reset-password,
+// redirect the user there so the token is handled correctly.
+const RecoveryRedirect = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY' && location.pathname !== '/reset-password') {
+        navigate('/reset-password', { replace: true });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate, location.pathname]);
+
+  return null;
+};
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -34,6 +53,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+        <RecoveryRedirect />
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/reset-password" element={<ResetPassword />} />
