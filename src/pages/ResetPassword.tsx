@@ -92,12 +92,26 @@ const ResetPassword = () => {
   };
 
   if (!sessionReady) {
+    const isExpired = error === 'expired';
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center space-y-4 text-foreground">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="flex flex-col items-center space-y-4 text-foreground text-center">
           <img src="/lovable-uploads/compostroca-app-logo.png" alt="Compostroca" className="h-12 w-12" />
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <p className="opacity-80">Verificando link de recuperação...</p>
+          {isExpired ? (
+            <>
+              <AlertTriangle className="h-8 w-8 text-destructive" />
+              <p className="font-semibold">Link expirado ou já utilizado</p>
+              <p className="text-sm text-muted-foreground">Solicite um novo link de recuperação na tela de login.</p>
+              <Button onClick={() => navigate('/auth')} className="mt-2">
+                Ir para Login
+              </Button>
+            </>
+          ) : (
+            <>
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <p className="opacity-80">Verificando link de recuperação...</p>
+            </>
+          )}
         </div>
       </div>
     );
