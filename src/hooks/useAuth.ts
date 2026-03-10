@@ -111,7 +111,7 @@ export const useAuth = () => {
       
       let message = "Erro ao criar conta";
       if (error?.message?.includes('User already registered')) {
-        message = "Este email já está cadastrado";
+        message = "Este email já possui uma conta. Tente fazer login ou use 'Esqueci minha senha' para recuperar o acesso.";
       }
       
       toast({
