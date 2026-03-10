@@ -289,6 +289,7 @@ export const useAuth = () => {
     signUp,
     signIn,
     signOut,
+    resetPassword,
     isAuthenticated: !!user,
   };
 };

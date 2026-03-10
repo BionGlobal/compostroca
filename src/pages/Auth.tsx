@@ -1,12 +1,14 @@
-import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 const Auth = () => {
   const [loginEmail, setLoginEmail] = useState('');
@@ -18,10 +20,44 @@ const Auth = () => {
   const [signupLoading, setSignupLoading] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
-  
-  const { signIn, signUp, isAuthenticated, loading } = useAuth();
 
-  // Redirect if already authenticated
+  // Forgot password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
+
+  const { signIn, signUp, resetPassword, isAuthenticated, loading } = useAuth();
+  const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Handle prefill from password reset redirect
+  useEffect(() => {
+    const newPasswordFlag = searchParams.get('newPassword');
+    const prefill = searchParams.get('prefillPassword');
+
+    if (newPasswordFlag === '1') {
+      toast({
+        title: 'Senha atualizada!',
+        description: 'Sua senha foi redefinida com sucesso. Faça login com a nova senha.',
+      });
+    }
+
+    if (prefill) {
+      try {
+        const decoded = atob(prefill);
+        setLoginPassword(decoded);
+      } catch {
+        // ignore invalid base64
+      }
+    }
+
+    // Clean up URL params immediately
+    if (newPasswordFlag || prefill) {
+      setSearchParams({}, { replace: true });
+    }
+  }, []);
+
   if (!loading && isAuthenticated) {
     return <Navigate to="/" replace />;
   }
@@ -38,13 +74,22 @@ const Auth = () => {
     setSignupLoading(true);
     const result = await signUp(signupEmail, signupPassword, signupFullName);
     if (result.data) {
-      // Switch to login tab after successful signup
       setLoginEmail(signupEmail);
       setSignupEmail('');
       setSignupPassword('');
       setSignupFullName('');
     }
     setSignupLoading(false);
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotLoading(true);
+    const result = await resetPassword(forgotEmail);
+    if (!result.error) {
+      setForgotSent(true);
+    }
+    setForgotLoading(false);
   };
 
   if (loading) {
@@ -61,9 +106,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      {/* --- INÍCIO DA ÚNICA ALTERAÇÃO --- */}
       <div className="w-full max-w-md relative" style={{ bottom: '5px' }}>
-      {/* --- FIM DA ÚNICA ALTERAÇÃO --- */}
         <div className="flex flex-col items-center mb-6">
           <div className="p-2 rounded-full mb-4">
             <img src="/lovable-uploads/compostroca-app-logo.png" alt="Compostroca App Logo" className="h-12 w-12" />
@@ -85,7 +128,7 @@ const Auth = () => {
                 <TabsTrigger value="login">Entrar</TabsTrigger>
                 <TabsTrigger value="signup">Cadastrar</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
@@ -104,7 +147,7 @@ const Auth = () => {
                     <div className="relative">
                       <Input
                         id="login-password"
-                        type={showLoginPassword ? "text" : "password"}
+                        type={showLoginPassword ? 'text' : 'password'}
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
                         placeholder="Sua senha"
@@ -116,11 +159,7 @@ const Auth = () => {
                         onClick={() => setShowLoginPassword(!showLoginPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        {showLoginPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
+                        {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
@@ -134,9 +173,22 @@ const Auth = () => {
                       'Entrar'
                     )}
                   </Button>
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotEmail(loginEmail);
+                        setForgotSent(false);
+                        setShowForgotPassword(true);
+                      }}
+                      className="text-sm text-muted-foreground hover:text-foreground underline transition-colors"
+                    >
+                      Esqueci minha senha
+                    </button>
+                  </div>
                 </form>
               </TabsContent>
-              
+
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
@@ -166,7 +218,7 @@ const Auth = () => {
                     <div className="relative">
                       <Input
                         id="signup-password"
-                        type={showSignupPassword ? "text" : "password"}
+                        type={showSignupPassword ? 'text' : 'password'}
                         value={signupPassword}
                         onChange={(e) => setSignupPassword(e.target.value)}
                         placeholder="Sua senha (mínimo 6 caracteres)"
@@ -179,11 +231,7 @@ const Auth = () => {
                         onClick={() => setShowSignupPassword(!showSignupPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        {showSignupPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
+                        {showSignupPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
@@ -202,13 +250,72 @@ const Auth = () => {
             </Tabs>
           </CardContent>
         </Card>
-        
+
         <div className="w-full mt-8 text-center text-xs text-muted-foreground">
           <a href="https://www.bion.global" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
             Powered by Bion ⚡
           </a>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Recuperar Senha</DialogTitle>
+            <DialogDescription>
+              {forgotSent
+                ? 'Verifique sua caixa de entrada (e spam) para o link de redefinição.'
+                : 'Informe o email da sua conta para receber o link de redefinição de senha.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {forgotSent ? (
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
+                <svg className="h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="text-sm text-muted-foreground text-center">
+                Email enviado para <strong className="text-foreground">{forgotEmail}</strong>
+              </p>
+              <Button variant="outline" onClick={() => setShowForgotPassword(false)} className="w-full">
+                Voltar ao Login
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="forgot-email">Email</Label>
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  required
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={() => setShowForgotPassword(false)} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={forgotLoading} className="flex-1">
+                  {forgotLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    'Enviar Link'
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

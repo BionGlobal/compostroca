@@ -21,6 +21,7 @@ import { PublicFotosLote } from "./pages/PublicFotosLote";
 import AuditoriaGeral from "./pages/AuditoriaGeral";
 import LoteAuditoria from "./pages/LoteAuditoria";
 import DiagnosticoTagoIO from "./pages/DiagnosticoTagoIO";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
           <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/diagnostico-tago" element={<DiagnosticoTagoIO />} />
           <Route path="/audit" element={<AuditoriaGeral />} />
           <Route path="/lote/auditoria/:codigoUnico" element={<LoteAuditoria />} />
