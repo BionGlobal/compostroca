@@ -20,11 +20,12 @@ export const UserRoleEditor = ({ user, onRoleUpdate }: UserRoleEditorProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const isSuperAdmin = profile?.user_role === 'super_admin';
+  const isAdmin = profile?.user_role === 'super_admin' || profile?.user_role === 'local_admin';
   const isOwnProfile = profile?.user_id === user.user_id;
   const hasChanges = newRole !== user.user_role;
 
-  // Não permite que Super Admins alterem seu próprio papel
-  if (!isSuperAdmin || isOwnProfile) {
+  // Não permite alterar próprio papel, e só admins podem editar
+  if (!isAdmin || isOwnProfile) {
     return null;
   }
 
