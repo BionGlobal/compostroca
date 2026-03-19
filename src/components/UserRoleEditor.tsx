@@ -20,11 +20,12 @@ export const UserRoleEditor = ({ user, onRoleUpdate }: UserRoleEditorProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const isSuperAdmin = profile?.user_role === 'super_admin';
+  const isAdmin = profile?.user_role === 'super_admin' || profile?.user_role === 'local_admin';
   const isOwnProfile = profile?.user_id === user.user_id;
   const hasChanges = newRole !== user.user_role;
 
-  // Não permite que Super Admins alterem seu próprio papel
-  if (!isSuperAdmin || isOwnProfile) {
+  // Não permite alterar próprio papel, e só admins podem editar
+  if (!isAdmin || isOwnProfile) {
     return null;
   }
 
@@ -125,15 +126,17 @@ export const UserRoleEditor = ({ user, onRoleUpdate }: UserRoleEditorProps) => {
                   </div>
                 </div>
               </SelectItem>
-              <SelectItem value="super_admin">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-destructive" />
-                  <div>
-                    <div className="font-medium">Super Administrador</div>
-                    <div className="text-xs text-muted-foreground">Acesso total</div>
+              {isSuperAdmin && (
+                <SelectItem value="super_admin">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-destructive" />
+                    <div>
+                      <div className="font-medium">Super Administrador</div>
+                      <div className="text-xs text-muted-foreground">Acesso total</div>
+                    </div>
                   </div>
-                </div>
-              </SelectItem>
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
 

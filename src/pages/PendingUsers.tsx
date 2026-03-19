@@ -31,6 +31,7 @@ export default function PendingUsers() {
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>();
 
   const isSuperAdmin = profile?.user_role === 'super_admin';
+  const isAdmin = profile?.user_role === 'super_admin' || profile?.user_role === 'local_admin';
 
   const handleUserClick = (user: any) => {
     setSelectedUser(user);
@@ -184,8 +185,8 @@ export default function PendingUsers() {
             loading={loading}
             onRefresh={refreshApprovedUsers}
             onViewActivities={handleViewActivities}
-            onDeleteUser={isSuperAdmin ? deleteUser : undefined}
-            onRoleUpdate={isSuperAdmin ? updateUserRole : undefined}
+            onDeleteUser={isAdmin ? deleteUser : undefined}
+            onRoleUpdate={isAdmin ? updateUserRole : undefined}
           />
         </TabsContent>
 

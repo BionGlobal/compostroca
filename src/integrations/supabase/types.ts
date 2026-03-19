@@ -1022,6 +1022,7 @@ export type Database = {
         Args: { unit_code: string; user_id?: string }
         Returns: boolean
       }
+      is_admin: { Args: { user_id?: string }; Returns: boolean }
       is_super_admin: { Args: { user_id?: string }; Returns: boolean }
       log_user_activity: {
         Args: {
