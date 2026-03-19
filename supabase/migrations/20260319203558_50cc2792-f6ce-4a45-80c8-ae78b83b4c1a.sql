@@ -1,0 +1,1 @@
+UPDATE entregas SET deleted_at = now() WHERE id = '362cbe08-c92c-44f6-86c5-78795c5c1c5d';
