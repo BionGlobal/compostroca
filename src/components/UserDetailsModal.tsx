@@ -18,6 +18,7 @@ export const UserDetailsModal = ({ user, isOpen, onClose, onRoleUpdate }: UserDe
   if (!user) return null;
 
   const isSuperAdmin = profile?.user_role === 'super_admin';
+  const isAdmin = profile?.user_role === 'super_admin' || profile?.user_role === 'local_admin';
   const isOwnProfile = profile?.user_id === user.user_id;
 
   const getRoleIcon = (role: string) => {
