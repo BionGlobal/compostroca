@@ -185,8 +185,8 @@ export default function PendingUsers() {
             loading={loading}
             onRefresh={refreshApprovedUsers}
             onViewActivities={handleViewActivities}
-            onDeleteUser={isSuperAdmin ? deleteUser : undefined}
-            onRoleUpdate={isSuperAdmin ? updateUserRole : undefined}
+            onDeleteUser={isAdmin ? deleteUser : undefined}
+            onRoleUpdate={isAdmin ? updateUserRole : undefined}
           />
         </TabsContent>
 

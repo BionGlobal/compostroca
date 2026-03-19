@@ -143,7 +143,7 @@ export const UserDetailsModal = ({ user, isOpen, onClose, onRoleUpdate }: UserDe
           </div>
 
           {/* Gerenciamento de Papel (apenas para Super Admins) */}
-          {isSuperAdmin && !isOwnProfile && onRoleUpdate && (
+          {isAdmin && !isOwnProfile && onRoleUpdate && (
             <UserRoleEditor 
               user={user} 
               onRoleUpdate={onRoleUpdate}

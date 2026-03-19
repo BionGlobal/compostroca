@@ -126,15 +126,17 @@ export const UserRoleEditor = ({ user, onRoleUpdate }: UserRoleEditorProps) => {
                   </div>
                 </div>
               </SelectItem>
-              <SelectItem value="super_admin">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-destructive" />
-                  <div>
-                    <div className="font-medium">Super Administrador</div>
-                    <div className="text-xs text-muted-foreground">Acesso total</div>
+              {isSuperAdmin && (
+                <SelectItem value="super_admin">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-destructive" />
+                    <div>
+                      <div className="font-medium">Super Administrador</div>
+                      <div className="text-xs text-muted-foreground">Acesso total</div>
+                    </div>
                   </div>
-                </div>
-              </SelectItem>
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
 
