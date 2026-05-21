@@ -94,6 +94,7 @@ export const usePublicProductionBelt = (unitCode: string) => {
           )
         `)
         .eq('unidade', unitCode)
+        .is('deleted_at', null)
         .in('status', ['ativo', 'em_processamento'])
         .gte('caixa_atual', 1)
         .lte('caixa_atual', 7)
