@@ -296,6 +296,7 @@ export const useLotesManager = () => {
           )
         `)
         .eq('unidade', profile.organization_code)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .order('created_at', { 
           referencedTable: 'leituras_diarias_sensores', 

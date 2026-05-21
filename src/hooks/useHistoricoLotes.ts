@@ -128,6 +128,7 @@ export const useHistoricoLotes = () => {
         .from('lotes')
         .select('*')
         .eq('status', 'em_processamento')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(6);
 
@@ -138,6 +139,7 @@ export const useHistoricoLotes = () => {
         .from('lotes')
         .select('*')
         .eq('status', 'encerrado')
+        .is('deleted_at', null)
         .order('data_encerramento', { ascending: false });
 
       if (lotesProntosError) throw lotesProntosError;
