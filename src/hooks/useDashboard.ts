@@ -38,6 +38,7 @@ export const useDashboard = () => {
         .from('lotes')
         .select('*')
         .eq('unidade', profile.organization_code)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
