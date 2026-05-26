@@ -207,7 +207,7 @@ export const useLoteProntoFotos = (loteId?: string) => {
 
   useEffect(() => {
     fetchFotosLoteProto();
-  }, [loteId, user]);
+  }, [loteId]);
 
   // Função para construir URL pública da foto
   const getFotoUrl = (fotoUrl: string): string => {
