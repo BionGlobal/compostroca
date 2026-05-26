@@ -1,63 +1,35 @@
-## Diagnóstico
+## Diagnóstico do bug real
 
-A página pública `https://compostroca.bion.global/CWB001` (rota `/:unitCode` → `ProductionBeltPublic.tsx`) é acessada por visitantes **anônimos**. Ao clicar em "Ver Fotos" em qualquer caixa, o `FotosGalleryModal` abre e dispara o hook `useLoteFotos` (ou `useLoteProntoFotos` para lotes encerrados).
+O botão **Ver Fotos** abre o modal no mobile, mas ele mostra **“Nenhuma foto encontrada”** para o lote `CWB001-21052026A454`.
 
-Ambos os hooks têm um `useEffect` gated por `user`:
+O problema não é visual/CSS do modal: a requisição mobile/desktop está retornando lista vazia porque `useLoteFotos` consulta a tabela `entrega_fotos`, que no acesso público/anônimo não expõe essas fotos. No banco, existem 4 entregas para esse lote e cada uma tem 3 fotos, mas a chamada pública para `entrega_fotos` retorna `[]`. Já existe tabela pública `lote_fotos`, criada para consolidar fotos e com policy pública, mas esse lote atual ainda não tem registros nela.
 
-```ts
-// src/hooks/useLoteFotos.ts (linha ~284)
-useEffect(() => {
-  if (user && loteId) {     // ← user é null no acesso público
-    fetchFotos();
-  }
-}, [loteId, user]);
+## Plano de correção rápida
 
-// e dentro de uploadFoto/fetch também: if (!user) return;
-```
+1. **Corrigir o hook da galeria pública/ativa (`src/hooks/useLoteFotos.ts`)**
+   - Trocar a fonte principal das fotos de entrega para `lote_fotos`, filtrando por `lote_id`, `entrega_id not null` e `deleted_at is null`.
+   - Manter fallback para `entrega_fotos` apenas se `lote_fotos` vier vazia, para não quebrar telas antigas autenticadas.
+   - Garantir que URLs relativas sejam resolvidas no bucket correto (`entrega-fotos` para fotos de entrega, `lote-fotos` para manejo).
 
-Como `useAuth()` retorna `user = null` para o visitante anônimo, `fetchFotos()` **nunca executa**. O estado `loading` inicializa como `true` e nunca muda, então o modal renderiza `null` no early-return:
+2. **Sincronizar dados existentes que ficaram órfãos**
+   - Criar migration idempotente para inserir em `lote_fotos` as fotos existentes em `entrega_fotos` para entregas que ainda não têm registro consolidado.
+   - Isso deve restaurar imediatamente a visualização pública/mobile dos lotes atuais, sem mexer na esteira nem em lotes/caixas.
 
-```ts
-if (!isOpen || loading) return null;  // FotosGalleryModal.tsx:157
-```
+3. **Preservar segurança e fluxo atual**
+   - Não alterar permissões amplas de `entrega_fotos`.
+   - Não liberar escrita pública.
+   - Manter upload/delete protegidos por autenticação.
 
-Resultado: clique no botão "Ver Fotos" não abre nada — exatamente o sintoma reportado, tanto em mobile quanto em desktop (mas é mais visível no mobile porque é onde o usuário está consumindo o link público).
+4. **Validar no alvo real**
+   - Testar `/CWB001` em viewport mobile.
+   - Clicar em **Ver Fotos** no card do lote `CWB001-21052026A454`.
+   - Confirmar que a galeria carrega imagens em grade, em vez do estado vazio.
 
-Isso é uma **regressão**: as RLS do banco já permitem leitura pública em `lotes`, `voluntarios` e `lote_fotos` (policy `"Public can view lote photos"`), então o fluxo funcionaria sem autenticação se o hook não estivesse bloqueando.
+## Arquivos previstos
 
-## Correção
+- `src/hooks/useLoteFotos.ts`
+- nova migration em `supabase/migrations/...sql` para backfill de `lote_fotos`
 
-Mudança mínima e cirúrgica em **2 hooks**, mantendo a proteção apenas nas mutações (upload/delete), que continuam exigindo `user`.
+## Observação
 
-### 1. `src/hooks/useLoteFotos.ts`
-- Remover `if (!user) return;` da função `fetchFotos` (não existe explicitamente — o gate está só no useEffect).
-- Trocar o `useEffect` final para depender apenas de `loteId`:
-  ```ts
-  useEffect(() => {
-    if (loteId) fetchFotos();
-  }, [loteId]);
-  ```
-- Manter `uploadFoto` e `deleteFoto` exigindo `user` (já fazem isso).
-
-### 2. `src/hooks/useLoteProntoFotos.ts`
-- Em `fetchFotosLoteProto`, remover o `!user` do guard inicial:
-  ```ts
-  if (!loteId) return;   // antes: if (!loteId || !user) return;
-  ```
-- Trocar o `useEffect` para depender apenas de `loteId`:
-  ```ts
-  useEffect(() => { fetchFotosLoteProto(); }, [loteId]);
-  ```
-
-## Não será alterado
-
-- Nenhuma policy RLS muda — `lote_fotos`, `lotes` e `voluntarios` já têm policy `"Public can view..."`.
-- `entrega_fotos` continua restrito a usuários aprovados; as fotos públicas das entregas vivem em `lote_fotos` (onde o `uploadFoto` já as grava). Se alguma unidade tiver fotos só em `entrega_fotos`, a galeria mostrará as que conseguir ler, sem quebrar.
-- Mutações (upload/delete) continuam protegidas por `useAuth`.
-- `FotosGalleryModal`, `PublicProductionBelt` e `ProductionBeltPublic` não precisam de alteração.
-
-## Validação
-
-1. Abrir `https://compostroca.bion.global/CWB001` em mobile (anônimo, sem login).
-2. Clicar em "Ver Fotos" em qualquer caixa com lote ativo → modal abre com grade de fotos.
-3. Conferir no `/lotes` autenticado que o fluxo de fotos continua intacto (mesmo hook).
+A esteira e a posição das caixas não serão alteradas neste plano.
