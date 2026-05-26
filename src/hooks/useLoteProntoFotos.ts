@@ -41,7 +41,7 @@ export const useLoteProntoFotos = (loteId?: string) => {
   const { user } = useAuth();
 
   const fetchFotosLoteProto = async () => {
-    if (!loteId || !user) return;
+    if (!loteId) return;
     
     setLoading(true);
     try {
@@ -207,7 +207,7 @@ export const useLoteProntoFotos = (loteId?: string) => {
 
   useEffect(() => {
     fetchFotosLoteProto();
-  }, [loteId, user]);
+  }, [loteId]);
 
   // Função para construir URL pública da foto
   const getFotoUrl = (fotoUrl: string): string => {

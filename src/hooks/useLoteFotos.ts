@@ -323,10 +323,10 @@ export const useLoteFotos = (loteId?: string) => {
   };
 
   useEffect(() => {
-    if (user && loteId) {
+    if (loteId) {
       fetchFotos();
     }
-  }, [loteId, user]);
+  }, [loteId]);
 
   return {
     fotos,
