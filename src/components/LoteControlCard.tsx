@@ -18,6 +18,7 @@ export const LoteControlCard = () => {
 
   // Verifica se a esteira está completa (todas as caixas 1-7 ocupadas)
   const lotesAtivos = orgData.lotes?.filter(l => 
+    !l.deleted_at &&
     (l.status === 'ativo' || l.status === 'em_processamento') && 
     l.caixa_atual >= 1 && l.caixa_atual <= 7
   ) || [];

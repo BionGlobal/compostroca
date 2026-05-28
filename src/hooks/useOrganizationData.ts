@@ -45,6 +45,7 @@ export interface Lote {
   semana_atual: number;
   data_inicio: string;
   data_encerramento?: string;
+  deleted_at?: string | null;
   peso_inicial: number;
   peso_atual: number;
   criado_por: string;
@@ -198,6 +199,7 @@ export const useOrganizationData = () => {
         .from('lotes')
         .select('*')
         .eq('unidade', organizationCode)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
