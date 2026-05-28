@@ -45,6 +45,7 @@ export interface Lote {
   semana_atual: number;
   data_inicio: string;
   data_encerramento?: string;
+  deleted_at?: string | null;
   peso_inicial: number;
   peso_atual: number;
   criado_por: string;
