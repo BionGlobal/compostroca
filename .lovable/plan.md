@@ -1,35 +1,50 @@
-## Diagnóstico do bug real
+# Bug: "Esteira completa" bloqueia criação de lote na Caixa 1
 
-O botão **Ver Fotos** abre o modal no mobile, mas ele mostra **“Nenhuma foto encontrada”** para o lote `CWB001-21052026A454`.
+## Causa raiz (confirmada no banco)
 
-O problema não é visual/CSS do modal: a requisição mobile/desktop está retornando lista vazia porque `useLoteFotos` consulta a tabela `entrega_fotos`, que no acesso público/anônimo não expõe essas fotos. No banco, existem 4 entregas para esse lote e cada uma tem 3 fotos, mas a chamada pública para `entrega_fotos` retorna `[]`. Já existe tabela pública `lote_fotos`, criada para consolidar fotos e com policy pública, mas esse lote atual ainda não tem registros nela.
+Existe um lote soft-deleted que está sendo contado como ativo apenas em um dos hooks:
 
-## Plano de correção rápida
+- `CWB001-21052026A225` — caixa_atual=2, status='em_processamento', **deleted_at=2026-05-21 12:13** (soft-deleted)
+- Mais 6 lotes reais em_processamento (caixas 2-7)
 
-1. **Corrigir o hook da galeria pública/ativa (`src/hooks/useLoteFotos.ts`)**
-   - Trocar a fonte principal das fotos de entrega para `lote_fotos`, filtrando por `lote_id`, `entrega_id not null` e `deleted_at is null`.
-   - Manter fallback para `entrega_fotos` apenas se `lote_fotos` vier vazia, para não quebrar telas antigas autenticadas.
-   - Garantir que URLs relativas sejam resolvidas no bucket correto (`entrega-fotos` para fotos de entrega, `lote-fotos` para manejo).
+Consultas:
 
-2. **Sincronizar dados existentes que ficaram órfãos**
-   - Criar migration idempotente para inserir em `lote_fotos` as fotos existentes em `entrega_fotos` para entregas que ainda não têm registro consolidado.
-   - Isso deve restaurar imediatamente a visualização pública/mobile dos lotes atuais, sem mexer na esteira nem em lotes/caixas.
+- `useLotesManager.fetchLotes` filtra `.is('deleted_at', null)` → retorna 6 lotes ativos → página **/lotes** mostra corretamente "6/7 caixas ocupadas".
+- `useOrganizationData.fetchLotes` **NÃO filtra `deleted_at`** → retorna 7 lotes (6 reais + 1 fantasma) → `LoteControlCard` calcula `lotesAtivos.length >= 7` → `isProductionBeltFull = true` → botão "Iniciar Lote" desabilitado com mensagem "Esteira completa - finalize um lote antes de criar outro".
 
-3. **Preservar segurança e fluxo atual**
-   - Não alterar permissões amplas de `entrega_fotos`.
-   - Não liberar escrita pública.
-   - Manter upload/delete protegidos por autenticação.
+Resultado: Mauricio não consegue criar lote novo na Caixa 1, e a página /entregas mostra "É necessário ter um lote ativo para registrar entregas" porque `loteAtivoCaixa01` é null (não há lote em caixa 1).
 
-4. **Validar no alvo real**
-   - Testar `/CWB001` em viewport mobile.
-   - Clicar em **Ver Fotos** no card do lote `CWB001-21052026A454`.
-   - Confirmar que a galeria carrega imagens em grade, em vez do estado vazio.
+## Correção
 
-## Arquivos previstos
+### 1. `src/hooks/useOrganizationData.ts` — `fetchLotes`
 
-- `src/hooks/useLoteFotos.ts`
-- nova migration em `supabase/migrations/...sql` para backfill de `lote_fotos`
+Adicionar `.is('deleted_at', null)` ao select de lotes (mesma proteção que `useLotesManager` já tem). Esta é a correção definitiva e elimina inconsistência entre os hooks.
 
-## Observação
+```ts
+const { data: lotesData, error } = await supabase
+  .from('lotes')
+  .select('*')
+  .eq('unidade', organizationCode)
+  .is('deleted_at', null)            // <-- adicionar
+  .order('created_at', { ascending: false });
+```
 
-A esteira e a posição das caixas não serão alteradas neste plano.
+### 2. `src/components/LoteControlCard.tsx` — defesa em profundidade
+
+No filtro local de `lotesAtivos`, também excluir registros com `deleted_at`:
+
+```ts
+const lotesAtivos = orgData.lotes?.filter(l => 
+  !l.deleted_at &&
+  (l.status === 'ativo' || l.status === 'em_processamento') && 
+  l.caixa_atual >= 1 && l.caixa_atual <= 7
+) || [];
+```
+
+## Validação
+
+Após o fix, com os 6 lotes reais ativos:
+- `isProductionBeltFull` = false → botão "Iniciar Lote" habilitado.
+- Mauricio cria lote → aparece em Caixa 1 status='ativo' → `loteAtivoCaixa01` resolve → página /entregas libera o formulário de Nova Entrega.
+
+Não é necessário tocar no lote soft-deleted (`CWB001-21052026A225`) — ele permanece arquivado e simplesmente deixa de poluir contadores. Sem migrações de banco.

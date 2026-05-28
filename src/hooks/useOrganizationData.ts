@@ -198,6 +198,7 @@ export const useOrganizationData = () => {
         .from('lotes')
         .select('*')
         .eq('unidade', organizationCode)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
